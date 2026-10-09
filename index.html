@@ -151,8 +151,10 @@ function procesar(txt, nombre){
     const imp=num(r[I.imp]), ne=num(r[I.neto]), co=num(r[I.costo]), ca=num(r[I.cant]), cli=String(r[I.cli]).trim();
     const fc=(r[I.fc]||'').trim(); if(/^\d{4}-\d{2}-\d{2}$/.test(fc)) fechas.add(fc);
     if(!nomCSV[v] && r[I.vn]) nomCSV[v]=titulo(r[I.vn]);
-    if(g){ add(vta,v+'|'+g,imp); add(net,v+'|'+g,ne); add(cos,v+'|'+g,co); add(net,'*|'+g,ne); add(cos,'*|'+g,co); add(uni,v+'|'+g+'|'+cli,ca); }
-    add(net,v+'|*',ne); add(cos,v+'|*',co); add(net,'*|*',ne); add(cos,'*|*',co); add(uni,v+'|*|'+cli,ca);
+    // el margen del equipo, como en el Excel, sale solo de los vendedores del reporte (no deposito ni mostrador)
+    const delReporte=VEND.has(v);
+    if(g){ add(vta,v+'|'+g,imp); add(net,v+'|'+g,ne); add(cos,v+'|'+g,co); if(delReporte){ add(net,'*|'+g,ne); add(cos,'*|'+g,co); } add(uni,v+'|'+g+'|'+cli,ca); }
+    add(net,v+'|*',ne); add(cos,v+'|*',co); if(delReporte){ add(net,'*|*',ne); add(cos,'*|*',co); } add(uni,v+'|*|'+cli,ca);
     const tc=(r[I.nro]||'').trim().slice(0,3).toUpperCase(); if(tc==='NCR'||tc==='NDB') add(rech,v,imp);
   }
   const ccc={}; for(const k in uni){ if(uni[k]>=1){ const p=k.split('|'); add(ccc,p[0]+'|'+p[1],1); } }
