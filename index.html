@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reporte diario de ventas LP · ELB</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+--bg:#E3F2EF; --panel:#F1FAF8; --line:#A9D3CB; --ink:#000; --ink2:#22403B; --input:#fff;
+--marca:#0F5257; --claro:#8EE3D9; --bar:#D3ECE7;
+--ok:#1E8E5A; --mid:#E0A100; --low:#D62839;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#E3F2EF; --ink:#000; } }
+:root[data-theme="dark"]{ --bg:#E3F2EF; --ink:#000; }
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Archivo",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;font-variant-numeric:tabular-nums;line-height:1.4}
+.wrap{max-width:1320px;margin:0 auto;padding:28px 20px 48px}
+header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px 16px;border-bottom:3px solid var(--ink);padding-bottom:14px}
+.titulo{flex:1 1 100%;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 0;margin:0 0 6px;padding:10px 18px;background:var(--marca);color:#fff;border-radius:8px;font-size:clamp(1.05rem,1.9vw,1.45rem);font-weight:700;letter-spacing:.02em;line-height:1.2}
+.titulo .t-marca{font-weight:900;color:var(--claro);text-transform:uppercase}
+.titulo .t-marca::before,.titulo .t-mes::before{content:"·";margin:0 .6em;color:rgba(255,255,255,.55);font-weight:400}
+.titulo .t-mes{font-weight:500;color:rgba(255,255,255,.85);text-transform:capitalize}
+.titulo .t-mes:empty{display:none}
+@media (min-width:900px){.titulo{flex-wrap:nowrap;white-space:nowrap}}
+.sub{margin:0;font-size:.95rem;color:var(--ink2)}
+.controls{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end;font-size:.85rem}
+.controls label{display:flex;flex-direction:column;gap:3px}
+select,input{font:inherit;color:var(--ink);background:var(--input);border:1px solid var(--line);border-radius:6px;padding:6px 8px}
+input[type=number]{width:84px}
+button{font:inherit;cursor:pointer;background:var(--ink);color:#fff;border:0;border-radius:6px;padding:7px 12px}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:22px}
+@media (max-width:1000px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{padding:14px 16px;border:2px solid var(--ink);border-radius:10px;box-shadow:5px 5px 0 var(--ink);background:#fff;min-width:0}
+.kpi .l{font-size:.8rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.kpi .v{font-size:clamp(1.3rem,2.4vw,1.9rem);font-weight:800;margin:4px 0 2px;overflow-wrap:anywhere}
+.kpi .n{font-size:.8rem;color:var(--ink2)}
+.kpi.c1{background:#C9F0E8}.kpi.c2{background:#FFF1B8}.kpi.c3{background:#D9E8FF}.kpi.c4{background:#FFD9D2}
+h2{font-size:1.15rem;margin:30px 0 0;font-weight:800}
+.nota{font-size:.82rem;color:var(--ink2);margin:4px 0 0}
+.tbl{overflow-x:auto;margin-top:12px;border:1px solid var(--ink);border-radius:8px;background:var(--panel)}
+table{width:100%;border-collapse:collapse;font-size:.88rem;min-width:1040px}
+th,td{padding:7px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th{position:sticky;top:0;background:var(--marca);color:#fff;font-weight:600;font-size:.8rem}
+th.s{cursor:pointer;user-select:none}
+.l{text-align:left}
+tbody tr:hover td{background:#fff}
+tr.tot td{font-weight:800;background:var(--bar);border-top:2px solid var(--ink)}
+tr.sub td{background:#fff;font-size:.84rem}
+tr.sub td:first-child{padding-left:34px}
+.chip{display:inline-block;min-width:58px;padding:2px 8px;border-radius:999px;border:1px solid #000;font-weight:700;color:#000;text-align:center}
+.muted{color:#6B7F7B}
+.tg{background:transparent;color:var(--ink);border:1px solid var(--ink);border-radius:5px;padding:1px 7px;margin-right:8px;font-weight:800;line-height:1.2}
+.tg[aria-expanded="true"]{background:var(--ink);color:#fff}
+.desp{margin-top:14px;border:1px solid var(--marca);border-radius:8px;background:var(--panel);overflow:hidden}
+.desp>summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--marca);color:#fff;font-weight:800;font-size:1.02rem}
+.desp>summary::-webkit-details-marker{display:none}
+.desp>summary::after{content:"▼";font-size:.8rem}
+.desp[open]>summary::after{content:"▲"}
+.desp .in{padding:14px}
+.desp .tbl{margin-top:0}
+.bar{display:inline-block;width:110px;height:9px;border:1px solid var(--ink);border-radius:2px;background:#fff;vertical-align:middle;margin-left:8px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--low)}
+#estado{margin-top:22px;padding:14px;border:1px dashed var(--ink);border-radius:8px;background:var(--panel)}
+#app{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1 class="titulo"><span class="t-txt">Reporte diario de ventas</span><span class="t-marca">Lago Puelo · Elebes</span><span class="t-mes" id="hMes"></span></h1>
+  <p class="sub" id="hSub">Cargando ventas…</p>
+  <div class="controls">
+    <label>Días transcurridos <input type="number" id="dT" min="1" max="31"></label>
+    <label>Días hábiles del mes <input type="number" id="dH" min="1" max="31"></label>
+  </div>
+</header>
+
+<div id="estado">Buscando el detalle de ventas más reciente…
+  <div id="manual" style="display:none;margin-top:8px"><input type="file" id="csvFile" accept=".csv,text/csv"></div>
+</div>
+
+<div id="app">
+  <section class="kpis" id="kpis"></section>
+
+  <h2>Total equipo de ventas</h2>
+  <p class="nota">Venta con IVA, neta de devoluciones. Tendencia = venta ÷ días transcurridos × días hábiles. El color del alcance compara contra el avance ideal de días.</p>
+  <div class="tbl"><table><thead id="eqHead"></thead><tbody id="eqBody"></tbody></table></div>
+
+  <h2>Por vendedor</h2>
+  <div class="controls" style="margin-top:8px">
+    <label>Empresa <select id="fEmp"></select></label>
+    <button type="button" id="tgAll" class="tg" style="padding:6px 12px">Abrir todos</button>
+  </div>
+  <div class="tbl"><table><thead id="vHead"></thead><tbody id="vBody"></tbody><tfoot id="vFoot"></tfoot></table></div>
+
+  <details class="desp">
+    <summary>Rechazos por vendedor</summary>
+    <div class="in">
+      <p class="nota" style="margin:0 0 10px">Notas de crédito (devoluciones por rechazo y por canje) netas de notas de débito, con IVA, sobre la venta del vendedor.</p>
+      <div class="tbl"><table style="min-width:640px"><thead id="rHead"></thead><tbody id="rBody"></tbody><tfoot id="rFoot"></tfoot></table></div>
+    </div>
+  </details>
+  <details class="desp">
+    <summary>Márgenes por vendedor y empresa</summary>
+    <div class="in">
+      <p class="nota" style="margin:0 0 10px">Margen = (venta neta sin IVA − costo) ÷ venta neta sin IVA.</p>
+      <div class="tbl"><table><thead id="mHead"></thead><tbody id="mBody"></tbody><tfoot id="mFoot"></tfoot></table></div>
+    </div>
+  </details>
+</div>
+</div>
+
+<script>
+const CFG = {"mes":"2026-10","grupos":["SOFTYS","AYUDIN","ILOLAY","GEORGALOS","RIOSMA","CEPAS","OTM"],"nomenclador":{"SOFTYS":["SOFTYS ARGENTINA S.A"],"AYUDIN":["GRUPO AYUDIN ARGENTINA S.A"],"ILOLAY":["ILOLAY"],"GEORGALOS":["GEORGALOS","GENERAL CEREALS S.A"],"RIOSMA":["RIOSMA"],"CEPAS":["CEPAS ARGENTINAS S.A"],"OTM":["AJINOMOTO","BETTER FOOD SAS","BIC ARGENTINA S.A","BODEGAS SAN HUBERTO S.A","BRURIN","CASTELL S.A","DREAMCO S.A","FECOVITA","LABORATORIOS ECOVITA S.A","LCB","LEDESMA","MENOYO S.A.","MOLINO CHACABUCO S.A","MORIXE","NECHO S.A","POLDITOS S.A.S","PORTA HNOS S.A","PRIMEROS PRODUCTOS PEHUENIA","PRO DE MAN S.A","INDUSTRIAS QUIMICAS Y MINERAS TIMBO S.A","LINEA DORADA S.A"]},"equipoObj":{"SOFTYS":437092986.39,"AYUDIN":189000000,"ILOLAY":180973464,"GEORGALOS":125208639.5,"RIOSMA":35189158,"CEPAS":39006625.36,"OTM":125536247.18},"equipoBase":{"SOFTYS":3299,"AYUDIN":3299,"ILOLAY":2384,"GEORGALOS":2518,"RIOSMA":2584,"CEPAS":3299,"OTM":3299,"TOTAL":3299},"vendedores":[{"c":2,"n":"Fernanda Cejas","b":131,"o":{"SOFTYS":17199221.17,"AYUDIN":3780000,"ILOLAY":10875758,"GEORGALOS":3716589,"RIOSMA":2338683,"CEPAS":1313000,"OTM":6480767.76}},{"c":3,"n":"","b":124,"o":{"SOFTYS":16848461.86,"AYUDIN":2835000,"ILOLAY":10875758,"GEORGALOS":3716589,"RIOSMA":2338683,"CEPAS":161600,"OTM":4065291.69}},{"c":4,"n":"Selene Pawlikowski","b":143,"o":{"SOFTYS":10706503.89,"AYUDIN":3780000,"ILOLAY":13954029,"GEORGALOS":2248074,"RIOSMA":1207808,"CEPAS":644148.18,"OTM":2467448.38}},{"c":5,"n":"Eliana Huber","b":135,"o":{"SOFTYS":12830682.67,"AYUDIN":6615000,"ILOLAY":16062420,"GEORGALOS":19051263,"RIOSMA":2887637,"CEPAS":646030.41,"OTM":5351383.82}},{"c":6,"n":"Nieves Alegre","b":118,"o":{"SOFTYS":21810133.18,"AYUDIN":7371000,"ILOLAY":16930879,"GEORGALOS":4482465.5,"RIOSMA":3677903,"CEPAS":1777003,"OTM":2797767.46}},{"c":7,"n":"Myrian Lertora","b":159,"o":{"SOFTYS":8812212.56,"AYUDIN":3969000,"ILOLAY":16757461,"GEORGALOS":4507116,"RIOSMA":3400397,"CEPAS":524344.6,"OTM":5131380.84}},{"c":24,"n":"Cecilia Gauchez","b":147,"o":{"SOFTYS":10867811.04,"AYUDIN":5859000,"ILOLAY":5356305,"GEORGALOS":7828314,"RIOSMA":1272966,"CEPAS":733060.38,"OTM":4606986.73}},{"c":26,"n":"Sabrina Pereira","b":119,"o":{"SOFTYS":17563286.5,"AYUDIN":7182000,"ILOLAY":5056096,"GEORGALOS":7865421,"RIOSMA":754700,"CEPAS":1046048.87,"OTM":6044861.95}},{"c":27,"n":"Samanta Dogliotti","b":143,"o":{"SOFTYS":16434648.19,"AYUDIN":5481000,"ILOLAY":5997113,"GEORGALOS":17166628,"RIOSMA":1444037,"CEPAS":2238514.79,"OTM":9038324.01}},{"c":28,"n":"Nadia Diaz","b":150,"o":{"SOFTYS":17280447.77,"AYUDIN":6426000,"ILOLAY":6406995,"GEORGALOS":10095120,"RIOSMA":1837423,"CEPAS":748404.84,"OTM":4145769.06}},{"c":29,"n":"Camila Navarrete","b":134,"o":{"SOFTYS":14048544.34,"AYUDIN":7560000,"ILOLAY":9970160,"GEORGALOS":10465866,"RIOSMA":1198978,"CEPAS":2326864.38,"OTM":9512201.17}},{"c":30,"n":"Oriana Sorgini","b":159,"o":{"SOFTYS":14870430.85,"AYUDIN":7749000,"ILOLAY":5878065,"GEORGALOS":13540132,"RIOSMA":844279,"CEPAS":1732208.27,"OTM":3041946.84}},{"c":51,"n":"Ezequiel Valente","b":136,"o":{"SOFTYS":24012832.57,"AYUDIN":10773000,"ILOLAY":12952442,"GEORGALOS":1998104,"RIOSMA":2064179,"CEPAS":2630729.28,"OTM":2561351.05}},{"c":52,"n":"Nicole Sosa","b":151,"o":{"SOFTYS":20431467.1,"AYUDIN":6426000,"ILOLAY":11272727,"GEORGALOS":1849629,"RIOSMA":2905446,"CEPAS":2079317.97,"OTM":2663306.09}},{"c":53,"n":"Verona Abati","b":116,"o":{"SOFTYS":19434945.26,"AYUDIN":8883000,"ILOLAY":10875752,"GEORGALOS":3716589,"RIOSMA":2338683,"CEPAS":2570886.33,"OTM":3093533.19}},{"c":54,"n":"Leonel Caruzo","b":144,"o":{"SOFTYS":21805044.85,"AYUDIN":11529000,"ILOLAY":10875752,"GEORGALOS":3716589,"RIOSMA":2338683,"CEPAS":3076258.96,"OTM":4457052.17}},{"c":56,"n":"Ezequiel Ferreira","b":175,"o":{"SOFTYS":25316730.66,"AYUDIN":10962000,"ILOLAY":10875752,"GEORGALOS":3716589,"RIOSMA":2338673,"CEPAS":2900015.66,"OTM":3390233.32}},{"c":61,"n":"Nailah Guzman","b":126,"o":{"SOFTYS":18091157.41,"AYUDIN":5670000,"ILOLAY":0,"GEORGALOS":876075,"RIOSMA":0,"CEPAS":1417503.62,"OTM":7052100.04}},{"c":62,"n":"Nahuel Martinez","b":124,"o":{"SOFTYS":25747894.23,"AYUDIN":11907000,"ILOLAY":0,"GEORGALOS":797509,"RIOSMA":0,"CEPAS":1605532.24,"OTM":8904869.75}},{"c":63,"n":"Daniel Martin","b":134,"o":{"SOFTYS":19225883.27,"AYUDIN":9261000,"ILOLAY":0,"GEORGALOS":978128,"RIOSMA":0,"CEPAS":1505231.64,"OTM":3461518.07}},{"c":64,"n":"Karina Fernandez","b":134,"o":{"SOFTYS":24145011.57,"AYUDIN":11340000,"ILOLAY":0,"GEORGALOS":2875850,"RIOSMA":0,"CEPAS":618277.64,"OTM":3557045.78}},{"c":73,"n":"Florencia Cubilla","b":142,"o":{"SOFTYS":21846679.86,"AYUDIN":12096000,"ILOLAY":0,"GEORGALOS":0,"RIOSMA":0,"CEPAS":2619694.64,"OTM":9801264.54}},{"c":74,"n":"Romina Baez","b":125,"o":{"SOFTYS":17997385.98,"AYUDIN":10395000,"ILOLAY":0,"GEORGALOS":0,"RIOSMA":0,"CEPAS":2285625.92,"OTM":8378517}},{"c":75,"n":"Julieta Yegros","b":130,"o":{"SOFTYS":19735569.71,"AYUDIN":11151000,"ILOLAY":0,"GEORGALOS":0,"RIOSMA":0,"CEPAS":1806323.75,"OTM":5531326.49}}]};
+const REPO = '1605-83/Reporte-Diario-Ventas';
+const FERIADOS = new Set(['2026-01-01','2026-02-16','2026-02-17','2026-03-24','2026-04-02','2026-04-03','2026-05-01','2026-05-25','2026-06-15','2026-07-09','2026-08-17','2026-10-12','2026-11-23','2026-12-08','2026-12-25','2027-01-01','2027-02-08','2027-02-09','2027-03-24','2027-03-25','2027-03-26','2027-04-02','2027-05-01','2027-05-25','2027-06-17','2027-06-20','2027-07-09','2027-08-17','2027-10-12','2027-11-22','2027-12-08','2027-12-25']);
+const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const NOMBRE_G = {SOFTYS:'Softys',AYUDIN:'Ayudin',ILOLAY:'Ilolay',GEORGALOS:'Georgalos',RIOSMA:'Riosma',CEPAS:'Cepas',OTM:'OTM',TOTAL:'Total'};
+const $ = id => document.getElementById(id);
+const fmt$ = n => '$ ' + Math.round(n).toLocaleString('es-AR');
+const fmtN = n => Math.round(n).toLocaleString('es-AR');
+const fmtP = n => (n*100).toLocaleString('es-AR',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';
+const esc = s => String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const titulo = s => { s=(s||'').trim(); if(!(s===s.toUpperCase() && /[A-ZÁÉÍÓÚÑ]/.test(s))) return s; return s.toLowerCase().replace(/(^|[^a-záéíóúñü])([a-záéíóúñü])/g,(m,a,b)=>a+b.toUpperCase()); };
+const num = s => { s=String(s??'').trim(); return s ? (parseFloat(s.replace(/\./g,'').replace(',','.'))||0) : 0; };
+const GRUPO = {}; Object.entries(CFG.nomenclador).forEach(([g,ps])=>ps.forEach(p=>GRUPO[p.trim().toUpperCase()]=g));
+
+function parseCSV(t){
+  const rows=[]; let row=[], f='', q=false;
+  for(let i=0;i<t.length;i++){ const ch=t[i];
+    if(q){ if(ch==='"'){ if(t[i+1]==='"'){f+='"';i++;} else q=false; } else f+=ch; }
+    else if(ch==='"') q=true; else if(ch===';'){ row.push(f); f=''; }
+    else if(ch==='\n'){ row.push(f.replace(/\r$/,'')); rows.push(row); row=[]; f=''; } else f+=ch; }
+  if(f!==''||row.length){ row.push(f.replace(/\r$/,'')); rows.push(row); }
+  return rows;
+}
+
+// ---- Calculo: mismas reglas que el Excel "Reporte Diario Ventas LP - ELB" ----
+function procesar(txt, nombre){
+  const R=parseCSV(txt).filter(r=>r.length>5); const H=R.shift().map(h=>h.trim());
+  const ix=n=>{const i=H.indexOf(n); if(i<0) throw new Error('Falta la columna '+n); return i;};
+  const I={cli:ix('Cliente'),fc:ix('FechaComprobante'),nro:ix('NroComprobante'),cant:ix('CantBase'),neto:ix('ImporteNetoItem'),imp:ix('ImporteItem'),cv:ix('CodVendedor'),vn:ix('Vendedor'),costo:ix('PrecioCosto'),prov:ix('Proveedor')};
+  const VEND=new Map(CFG.vendedores.map(v=>[v.c,v]));
+  const vta={}, uni={}, net={}, cos={}, rech={}, nomCSV={}, fechas=new Set();
+  const add=(o,k,x)=>{o[k]=(o[k]||0)+x;};
+  for(const r of R){
+    const v=parseInt(r[I.cv],10); if(isNaN(v)) continue;
+    const g=GRUPO[(r[I.prov]||'').trim().toUpperCase()]||null;
+    const imp=num(r[I.imp]), ne=num(r[I.neto]), co=num(r[I.costo]), ca=num(r[I.cant]), cli=String(r[I.cli]).trim();
+    const fc=(r[I.fc]||'').trim(); if(/^\d{4}-\d{2}-\d{2}$/.test(fc)) fechas.add(fc);
+    if(!nomCSV[v] && r[I.vn]) nomCSV[v]=titulo(r[I.vn]);
+    if(g){ add(vta,v+'|'+g,imp); add(net,v+'|'+g,ne); add(cos,v+'|'+g,co); add(net,'*|'+g,ne); add(cos,'*|'+g,co); add(uni,v+'|'+g+'|'+cli,ca); }
+    add(net,v+'|*',ne); add(cos,v+'|*',co); add(net,'*|*',ne); add(cos,'*|*',co); add(uni,v+'|*|'+cli,ca);
+    const tc=(r[I.nro]||'').trim().slice(0,3).toUpperCase(); if(tc==='NCR'||tc==='NDB') add(rech,v,imp);
+  }
+  const ccc={}; for(const k in uni){ if(uni[k]>=1){ const p=k.split('|'); add(ccc,p[0]+'|'+p[1],1); } }
+  const marg=k=> net[k]? (net[k]-(cos[k]||0))/net[k] : null;
+  const G=CFG.grupos;
+  const vendedores=CFG.vendedores.map(cv=>{
+    const filas={}; let tv=0, to=0;
+    for(const g of G){ const venta=vta[cv.c+'|'+g]||0, obj=cv.o[g]||0; tv+=venta; to+=obj;
+      filas[g]={venta,obj,base:cv.b,ccc:ccc[cv.c+'|'+g]||0,margen:marg(cv.c+'|'+g)}; }
+    const rv=Math.abs(rech[cv.c]||0);
+    filas.TOTAL={venta:tv,obj:to,base:cv.b,ccc:ccc[cv.c+'|*']||0,margen:marg(cv.c+'|*'),rech:rv,rechP:tv? rv/tv : null};
+    return {c:cv.c,n:cv.n||nomCSV[cv.c]||('Vendedor '+cv.c),filas};
+  });
+  const equipo={};
+  let tv=0;
+  for(const g of G){ const venta=vendedores.reduce((a,v)=>a+v.filas[g].venta,0); tv+=venta;
+    equipo[g]={venta,obj:CFG.equipoObj[g],base:CFG.equipoBase[g],ccc:vendedores.reduce((a,v)=>a+v.filas[g].ccc,0),margen:marg('*|'+g)}; }
+  const rt=Math.abs(Object.values(rech).reduce((a,x)=>a+x,0));
+  equipo.TOTAL={venta:tv,obj:G.reduce((a,g)=>a+CFG.equipoObj[g],0),base:CFG.equipoBase.TOTAL,ccc:vendedores.reduce((a,v)=>a+v.filas.TOTAL.ccc,0),margen:marg('*|*'),rech:rt,rechP:tv? rt/tv : null};
+  // dias: con ventas facturadas en el mes (hasta hoy) y habiles del mes
+  const hoy=new Date(Date.now()-3*3600e3).toISOString().slice(0,10);
+  const fs=[...fechas].filter(d=>d<=hoy).sort(); const ult=fs[fs.length-1]||hoy; const ym=ult.slice(0,7); const [y,mo]=ym.split('-').map(Number);
+  const dT=fs.filter(d=>d.startsWith(ym)).length||1;
+  let dH=0; const nd=new Date(y,mo,0).getDate();
+  for(let d=1;d<=nd;d++){ const wd=new Date(y,mo-1,d).getDay(), iso=ym+'-'+String(d).padStart(2,'0'); if(wd>0&&wd<6&&!FERIADOS.has(iso)) dH++; }
+  const st=(nombre||'').match(/(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})\d{2}/);
+  const corte= st? `${st[3]}/${st[2]}/${st[1]} ${st[4]}:${st[5]}` : ult.split('-').reverse().join('/');
+  return {vendedores,equipo,dT,dH,ym,mes:MESES[mo-1]+' '+y,corte};
+}
+
+// ---- Dibujo ----
+let D=null, abiertos=new Set(), sortK='c', sortD=1;
+const STORE='reporte-diario-dias';
+function dias(){ return {dT:+$('dT').value||D.dT, dH:+$('dH').value||D.dH}; }
+function chipA(a,ideal){ if(a==null) return '<span class="muted">—</span>'; const r=a/ideal; const c=r>=1?'#7CFF6B':r>=.85?'#FFE14D':'#FF6B6B'; return `<span class="chip" style="background:${c}">${fmtP(a)}</span>`; }
+function calc(f){ const {dT,dH}=dias(); const tend=f.venta/dT*dH; return {...f, alc:f.obj? f.venta/f.obj:null, tend, alcT:f.obj? tend/f.obj:null, cob:f.base? f.ccc/f.base:null}; }
+const COLS=[['obj','Objetivo'],['venta','Venta'],['alc','% Alcance'],['tend','Tendencia $'],['alcT','% Alcance tend.'],['cob','% Cobertura'],['base','Base'],['ccc','CCC'],['margen','% Margen'],['rechP','% Rechazos']];
+function celdas(f){ const {dT,dH}=dias(), ideal=dT/dH, x=calc(f);
+  return [x.obj? fmt$(x.obj):'<span class="muted">—</span>', fmt$(x.venta), chipA(x.alc,ideal), fmt$(x.tend), chipA(x.alcT,1),
+    x.cob==null?'<span class="muted">—</span>':fmtP(x.cob), x.base? fmtN(x.base):'<span class="muted">—</span>', fmtN(x.ccc),
+    x.margen==null?'<span class="muted">—</span>':fmtP(x.margen), x.rechP==null?'':fmtP(x.rechP)].map(c=>`<td>${c}</td>`).join(''); }
+
+function render(){
+  const {dT,dH}=dias(), E=D.equipo, T=calc(E.TOTAL);
+  $('kpis').innerHTML=[
+    ['c1','Venta del mes (con IVA)',fmt$(T.venta),`Objetivo ${fmt$(T.obj)}`],
+    ['c2','% Alcance',fmtP(T.alc||0),`Ideal hoy ${fmtP(dT/dH)} · ${dT} de ${dH} días hábiles`],
+    ['c3','Tendencia al cierre',fmt$(T.tend),`${fmtP(T.alcT||0)} del objetivo`],
+    ['c4','Cobertura',fmtP(T.cob||0),`${fmtN(T.ccc)} clientes con compra de ${fmtN(T.base)}`],
+    ['c1','% Margen',T.margen==null?'—':fmtP(T.margen),'Sobre venta neta sin IVA'],
+    ['c4','Rechazos',fmt$(E.TOTAL.rech),`${fmtP(E.TOTAL.rechP||0)} de la venta`],
+    ['c3','Vendedores',fmtN(D.vendedores.length),'Del reporte de objetivos'],
+    ['c2','Corte',D.corte,'Datos de la base de Gescom']
+  ].map(k=>`<div class="kpi ${k[0]}"><div class="l">${k[1]}</div><div class="v">${k[2]}</div><div class="n">${k[3]}</div></div>`).join('');
+
+  const head=first=>`<tr><th class="l">${first}</th>${COLS.map(c=>`<th>${c[1]}</th>`).join('')}</tr>`;
+  $('eqHead').innerHTML=head('Empresa');
+  $('eqBody').innerHTML=[...CFG.grupos,'TOTAL'].map(g=>`<tr class="${g==='TOTAL'?'tot':''}"><td class="l">${NOMBRE_G[g]}</td>${celdas(E[g])}</tr>`).join('');
+
+  const emp=$('fEmp').value;
+  const COLS_V=[['c','Cód'],['n','Vendedor'],...COLS];
+  $('vHead').innerHTML=`<tr>${COLS_V.map(([k,t],i)=>`<th class="s ${i<2?'l':''}" data-k="${k}">${t}${sortK===k?(sortD>0?' ▲':' ▼'):''}</th>`).join('')}</tr>`;
+  const rs=D.vendedores.map(v=>({v,x:calc(v.filas[emp])}));
+  rs.sort((a,b)=>{ const A=sortK==='c'?a.v.c:sortK==='n'?a.v.n:a.x[sortK], B=sortK==='c'?b.v.c:sortK==='n'?b.v.n:b.x[sortK];
+    if(A==null&&B==null) return 0; if(A==null) return 1; if(B==null) return -1; return (typeof A==='string'?A.localeCompare(B):A-B)*sortD; });
+  $('vBody').innerHTML=rs.map(({v})=>{
+    const ab=abiertos.has(v.c);
+    let h=`<tr><td class="l"><button class="tg" type="button" data-tg="${v.c}" aria-expanded="${ab}" aria-label="Ver empresas de ${esc(v.n)}">${ab?'−':'+'}</button>${v.c}</td><td class="l">${esc(v.n)}</td>${celdas(v.filas[emp])}</tr>`;
+    if(ab) h+=[...CFG.grupos,'TOTAL'].filter(g=>g!==emp).map(g=>`<tr class="sub"><td class="l" colspan="2">${NOMBRE_G[g]}</td>${celdas(v.filas[g])}</tr>`).join('');
+    return h; }).join('');
+  $('vFoot').innerHTML=`<tr class="tot"><td class="l" colspan="2">Total equipo · ${NOMBRE_G[emp]}</td>${celdas(E[emp])}</tr>`;
+  $('tgAll').textContent = D.vendedores.every(v=>abiertos.has(v.c)) ? 'Cerrar todos' : 'Abrir todos';
+
+  const maxR=Math.max(1,...D.vendedores.map(v=>v.filas.TOTAL.rech));
+  $('rHead').innerHTML='<tr><th class="l">Cód</th><th class="l">Vendedor</th><th>Rechazos $</th><th>Venta</th><th>% Rechazos</th></tr>';
+  $('rBody').innerHTML=[...D.vendedores].sort((a,b)=>b.filas.TOTAL.rech-a.filas.TOTAL.rech).map(v=>{const f=v.filas.TOTAL;
+    return `<tr><td class="l">${v.c}</td><td class="l">${esc(v.n)}</td><td>${fmt$(f.rech)}<span class="bar"><i style="width:${f.rech/maxR*100}%"></i></span></td><td>${fmt$(f.venta)}</td><td>${f.rechP==null?'—':fmtP(f.rechP)}</td></tr>`;}).join('');
+  $('rFoot').innerHTML=`<tr class="tot"><td class="l" colspan="2">Total (todos los vendedores)</td><td>${fmt$(E.TOTAL.rech)}</td><td>${fmt$(E.TOTAL.venta)}</td><td>${fmtP(E.TOTAL.rechP||0)}</td></tr>`;
+
+  const GS=[...CFG.grupos,'TOTAL'], mp=x=>x==null?'<span class="muted">—</span>':fmtP(x);
+  $('mHead').innerHTML=`<tr><th class="l">Cód</th><th class="l">Vendedor</th>${GS.map(g=>`<th>${NOMBRE_G[g]}</th>`).join('')}</tr>`;
+  $('mBody').innerHTML=D.vendedores.map(v=>`<tr><td class="l">${v.c}</td><td class="l">${esc(v.n)}</td>${GS.map(g=>`<td>${mp(v.filas[g].margen)}</td>`).join('')}</tr>`).join('');
+  $('mFoot').innerHTML=`<tr class="tot"><td class="l" colspan="2">Total</td>${GS.map(g=>`<td>${mp(E[g].margen)}</td>`).join('')}</tr>`;
+}
+
+function arrancar(txt,nombre){
+  try{
+    D=procesar(txt,nombre);
+    let st={}; try{ st=JSON.parse(localStorage.getItem(STORE)||'{}')[D.ym]||{}; }catch(e){}
+    $('dT').value=st.dT||D.dT; $('dH').value=st.dH||D.dH;
+    $('hMes').textContent=D.mes; document.title='Reporte diario de ventas LP · ELB, '+D.mes;
+    $('hSub').textContent=`Corte al ${D.corte} · Lago Puelo S.A. y Elebes · ${CFG.vendedores.length} vendedores`;
+    $('fEmp').innerHTML=['TOTAL',...CFG.grupos].map(g=>`<option value="${g}">${NOMBRE_G[g]}</option>`).join('');
+    $('estado').style.display='none'; $('app').style.display='block';
+    if(CFG.mes!==D.ym) $('hSub').textContent+=` · Objetivos y bases cargados para ${CFG.mes.split('-').reverse().join('/')}`;
+    render();
+  }catch(e){ mostrarError('No se pudo procesar el archivo: '+e.message); }
+}
+function mostrarError(m){ $('estado').firstChild.textContent=m+' Podés abrir el CSV manualmente: '; $('manual').style.display='block'; }
+async function cargarRepo(){
+  const r=await fetch('https://api.github.com/repos/'+REPO+'/contents/',{cache:'no-store'});
+  if(!r.ok) throw new Error('No se pudo leer el repositorio ('+r.status+')');
+  const files=(await r.json()).filter(f=>f.type==='file'&&/\.csv$/i.test(f.name));
+  if(!files.length) throw new Error('No hay ningún CSV en el repositorio');
+  const key=f=>{const m=f.name.match(/(\d{8})-(\d{6})/); return m? m[1]+m[2] : '0'+f.name;};
+  files.sort((a,b)=>key(b).localeCompare(key(a)));
+  const d=await fetch(files[0].download_url+'?t='+Date.now()); if(!d.ok) throw new Error('No se pudo descargar '+files[0].name);
+  return {txt:new TextDecoder('windows-1252').decode(await d.arrayBuffer()), nombre:files[0].name};
+}
+$('csvFile').addEventListener('change',async e=>{ const f=e.target.files[0]; if(f) arrancar(new TextDecoder('windows-1252').decode(await f.arrayBuffer()), f.name); });
+['dT','dH'].forEach(id=>$(id).addEventListener('input',()=>{ if(!D) return; try{ const all=JSON.parse(localStorage.getItem(STORE)||'{}'); all[D.ym]={dT:+$('dT').value,dH:+$('dH').value}; localStorage.setItem(STORE,JSON.stringify(all)); }catch(e){} render(); }));
+$('fEmp').addEventListener('change',render);
+$('vHead').addEventListener('click',e=>{ const th=e.target.closest('th[data-k]'); if(!th) return; const k=th.dataset.k; if(sortK===k) sortD*=-1; else { sortK=k; sortD=(k==='c'||k==='n')?1:-1; } render(); });
+$('vBody').addEventListener('click',e=>{ const b=e.target.closest('[data-tg]'); if(!b) return; const c=+b.dataset.tg; abiertos.has(c)?abiertos.delete(c):abiertos.add(c); render(); });
+$('tgAll').addEventListener('click',()=>{ const todos=D.vendedores.every(v=>abiertos.has(v.c)); abiertos=new Set(todos?[]:D.vendedores.map(v=>v.c)); render(); });
+(async()=>{ try{ const {txt,nombre}=await cargarRepo(); arrancar(txt,nombre); } catch(e){ mostrarError(e.message+'.'); } })();
+</script>
+</body>
+</html>
