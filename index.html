@@ -202,9 +202,9 @@ const STORE='reporte-diario-dias';
 function dias(){ return {dT:+$('dT').value||D.dT, dH:+$('dH').value||D.dH}; }
 function chipA(a,ideal){ if(a==null) return '<span class="muted">—</span>'; const r=a/ideal; const c=r>=1?'#7CFF6B':r>=.85?'#FFE14D':'#FF6B6B'; return `<span class="chip" style="background:${c}">${fmtP(a)}</span>`; }
 function calc(f){ const {dT,dH}=dias(); const tend=f.venta/dT*dH; return {...f, alc:f.obj? f.venta/f.obj:null, tend, alcT:f.obj? tend/f.obj:null, cob:f.base? f.ccc/f.base:null}; }
-const COLS=[['obj','Objetivo'],['venta','Venta'],['alc','% Alcance'],['tend','Tendencia $'],['alcT','% Alcance tend.'],['cob','% Cobertura'],['base','Base'],['ccc','CCC'],['margen','% Margen'],['rechP','% Rechazos']];
+const COLS=[['obj','Objetivo'],['venta','Venta'],['alc','% Alcance'],['tend','Tendencia $'],['cob','% Cobertura'],['base','Base'],['ccc','CCC'],['margen','% Margen'],['rechP','% Rechazos']];
 function celdas(f){ const {dT,dH}=dias(), ideal=dT/dH, x=calc(f);
-  return [x.obj? fmt$(x.obj):'<span class="muted">—</span>', fmt$(x.venta), chipA(x.alc,ideal), fmt$(x.tend), chipA(x.alcT,1),
+  return [x.obj? fmt$(x.obj):'<span class="muted">—</span>', fmt$(x.venta), chipA(x.alc,ideal), fmt$(x.tend),
     x.cob==null?'<span class="muted">—</span>':fmtP(x.cob), x.base? fmtN(x.base):'<span class="muted">—</span>', fmtN(x.ccc),
     x.margen==null?'<span class="muted">—</span>':fmtP(x.margen), x.rechP==null?'':fmtP(x.rechP)].map(c=>`<td>${c}</td>`).join(''); }
 
@@ -213,7 +213,7 @@ function render(){
   $('kpis').innerHTML=[
     ['c1','Venta del mes (con IVA)',fmt$(T.venta),`Objetivo ${fmt$(T.obj)}`],
     ['c2','% Alcance',fmtP(T.alc||0),`Ideal hoy ${fmtP(dT/dH)} · ${dT} de ${dH} días hábiles`],
-    ['c3','Tendencia al cierre',fmt$(T.tend),`${fmtP(T.alcT||0)} del objetivo`],
+    ['c3','Tendencia al cierre',fmt$(T.tend),`Al ritmo actual, ${dT} de ${dH} d],
     ['c4','Cobertura',fmtP(T.cob||0),`${fmtN(T.ccc)} clientes con compra de ${fmtN(T.base)}`],
     ['c1','% Margen',T.margen==null?'—':fmtP(T.margen),'Sobre venta neta sin IVA'],
     ['c4','Rechazos',fmt$(E.TOTAL.rech),`${fmtP(E.TOTAL.rechP||0)} de la venta`],
