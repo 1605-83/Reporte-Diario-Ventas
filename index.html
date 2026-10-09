@@ -42,6 +42,7 @@ h2{font-size:1.15rem;margin:30px 0 0;font-weight:800}
 .tbl{overflow-x:auto;margin-top:12px;color:#000;border:1px solid #fff;border-radius:8px;background:var(--panel)}
 table{width:100%;border-collapse:collapse;font-size:.88rem;min-width:1040px}
 th,td{padding:7px 10px;text-align:right;border-bottom:1px solid #4A5A57;white-space:nowrap}
+td{font-weight:700;color:#000}
 .g-SOFTYS td,td.g-SOFTYS{background:#DCEBFF}
 .g-AYUDIN td,td.g-AYUDIN{background:#DDF5D8}
 .g-ILOLAY td,td.g-ILOLAY{background:#FFF6C7}
@@ -54,9 +55,9 @@ th.s{cursor:pointer;user-select:none}
 .l{text-align:left}
 tbody tr:hover td{filter:brightness(1.04)}
 tr.tot td{font-weight:800;background:var(--bar);border-top:2px solid var(--ink)}
-tr.sub td{background:#fff;font-size:.84rem}
-tr.sub.g-SOFTYS td{background:#DCEBFF}tr.sub.g-AYUDIN td{background:#DDF5D8}tr.sub.g-ILOLAY td{background:#FFF6C7}tr.sub.g-GEORGALOS td{background:#FFE3CC}tr.sub.g-RIOSMA td{background:#F1E1FF}tr.sub.g-CEPAS td{background:#FFDDE6}tr.sub.g-OTM td{background:#E8E8E8}
-tr.sub td:first-child{padding-left:34px}
+tr.det td{background:#fff;font-size:.84rem}
+tr.det.g-SOFTYS td{background:#DCEBFF}tr.det.g-AYUDIN td{background:#DDF5D8}tr.det.g-ILOLAY td{background:#FFF6C7}tr.det.g-GEORGALOS td{background:#FFE3CC}tr.det.g-RIOSMA td{background:#F1E1FF}tr.det.g-CEPAS td{background:#FFDDE6}tr.det.g-OTM td{background:#E8E8E8}
+tr.det td:first-child{padding-left:34px}
 .chip{display:inline-block;min-width:58px;padding:2px 8px;border-radius:999px;border:1px solid #000;font-weight:700;color:#000;text-align:center}
 .muted{color:#6B7F7B}
 .tg{background:transparent;color:var(--ink);border:1px solid var(--ink);border-radius:5px;padding:1px 7px;margin-right:8px;font-weight:800;line-height:1.2}
@@ -99,6 +100,7 @@ tr.sub td:first-child{padding-left:34px}
 
   <h2>Por vendedor</h2>
   <div class="controls" style="margin-top:8px">
+    <label>Vendedor <select id="fVend"></select></label>
     <label>Empresa <select id="fEmp"></select></label>
     <button type="button" id="tgAll" class="tg" style="padding:6px 12px">Abrir todos</button>
   </div>
@@ -226,26 +228,28 @@ function render(){
   const emp=$('fEmp').value;
   const COLS_V=[['c','Cód'],['n','Vendedor'],...COLS];
   $('vHead').innerHTML=`<tr>${COLS_V.map(([k,t],i)=>`<th class="s ${i<2?'l':''}" data-k="${k}">${t}${sortK===k?(sortD>0?' ▲':' ▼'):''}</th>`).join('')}</tr>`;
-  const rs=D.vendedores.map(v=>({v,x:calc(v.filas[emp])}));
+  const sel=+$('fVend').value||0, lista=sel? D.vendedores.filter(v=>v.c===sel) : D.vendedores;
+  if(sel) abiertos.add(sel);
+  const rs=lista.map(v=>({v,x:calc(v.filas[emp])}));
   rs.sort((a,b)=>{ const A=sortK==='c'?a.v.c:sortK==='n'?a.v.n:a.x[sortK], B=sortK==='c'?b.v.c:sortK==='n'?b.v.n:b.x[sortK];
     if(A==null&&B==null) return 0; if(A==null) return 1; if(B==null) return -1; return (typeof A==='string'?A.localeCompare(B):A-B)*sortD; });
   $('vBody').innerHTML=rs.map(({v})=>{
     const ab=abiertos.has(v.c);
     let h=`<tr><td class="l"><button class="tg" type="button" data-tg="${v.c}" aria-expanded="${ab}" aria-label="Ver empresas de ${esc(v.n)}">${ab?'−':'+'}</button>${v.c}</td><td class="l">${esc(v.n)}</td>${celdas(v.filas[emp])}</tr>`;
-    if(ab) h+=[...CFG.grupos,'TOTAL'].filter(g=>g!==emp).map(g=>`<tr class="sub ${g==='TOTAL'?'':'g-'+g}"><td class="l" colspan="2">${NOMBRE_G[g]}</td>${celdas(v.filas[g])}</tr>`).join('');
+    if(ab) h+=[...CFG.grupos,'TOTAL'].filter(g=>g!==emp).map(g=>`<tr class="det ${g==='TOTAL'?'':'g-'+g}"><td class="l" colspan="2">${NOMBRE_G[g]}</td>${celdas(v.filas[g])}</tr>`).join('');
     return h; }).join('');
   $('vFoot').innerHTML=`<tr class="tot"><td class="l" colspan="2">Total equipo · ${NOMBRE_G[emp]}</td>${celdas(E[emp])}</tr>`;
   $('tgAll').textContent = D.vendedores.every(v=>abiertos.has(v.c)) ? 'Cerrar todos' : 'Abrir todos';
 
   const maxR=Math.max(1,...D.vendedores.map(v=>v.filas.TOTAL.rech));
   $('rHead').innerHTML='<tr><th class="l">Cód</th><th class="l">Vendedor</th><th>Rechazos $</th><th>Venta</th><th>% Rechazos</th></tr>';
-  $('rBody').innerHTML=[...D.vendedores].sort((a,b)=>b.filas.TOTAL.rech-a.filas.TOTAL.rech).map(v=>{const f=v.filas.TOTAL;
+  $('rBody').innerHTML=[...lista].sort((a,b)=>b.filas.TOTAL.rech-a.filas.TOTAL.rech).map(v=>{const f=v.filas.TOTAL;
     return `<tr><td class="l">${v.c}</td><td class="l">${esc(v.n)}</td><td>${fmt$(f.rech)}<span class="bar"><i style="width:${f.rech/maxR*100}%"></i></span></td><td>${fmt$(f.venta)}</td><td>${f.rechP==null?'—':fmtP(f.rechP)}</td></tr>`;}).join('');
   $('rFoot').innerHTML=`<tr class="tot"><td class="l" colspan="2">Total (todos los vendedores)</td><td>${fmt$(E.TOTAL.rech)}</td><td>${fmt$(E.TOTAL.venta)}</td><td>${fmtP(E.TOTAL.rechP||0)}</td></tr>`;
 
   const GS=[...CFG.grupos,'TOTAL'], mp=x=>x==null?'<span class="muted">—</span>':fmtP(x);
   $('mHead').innerHTML=`<tr><th class="l">Cód</th><th class="l">Vendedor</th>${GS.map(g=>`<th>${NOMBRE_G[g]}</th>`).join('')}</tr>`;
-  $('mBody').innerHTML=D.vendedores.map(v=>`<tr><td class="l">${v.c}</td><td class="l">${esc(v.n)}</td>${GS.map(g=>`<td class="${g==='TOTAL'?'':'g-'+g}">${mp(v.filas[g].margen)}</td>`).join('')}</tr>`).join('');
+  $('mBody').innerHTML=lista.map(v=>`<tr><td class="l">${v.c}</td><td class="l">${esc(v.n)}</td>${GS.map(g=>`<td class="${g==='TOTAL'?'':'g-'+g}">${mp(v.filas[g].margen)}</td>`).join('')}</tr>`).join('');
   $('mFoot').innerHTML=`<tr class="tot"><td class="l" colspan="2">Total</td>${GS.map(g=>`<td>${mp(E[g].margen)}</td>`).join('')}</tr>`;
 }
 
@@ -256,6 +260,7 @@ function arrancar(txt,nombre){
     $('dT').value=st.dT||D.dT; $('dH').value=st.dH||D.dH;
     $('hMes').textContent=D.mes; document.title='Reporte diario de ventas LP · ELB, '+D.mes;
     $('hSub').textContent=`Corte al ${D.corte} · Lago Puelo S.A. y Elebes · ${CFG.vendedores.length} vendedores`;
+    $('fVend').innerHTML='<option value="">Todos</option>'+[...CFG.vendedores].sort((a,b)=>a.c-b.c).map(v=>`<option value="${v.c}">${v.c} · ${esc(v.n||'Vendedor '+v.c)}</option>`).join('');
     $('fEmp').innerHTML=['TOTAL',...CFG.grupos].map(g=>`<option value="${g}">${NOMBRE_G[g]}</option>`).join('');
     $('estado').style.display='none'; $('app').style.display='block';
     if(CFG.mes!==D.ym) $('hSub').textContent+=` · Objetivos y bases cargados para ${CFG.mes.split('-').reverse().join('/')}`;
@@ -276,6 +281,7 @@ async function cargarRepo(){
 $('csvFile').addEventListener('change',async e=>{ const f=e.target.files[0]; if(f) arrancar(new TextDecoder('windows-1252').decode(await f.arrayBuffer()), f.name); });
 ['dT','dH'].forEach(id=>$(id).addEventListener('input',()=>{ if(!D) return; try{ const all=JSON.parse(localStorage.getItem(STORE)||'{}'); all[D.ym]={dT:+$('dT').value,dH:+$('dH').value}; localStorage.setItem(STORE,JSON.stringify(all)); }catch(e){} render(); }));
 $('fEmp').addEventListener('change',render);
+$('fVend').addEventListener('change',render);
 $('vHead').addEventListener('click',e=>{ const th=e.target.closest('th[data-k]'); if(!th) return; const k=th.dataset.k; if(sortK===k) sortD*=-1; else { sortK=k; sortD=(k==='c'||k==='n')?1:-1; } render(); });
 $('vBody').addEventListener('click',e=>{ const b=e.target.closest('[data-tg]'); if(!b) return; const c=+b.dataset.tg; abiertos.has(c)?abiertos.delete(c):abiertos.add(c); render(); });
 $('tgAll').addEventListener('click',()=>{ const todos=D.vendedores.every(v=>abiertos.has(v.c)); abiertos=new Set(todos?[]:D.vendedores.map(v=>v.c)); render(); });
