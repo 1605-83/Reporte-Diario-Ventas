@@ -55,6 +55,9 @@ th.s{cursor:pointer;user-select:none}
 .l{text-align:left}
 tbody tr:hover td{filter:brightness(1.04)}
 tr.tot td{font-weight:800;background:var(--bar);border-top:2px solid var(--ink)}
+tr.vtot td{background:#FFE08A;font-weight:900;border-top:2px solid #000;border-bottom:3px solid #000}
+tr.vtot td:first-child{padding-left:34px}
+tr.vcab td{background:#fff;font-weight:900}
 tr.det td{background:#fff;font-size:.96rem}
 tr.det.g-SOFTYS td{background:#DCEBFF}tr.det.g-AYUDIN td{background:#DDF5D8}tr.det.g-ILOLAY td{background:#FFF6C7}tr.det.g-GEORGALOS td{background:#FFE3CC}tr.det.g-RIOSMA td{background:#F1E1FF}tr.det.g-CEPAS td{background:#FFDDE6}tr.det.g-OTM td{background:#E8E8E8}
 tr.det td:first-child{padding-left:34px}
@@ -239,8 +242,10 @@ function render(){
     if(A==null&&B==null) return 0; if(A==null) return 1; if(B==null) return -1; return (typeof A==='string'?A.localeCompare(B):A-B)*sortD; });
   $('vBody').innerHTML=rs.map(({v})=>{
     const ab=abiertos.has(v.c);
-    let h=`<tr><td class="l"><button class="tg" type="button" data-tg="${v.c}" aria-expanded="${ab}" aria-label="Ver empresas de ${esc(v.n)}">${ab?'−':'+'}</button>${v.c}</td><td class="l">${esc(v.n)}</td>${celdas(v.filas[emp])}</tr>`;
-    if(ab) h+=[...CFG.grupos,'TOTAL'].filter(g=>g!==emp).map(g=>`<tr class="det ${g==='TOTAL'?'':'g-'+g}"><td class="l" colspan="2">${NOMBRE_G[g]}</td>${celdas(v.filas[g])}</tr>`).join('');
+    // abierto: arriba solo codigo y nombre, despues cada empresa y al final el total del vendedor resaltado
+    let h=`<tr class="${ab?'vcab':''}"><td class="l"><button class="tg" type="button" data-tg="${v.c}" aria-expanded="${ab}" aria-label="Ver empresas de ${esc(v.n)}">${ab?'−':'+'}</button>${v.c}</td><td class="l">${esc(v.n)}</td>${ab? `<td colspan="${COLS.length}"></td>` : celdas(v.filas[emp])}</tr>`;
+    if(ab) h+=CFG.grupos.map(g=>`<tr class="det g-${g}"><td class="l" colspan="2">${NOMBRE_G[g]}</td>${celdas(v.filas[g])}</tr>`).join('')
+      + `<tr class="vtot"><td class="l" colspan="2">Total ${esc(v.n)}</td>${celdas(v.filas.TOTAL)}</tr>`;
     return h; }).join('');
   $('vFoot').innerHTML=`<tr class="tot"><td class="l" colspan="2">Total equipo · ${NOMBRE_G[emp]}</td>${celdas(E[emp])}</tr>`;
   $('tgAll').textContent = D.vendedores.every(v=>abiertos.has(v.c)) ? 'Cerrar todos' : 'Abrir todos';
