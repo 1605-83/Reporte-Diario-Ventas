@@ -31,6 +31,8 @@ $CONFIG = @{
   }
 }
 $cfg = $CONFIG[$Repo]
+# todos los tableros dejan elegir fecha de comprobante, de entrega o de carga (pedido de Bruno, 9/10/2026)
+if ($cfg) { $cfg.todasFechas = $true }
 if (-not $cfg) { throw "Repo desconocido: '$Repo'. Opciones: $($CONFIG.Keys -join ', ')" }
 $clave = $env:GESCOM_LPE_CLAVE
 if (-not $clave) { throw 'Falta la variable de entorno GESCOM_LPE_CLAVE' }
