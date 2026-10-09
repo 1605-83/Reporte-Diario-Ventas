@@ -58,6 +58,7 @@ tr.tot td{font-weight:900;background:var(--marca);color:#fff;border-top:2px soli
 tr.vtot td{background:var(--marca);color:#fff;font-weight:900;border-top:2px solid #000;border-bottom:3px solid #000}
 tr.vtot td:first-child{padding-left:34px}
 tr.vcab td{background:#fff;font-weight:900}
+tr.rmot td{background:#FFE9E6;font-weight:700}
 tr.prov td{font-size:.93rem;font-weight:600;font-style:italic}
 tr.prov td:first-child{padding-left:58px}
 tr.cat>td{background:#F7FBFF;padding:10px 14px 14px 44px;text-align:left;white-space:normal}
@@ -278,7 +279,7 @@ function render(){
   const head=first=>`<tr><th class="l">${first}</th>${COLS.map(c=>`<th>${c[1]}</th>`).join('')}</tr>`;
   $('eqHead').innerHTML=head('Empresa');
   $('eqBody').innerHTML=[...CFG.grupos,'TOTAL'].map(g=>{
-    if(g==='TOTAL') return `<tr class="tot"><td class="l">Total</td>${celdas(E[g])}</tr>`;
+    if(g==='TOTAL') return `<tr class="tot"><td class="l">Total</td>${celdas(E[g])}</tr>` + filaMotivos('R|E',0,'todos los vendedores',COLS.length+1,'');
     const k='E|'+g, ab=abiertosP.has(k);
     return `<tr class="g-${g}"><td class="l">${btnP(k,ab,NOMBRE_G[g])}${NOMBRE_G[g]}</td>${celdas(E[g])}</tr>`
       + (ab? filasCat(D.vendedores,g,COLS.length+1,NOMBRE_G[g],E[g].ccc) : '');
@@ -299,7 +300,8 @@ function render(){
     if(ab) h+=CFG.grupos.map(g=>{ const k=v.c+'|'+g, abp=abiertosP.has(k);
         return `<tr class="det g-${g}"><td class="l" colspan="2">${btnP(k,abp,NOMBRE_G[g]+' de '+esc(v.n))}${NOMBRE_G[g]}</td>${celdas(v.filas[g])}</tr>`
           + (abp? filasCat([v],g,COLS.length+2,NOMBRE_G[g]+' · '+esc(v.n),v.filas[g].ccc) : ''); }).join('')
-      + `<tr class="vtot"><td class="l" colspan="2">Total ${esc(v.n)}</td>${celdas(v.filas.TOTAL)}</tr>`;
+      + `<tr class="vtot"><td class="l" colspan="2">Total ${esc(v.n)}</td>${celdas(v.filas.TOTAL)}</tr>`
+      + filaMotivos('R|'+v.c,v.c,esc(v.n),COLS.length+2,' colspan="2"');
     return h; }).join('');
   $('vFoot').innerHTML=`<tr class="tot"><td class="l" colspan="2">Total equipo · ${NOMBRE_G[emp]}</td>${celdas(E[emp])}</tr>`;
   $('tgAll').textContent = D.vendedores.every(v=>abiertos.has(v.c)) ? 'Cerrar todos' : 'Abrir todos';
@@ -311,11 +313,7 @@ function render(){
   $('rFoot').innerHTML=`<tr class="tot"><td class="l" colspan="2">Total (todos los vendedores)</td><td>${fmt$(E.TOTAL.rech)}</td><td>${fmt$(E.TOTAL.venta)}</td><td>${fmtP(E.TOTAL.rechP||0)}</td></tr>`;
 
   // rechazos por motivo: del vendedor elegido arriba, o de todos (como el total de rechazos)
-  const mm={};
-  for(const v in D.motivos){ if(sel && +v!==sel) continue;
-    for(const m in D.motivos[v]){ const x=mm[m]||(mm[m]={imp:0,comp:new Set()}); x.imp+=D.motivos[v][m].imp; D.motivos[v][m].comp.forEach(c=>x.comp.add(c)); } }
-  // las notas de credito vienen en negativo y las de debito en positivo: el rechazo es -importe (el debito resta, como en el total)
-  const mot=Object.entries(mm).map(([m,x])=>({m,imp:-x.imp,n:x.comp.size})).filter(o=>Math.abs(o.imp)>0.5).sort((a,b)=>b.imp-a.imp);
+  const mot=motivosDe(sel);
   const totM=mot.reduce((a,o)=>a+o.imp,0), maxM=Math.max(1,...mot.map(o=>o.imp));
   $('rmQuien').textContent=sel? '· '+(D.vendedores.find(v=>v.c===sel)||{n:'vendedor '+sel}).n : '· todos los vendedores';
   $('rmHead').innerHTML='<tr><th class="l">Motivo</th><th>Rechazos $</th><th>% del total</th><th>Comprobantes</th></tr>';
@@ -360,6 +358,25 @@ function filasCat(vs,g,ncols,titulo,cccTotal){
   const body=nombres.map(c=>{ const f=cs[c]?cs[c].venta:0; return `<tr${f||obj[c]?'':' class="cero"'}>${fil(esc(c),f,obj[c]||0,cs[c]?cs[c].ccc:0)}</tr>`; }).join('');
   return `<tr class="cat"><td colspan="${ncols}"><table><thead><tr><th class="l">Categoría</th><th>Objetivo $</th><th>Facturación</th><th>Alcance %</th><th>Falta $</th><th>% de la empresa</th><th>Clientes con compra</th></tr></thead>`
     + `<tbody>${body}</tbody><tfoot><tr>${fil('Total '+titulo,tot,totObj,cccTotal)}</tr></tfoot></table></td></tr>`;
+}
+// rechazos por motivo de un vendedor (cod) o de todos (cod 0)
+function motivosDe(cod){
+  const mm={};
+  for(const v in D.motivos){ if(cod && +v!==cod) continue;
+    for(const m in D.motivos[v]){ const x=mm[m]||(mm[m]={imp:0,comp:new Set()}); x.imp+=D.motivos[v][m].imp; D.motivos[v][m].comp.forEach(c=>x.comp.add(c)); } }
+  // las notas de credito vienen en negativo y las de debito en positivo: el rechazo es -importe (el debito resta, como en el total)
+  return Object.entries(mm).map(([m,x])=>({m,imp:-x.imp,n:x.comp.size})).filter(o=>Math.abs(o.imp)>0.5).sort((a,b)=>b.imp-a.imp);
+}
+// fila "Rechazos por motivo" con su +, y al abrirla la tabla de motivos (mismo formato que las categorias)
+function filaMotivos(k,cod,quien,ncols,span){
+  const ab=abiertosP.has(k), mot=motivosDe(cod), tot=mot.reduce((a,o)=>a+o.imp,0), n=mot.reduce((a,o)=>a+o.n,0);
+  let h=`<tr class="rmot"><td class="l"${span}><button class="tg" type="button" data-pg="${k}" aria-expanded="${ab}" aria-label="Ver rechazos por motivo de ${quien}">${ab?'−':'+'}</button>Rechazos por motivo</td><td colspan="${ncols-(span?2:1)}" class="l">${fmt$(tot)} en ${fmtN(n)} comprobante${n===1?'':'s'}</td></tr>`;
+  if(ab){ const max=Math.max(1,...mot.map(o=>o.imp));
+    const body=mot.length? mot.map(o=>`<tr><td class="l">${esc(titulo(o.m))}</td><td>${fmt$(o.imp)}<span class="cbar"><i style="width:${Math.max(o.imp,0)/max*100}%;background:#FF6B6B"></i></span></td><td>${tot>0.5? fmtP(o.imp/tot) : '—'}</td><td>${fmtN(o.n)}</td></tr>`).join('')
+      : '<tr><td class="l" colspan="4">Sin rechazos en este período.</td></tr>';
+    h+=`<tr class="cat"><td colspan="${ncols}"><table><thead><tr><th class="l">Motivo</th><th>Rechazos $</th><th>% del total</th><th>Comprobantes</th></tr></thead><tbody>${body}</tbody>`
+      +`<tfoot><tr><td class="l">Total ${quien}</td><td>${fmt$(tot)}</td><td>100,0%</td><td>${fmtN(n)}</td></tr></tfoot></table></td></tr>`; }
+  return h;
 }
 const btnP=(k,ab,txt)=>`<button class="tg" type="button" data-pg="${k}" aria-expanded="${ab}" aria-label="Ver categorías de ${txt}">${ab?'−':'+'}</button>`;
 
