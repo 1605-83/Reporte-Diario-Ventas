@@ -250,7 +250,7 @@ function procesar(txt, nombre, ymPedido, dia){
 }
 
 // ---- Dibujo ----
-let D=null, abiertos=new Set(), sortK='c', sortD=1;
+let D=null, abiertos=new Set(), sortK='c', sortD=1, rSortK='rech', rSortD=-1;
 const STORE='reporte-diario-dias';
 function dias(){ if(D.dia) return {dT:1,dH:1};   // un dia: el ideal es el 100% del objetivo diario y la tendencia es la venta del dia
   return {dT:+$('dT').value||D.dT, dH:+$('dH').value||D.dH}; }
@@ -311,9 +311,14 @@ function render(){
   $('tgAll').textContent = D.vendedores.every(v=>abiertos.has(v.c)) ? 'Cerrar todos' : 'Abrir todos';
 
   const maxR=Math.max(1,...D.vendedores.map(v=>v.filas.TOTAL.rech));
-  $('rHead').innerHTML='<tr><th class="l">Cód</th><th class="l">Vendedor</th><th>Rechazos $</th><th>Venta</th><th>% Rechazos</th><th class="l">Motivo principal</th></tr>';
-  $('rBody').innerHTML=[...lista].sort((a,b)=>b.filas.TOTAL.rech-a.filas.TOTAL.rech).map(v=>{const f=v.filas.TOTAL, k='RV|'+v.c, ab=abiertosP.has(k);
-    const mv=motivosDe(v.c), tm=mv.reduce((a,o)=>a+o.imp,0), top=mv[0];
+  // tabla ordenable: clic en el encabezado (mayor a menor, y otro clic al reves)
+  const RCOLS=[['c','Cód','l'],['n','Vendedor','l'],['rech','Rechazos $',''],['venta','Venta',''],['rechP','% Rechazos',''],['mot','Motivo principal','l']];
+  $('rHead').innerHTML=`<tr>${RCOLS.map(([k,t,l])=>`<th class="s ${l}" data-rk="${k}">${t}${rSortK===k?(rSortD>0?' ▲':' ▼'):''}</th>`).join('')}</tr>`;
+  const filasR=lista.map(v=>{ const f=v.filas.TOTAL, mv=motivosDe(v.c), tm=mv.reduce((a,o)=>a+o.imp,0);
+    return {v,f,mv,tm,top:mv[0],val:{c:v.c,n:v.n,rech:f.rech,venta:f.venta,rechP:f.rechP,mot:mv[0]? titulo(mv[0].m) : null}}; });
+  filasR.sort((a,b)=>{ const A=a.val[rSortK], B=b.val[rSortK]; if(A==null&&B==null) return 0; if(A==null) return 1; if(B==null) return -1;
+    return (typeof A==='string'? A.localeCompare(B) : A-B)*rSortD; });
+  $('rBody').innerHTML=filasR.map(({v,f,mv,tm,top})=>{ const k='RV|'+v.c, ab=abiertosP.has(k);
     return `<tr><td class="l"><button class="tg" type="button" data-pg="${k}" aria-expanded="${ab}" aria-label="Ver motivos, clientes y productos de ${esc(v.n)}">${ab?'−':'+'}</button>${v.c}</td><td class="l">${esc(v.n)}</td><td>${fmt$(f.rech)}<span class="bar"><i style="width:${Math.max(f.rech,0)/maxR*100}%"></i></span></td><td>${fmt$(f.venta)}</td><td>${f.rechP==null?'—':fmtP(f.rechP)}</td><td class="l">${top? esc(titulo(top.m))+(tm>0.5? ' <span class="muted">('+fmtP(top.imp/tm)+')</span>' : '') : '<span class="muted">—</span>'}</td></tr>`
       + (ab? filaMotivos(k,v.c,esc(v.n),6,'',undefined,true) : '');}).join('');
   $('rFoot').innerHTML=`<tr class="tot"><td class="l" colspan="2">Total (todos los vendedores)</td><td>${fmt$(E.TOTAL.rech)}</td><td>${fmt$(E.TOTAL.venta)}</td><td>${fmtP(E.TOTAL.rechP||0)}</td><td></td></tr>`;
@@ -447,6 +452,8 @@ $('vHead').addEventListener('click',e=>{ const th=e.target.closest('th[data-k]')
 const togP=e=>{ const b=e.target.closest('[data-pg]'); if(!b) return false; const k=b.dataset.pg; abiertosP.has(k)?abiertosP.delete(k):abiertosP.add(k); render(); return true; };
 $('eqBody').addEventListener('click',togP);
 $('rBody').addEventListener('click',togP);
+$('rHead').addEventListener('click',e=>{ const th=e.target.closest('th[data-rk]'); if(!th) return; const k=th.dataset.rk;
+  if(rSortK===k) rSortD*=-1; else { rSortK=k; rSortD=(k==='c'||k==='n'||k==='mot')?1:-1; } render(); });
 $('vBody').addEventListener('click',e=>{ if(togP(e)) return; const b=e.target.closest('[data-tg]'); if(!b) return; const c=+b.dataset.tg; abiertos.has(c)?abiertos.delete(c):abiertos.add(c); render(); });
 $('tgAll').addEventListener('click',()=>{ const todos=D.vendedores.every(v=>abiertos.has(v.c)); abiertos=new Set(todos?[]:D.vendedores.map(v=>v.c)); render(); });
 $('fMes').addEventListener('change',e=>{ cargarMes(e.target.value).catch(err=>mostrarError(err.message+'.')); });
