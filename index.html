@@ -133,10 +133,7 @@ tr.det td:first-child{padding-left:34px}
     <summary>Rechazos por vendedor</summary>
     <div class="in">
       <p class="nota" style="margin:0 0 10px">Notas de crédito (devoluciones por rechazo y por canje) netas de notas de débito, con IVA, sobre la venta del vendedor.</p>
-      <div class="tbl"><table style="min-width:640px"><thead id="rHead"></thead><tbody id="rBody"></tbody><tfoot id="rFoot"></tfoot></table></div>
-      <h3 style="margin:18px 0 6px;font-size:1.05rem">Rechazos por motivo <span id="rmQuien" style="font-weight:500"></span></h3>
-      <div class="tbl"><table style="min-width:560px"><thead id="rmHead"></thead><tbody id="rmBody"></tbody><tfoot id="rmFoot"></tfoot></table></div>
-    </div>
+      <div class="tbl"><table style="min-width:640px"><thead id="rHead"></thead><tbody id="rBody"></tbody><tfoot id="rFoot"></tfoot></table></div>    </div>
   </details>
   <details class="desp">
     <summary>Márgenes por vendedor y empresa</summary>
@@ -321,14 +318,6 @@ function render(){
       + (ab? filaMotivos(k,v.c,esc(v.n),6,'',undefined,true) : '');}).join('');
   $('rFoot').innerHTML=`<tr class="tot"><td class="l" colspan="2">Total (todos los vendedores)</td><td>${fmt$(E.TOTAL.rech)}</td><td>${fmt$(E.TOTAL.venta)}</td><td>${fmtP(E.TOTAL.rechP||0)}</td><td></td></tr>`;
 
-  // rechazos por motivo: del vendedor elegido arriba, o de todos (como el total de rechazos)
-  const mot=motivosDe(sel);
-  const totM=mot.reduce((a,o)=>a+o.imp,0), maxM=Math.max(1,...mot.map(o=>o.imp));
-  $('rmQuien').textContent=sel? '· '+(D.vendedores.find(v=>v.c===sel)||{n:'vendedor '+sel}).n : '· todos los vendedores';
-  $('rmHead').innerHTML='<tr><th class="l">Motivo</th><th>Rechazos $</th><th>% del total</th><th>Comprobantes</th></tr>';
-  $('rmBody').innerHTML=mot.length? mot.map(o=>`<tr><td class="l">${esc(titulo(o.m))}</td><td>${fmt$(o.imp)}<span class="bar"><i style="width:${Math.max(o.imp,0)/maxM*100}%"></i></span></td><td>${totM>0.5? fmtP(o.imp/totM) : '—'}</td><td>${fmtN(o.n)}</td></tr>`).join('')
-    : '<tr><td class="l" colspan="4">Sin rechazos en este período.</td></tr>';
-  $('rmFoot').innerHTML=`<tr class="tot"><td class="l">Total</td><td>${fmt$(totM)}</td><td>100,0%</td><td>${fmtN(mot.reduce((a,o)=>a+o.n,0))}</td></tr>`;
 
   const GS=[...CFG.grupos,'TOTAL'], mp=x=>x==null?'<span class="muted">—</span>':fmtP(x);
   $('mHead').innerHTML=`<tr><th class="l">Cód</th><th class="l">Vendedor</th>${GS.map(g=>`<th>${NOMBRE_G[g]}</th>`).join('')}</tr>`;
