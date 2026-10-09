@@ -24,7 +24,7 @@ $CONFIG = @{
                 'AJINOMOTO','BETTER FOOD SAS','BIC ARGENTINA S.A','BODEGAS SAN HUBERTO S.A','BRURIN','CASTELL S.A','DREAMCO S.A','FECOVITA',
                 'LABORATORIOS ECOVITA S.A','LCB','LEDESMA','MENOYO S.A.','MOLINO CHACABUCO S.A','MORIXE','NECHO S.A','POLDITOS S.A.S',
                 'PORTA HNOS S.A','PRIMEROS PRODUCTOS PEHUENIA','PRO DE MAN S.A','INDUSTRIAS QUIMICAS Y MINERAS TIMBO S.A','LINEA DORADA S.A')
-    meses = 1; futuro = 7
+    desde = '2026-08-01'; porMes = $true; futuro = 7   # la base tiene ventas desde el 1/8/2026
     columnas = @('Cliente','FechaComprobante','FechaEntrega','NroComprobante','TipoDeVenta','Empresa','Codigo','CantBase','ImporteNetoItem',
                  'ImporteItem','RazonSocial','CodVendedor','Vendedor','Articulo','PrecioCosto','Proveedor')
   }
@@ -101,14 +101,16 @@ ORDER BY v.id, i.orden
   @($r.filas)
 }
 
-$filas = Consultar $desde $hasta
-# El dia 1 a primera hora el mes nuevo puede estar vacio: en ese caso se muestra el mes anterior entero
-if ($filas.Count -eq 0) {
-  $desde = $desde.AddMonths(-1); $hasta = $desde.AddMonths($cfg.meses).AddDays(-1)
-  Write-Warning "Sin ventas desde el 1 del mes; uso $($desde.ToString('yyyy-MM-dd')) a $($hasta.ToString('yyyy-MM-dd'))"
+if (-not $cfg.porMes) {
   $filas = Consultar $desde $hasta
+  # El dia 1 a primera hora el mes nuevo puede estar vacio: en ese caso se muestra el mes anterior entero
+  if ($filas.Count -eq 0) {
+    $desde = $desde.AddMonths(-1); $hasta = $desde.AddMonths($cfg.meses).AddDays(-1)
+    Write-Warning "Sin ventas desde el 1 del mes; uso $($desde.ToString('yyyy-MM-dd')) a $($hasta.ToString('yyyy-MM-dd'))"
+    $filas = Consultar $desde $hasta
+  }
+  if ($filas.Count -eq 0) { throw 'La base no devolvio ninguna venta para el periodo: no se reemplaza el CSV' }
 }
-if ($filas.Count -eq 0) { throw 'La base no devolvio ninguna venta para el periodo: no se reemplaza el CSV' }
 
 # ---- Datos que la base no tiene (Familia del articulo y direccion del cliente) ----
 $extra = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'datos.json'), [Text.Encoding]::UTF8) | ConvertFrom-Json
@@ -128,6 +130,7 @@ function Txt($x) {
   if ($t -match '[;"]') { '"' + $t.Replace('"', '""') + '"' } else { $t }
 }
 
+function ArmarCsv($filas) {
 $sb = New-Object Text.StringBuilder
 [void]$sb.Append(($COLS -join ';') + "`r`n")
 foreach ($f in $filas) {
@@ -182,12 +185,40 @@ foreach ($f in $filas) {
   $r.NetoItemReal = $r.NetoItem
   [void]$sb.Append((($COLS | ForEach-Object { Txt $r[$_] }) -join ';') + "`r`n")
 }
+$sb.ToString()
+}
+
+if ($cfg.porMes) {
+  # ---- Historial: un CSV por mes en la carpeta meses/. Se rehacen el mes en curso y el anterior
+  # (devoluciones y correcciones tardias); los meses mas viejos ya guardados no se vuelven a bajar ----
+  $dir = Join-Path (Resolve-Path $Salida) 'meses'
+  New-Item -ItemType Directory -Force $dir | Out-Null
+  $sello = $corte.ToString('yyyyMMdd-HHmmss')
+  $mesActual = (Get-Date -Year $hoy.Year -Month $hoy.Month -Day 1).Date
+  $m = (Get-Date -Year $desde.Year -Month $desde.Month -Day 1).Date
+  while ($m -le $mesActual) {
+    $clave = $m.ToString('yyyy-MM')
+    $previos = @(Get-ChildItem -Path $dir -Filter "ventas-$clave-*.csv" -File)
+    if ($m -lt $mesActual.AddMonths(-1) -and $previos.Count) { Write-Host "$clave : ya guardado"; $m = $m.AddMonths(1); continue }
+    $fin = $m.AddMonths(1).AddDays(-1); if ($fin -gt $hasta) { $fin = $hasta }
+    $filasMes = @(Consultar $m $fin)
+    if ($filasMes.Count -eq 0) { Write-Host "$clave : sin ventas todavia"; $m = $m.AddMonths(1); continue }
+    $destino = Join-Path $dir "ventas-$clave-$sello.csv"
+    [IO.File]::WriteAllText($destino, (ArmarCsv $filasMes), [Text.Encoding]::GetEncoding(1252))
+    $previos | Where-Object { $_.FullName -ne $destino } | Remove-Item -Force
+    Write-Host "$Repo $clave : $($filasMes.Count) renglones, datos al $($corte.ToString('dd/MM/yyyy HH:mm')) -> $(Split-Path $destino -Leaf)"
+    $m = $m.AddMonths(1)
+  }
+  # los CSV sueltos de la raiz ya no se usan en este tablero
+  Get-ChildItem -Path $Salida -Filter '*.csv' -File | Remove-Item -Force
+  return
+}
 
 # ---- Guardar: reemplaza el CSV anterior (los tableros leen el mas nuevo de la raiz del repo) ----
 $nombre = "ventas-Detallado de ventas extendido-$($corte.ToString('yyyyMMdd-HHmmss')).csv"
 $destino = Join-Path (Resolve-Path $Salida) $nombre
 Get-ChildItem -Path $Salida -Filter '*.csv' -File | Where-Object { $_.FullName -ne $destino } | Remove-Item -Force
-[IO.File]::WriteAllText($destino, $sb.ToString(), [Text.Encoding]::GetEncoding(1252))
+[IO.File]::WriteAllText($destino, (ArmarCsv $filas), [Text.Encoding]::GetEncoding(1252))
 
 $n = ($filas | Measure-Object).Count
 $neto = ($filas | ForEach-Object { if ($_.tipo -like 'DEV-*') { -[double]$_.neto } else { [double]$_.neto } } | Measure-Object -Sum).Sum
