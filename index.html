@@ -103,6 +103,7 @@ tr.det td:first-child{padding-left:34px}
   <h1 class="titulo"><span class="t-txt">Reporte diario de ventas</span><span class="t-marca">Lago Puelo · Elebes</span><span class="t-mes" id="hMes"></span></h1>
   <p class="sub" id="hSub">Cargando ventas…</p>
   <div class="controls">
+    <label>Fecha <select id="fTipo"><option value="comp">De comprobante</option><option value="ent">De entrega</option><option value="car">De carga</option></select></label>
     <label>Mes <select id="fMes"></select></label>
     <label>Día <select id="fDia"></select></label>
     <label>Días transcurridos <input type="number" id="dT" min="1" max="31"></label>
@@ -171,7 +172,11 @@ function parseCSV(t){
 }
 
 // ---- Calculo: mismas reglas que el Excel "Reporte Diario Ventas LP - ELB" ----
-// dia: 'dd-mm-aaaa' = solo la venta CARGADA ese dia (FechaCarga); vacio = el mes entero (por fecha de entrega)
+// dia: 'dd-mm-aaaa' = solo la venta CARGADA ese dia (FechaCarga); vacio = el mes entero por la fecha elegida en TIPO_F
+// (comp = fecha de comprobante, solo lo facturado; ent = fecha de entrega; car = fecha de carga)
+let TIPO_F='comp'; try{ TIPO_F=localStorage.getItem('reporte-tipo-fecha')||'comp'; }catch(e){}
+const NOMBRE_TIPO={comp:'fecha de comprobante', ent:'fecha de entrega', car:'fecha de carga'};
+const dmyIso=d=>/^\d{2}-\d{2}-\d{4}$/.test(d)? d.slice(6)+'-'+d.slice(3,5)+'-'+d.slice(0,2) : '';
 function procesar(txt, nombre, ymPedido, dia){
   const R=parseCSV(txt).filter(r=>r.length>5); const H=R.shift().map(h=>h.trim());
   const ix=n=>{const i=H.indexOf(n); if(i<0) throw new Error('Falta la columna '+n); return i;};
@@ -180,16 +185,20 @@ function procesar(txt, nombre, ymPedido, dia){
   const vta={}, uni={}, net={}, cos={}, rech={}, nomCSV={}, fechas=new Set();
   const pv={}, pn={}, pc={}, pu={}, pr={};   // lo mismo por vendedor y proveedor
   const kv={}, kn={}, kc={}, ku={}, kr={}, catsDe={};   // y por vendedor, proveedor y categoria
-  const icat=H.indexOf('Categoria'), icar=H.indexOf('FechaCarga'), cargas=new Set();
+  const icat=H.indexOf('Categoria'), icar=H.indexOf('FechaCarga'), ient=H.indexOf('FechaEntrega'), cargas=new Set();
   const imot=H.indexOf('MotivoDevolucion'), irs=H.indexOf('RazonSocial'), icod=H.indexOf('Codigo'), iart=H.indexOf('Articulo'), motivos={};   // rechazos por vendedor y motivo: {v:{motivo:{imp, comp:Set, cli:{cod:{imp,comp:Set,rs}}}}}
   const add=(o,k,x)=>{o[k]=(o[k]||0)+x;};
   for(const r of R){
     const v=parseInt(r[I.cv],10); if(isNaN(v)) continue;
     const car=icar>=0? (r[icar]||'').trim() : ''; if(car) cargas.add(car);
     if(dia && car!==dia) continue;
+    if(!dia){   // el CSV del mes trae los renglones con cualquiera de las tres fechas en el mes: se queda con los de la fecha elegida
+      const fx= TIPO_F==='comp'? (r[I.fc]||'').trim() : dmyIso(TIPO_F==='ent'? (ient>=0? (r[ient]||'').trim() : '') : car);
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(fx)) continue;
+      if(ymPedido && fx.slice(0,7)!==ymPedido) continue;
+      fechas.add(fx); }
     const g=GRUPO[(r[I.prov]||'').trim().toUpperCase()]||null;
     const imp=num(r[I.imp]), ne=num(r[I.neto]), co=num(r[I.costo]), ca=num(r[I.cant]), cli=String(r[I.cli]).trim();
-    const fc=(r[I.fc]||'').trim(); if(/^\d{4}-\d{2}-\d{2}$/.test(fc)) fechas.add(fc);
     if(!nomCSV[v] && r[I.vn]) nomCSV[v]=titulo(r[I.vn]);
     // el margen del equipo, como en el Excel, sale solo de los vendedores del reporte (no deposito ni mostrador)
     const delReporte=VEND.has(v);
@@ -411,6 +420,7 @@ function arrancar(txt,nombre,ym,dia){
     $('fEmp').innerHTML=['TOTAL',...CFG.grupos].map(g=>`<option value="${g}">${NOMBRE_G[g]}</option>`).join('');
     $('estado').style.display='none'; $('app').style.display='block';
     if(!D.conObj) $('hSub').textContent+=' · Sin objetivos cargados para este mes';
+    if(!D.dia) $('hSub').textContent=`Venta por ${NOMBRE_TIPO[TIPO_F]} · ${$('hSub').textContent}`;
     if(D.dia) $('hSub').textContent=`Venta cargada el ${D.dia.replace(/-/g,'/')} · ${$('hSub').textContent}`;
     render();
   }catch(e){ mostrarError('No se pudo procesar el archivo: '+e.message); }
@@ -457,6 +467,9 @@ $('rHead').addEventListener('click',e=>{ const th=e.target.closest('th[data-rk]'
 $('vBody').addEventListener('click',e=>{ if(togP(e)) return; const b=e.target.closest('[data-tg]'); if(!b) return; const c=+b.dataset.tg; abiertos.has(c)?abiertos.delete(c):abiertos.add(c); render(); });
 $('tgAll').addEventListener('click',()=>{ const todos=D.vendedores.every(v=>abiertos.has(v.c)); abiertos=new Set(todos?[]:D.vendedores.map(v=>v.c)); render(); });
 $('fMes').addEventListener('change',e=>{ cargarMes(e.target.value).catch(err=>mostrarError(err.message+'.')); });
+$('fTipo').value=TIPO_F;
+$('fTipo').addEventListener('change',e=>{ TIPO_F=e.target.value; try{ localStorage.setItem('reporte-tipo-fecha',TIPO_F); }catch(err){}
+  if(D) cargarMes(D.ym, D.dia).catch(err=>mostrarError(err.message+'.')); });
 (async()=>{ try{
   MESES_REPO=await listarMeses();
   $('fMes').innerHTML=MESES_REPO.map(x=>`<option value="${x.ym}">${nombreMes(x.ym)}</option>`).join('');
