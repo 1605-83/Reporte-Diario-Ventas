@@ -287,10 +287,10 @@ function render(){
   const head=first=>`<tr><th class="l">${first}</th>${COLS.map(c=>`<th>${c[1]}</th>`).join('')}</tr>`;
   $('eqHead').innerHTML=head('Empresa');
   $('eqBody').innerHTML=[...CFG.grupos,'TOTAL'].map(g=>{
-    if(g==='TOTAL') return `<tr class="tot"><td class="l">Total</td>${celdas(E[g])}</tr>` + filaMotivos('R|E',0,'todos los vendedores',COLS.length+1,'');
+    if(g==='TOTAL') return `<tr class="tot"><td class="l">Total</td>${celdas(E[g])}</tr>`;
     const k='E|'+g, ab=abiertosP.has(k);
     return `<tr class="g-${g}"><td class="l">${btnP(k,ab,NOMBRE_G[g])}${NOMBRE_G[g]}</td>${celdas(E[g])}</tr>`
-      + (ab? filasCat(D.vendedores,g,COLS.length+1,NOMBRE_G[g],E[g].ccc) + filaMotivos('R|E|'+g,0,NOMBRE_G[g],COLS.length+1,'',g) : '');
+      + (ab? filasCat(D.vendedores,g,COLS.length+1,NOMBRE_G[g],E[g].ccc) : '');
   }).join('');
 
   const emp=$('fEmp').value;
@@ -305,20 +305,21 @@ function render(){
     const ab=abiertos.has(v.c);
     // abierto: arriba solo codigo y nombre, despues cada empresa y al final el total del vendedor resaltado
     let h=`<tr class="${ab?'vcab':''}"><td class="l"><button class="tg" type="button" data-tg="${v.c}" aria-expanded="${ab}" aria-label="Ver empresas de ${esc(v.n)}">${ab?'−':'+'}</button>${v.c}</td><td class="l">${esc(v.n)}</td>${ab? `<td colspan="${COLS.length}"></td>` : celdas(v.filas[emp])}</tr>`;
-    if(ab) h+=filaMotivos('R|'+v.c,v.c,esc(v.n),COLS.length+2,' colspan="2"')
-      + CFG.grupos.map(g=>{ const k=v.c+'|'+g, abp=abiertosP.has(k);
+    if(ab) h+=CFG.grupos.map(g=>{ const k=v.c+'|'+g, abp=abiertosP.has(k);
         return `<tr class="det g-${g}"><td class="l" colspan="2">${btnP(k,abp,NOMBRE_G[g]+' de '+esc(v.n))}${NOMBRE_G[g]}</td>${celdas(v.filas[g])}</tr>`
-          + (abp? filasCat([v],g,COLS.length+2,NOMBRE_G[g]+' · '+esc(v.n),v.filas[g].ccc) + filaMotivos('R|'+v.c+'|'+g,v.c,NOMBRE_G[g]+' · '+esc(v.n),COLS.length+2,' colspan="2"',g) : ''); }).join('')
+          + (abp? filasCat([v],g,COLS.length+2,NOMBRE_G[g]+' · '+esc(v.n),v.filas[g].ccc) : ''); }).join('')
       + `<tr class="vtot"><td class="l" colspan="2">Total ${esc(v.n)}</td>${celdas(v.filas.TOTAL)}</tr>`;
     return h; }).join('');
   $('vFoot').innerHTML=`<tr class="tot"><td class="l" colspan="2">Total equipo · ${NOMBRE_G[emp]}</td>${celdas(E[emp])}</tr>`;
   $('tgAll').textContent = D.vendedores.every(v=>abiertos.has(v.c)) ? 'Cerrar todos' : 'Abrir todos';
 
   const maxR=Math.max(1,...D.vendedores.map(v=>v.filas.TOTAL.rech));
-  $('rHead').innerHTML='<tr><th class="l">Cód</th><th class="l">Vendedor</th><th>Rechazos $</th><th>Venta</th><th>% Rechazos</th></tr>';
-  $('rBody').innerHTML=[...lista].sort((a,b)=>b.filas.TOTAL.rech-a.filas.TOTAL.rech).map(v=>{const f=v.filas.TOTAL;
-    return `<tr><td class="l">${v.c}</td><td class="l">${esc(v.n)}</td><td>${fmt$(f.rech)}<span class="bar"><i style="width:${f.rech/maxR*100}%"></i></span></td><td>${fmt$(f.venta)}</td><td>${f.rechP==null?'—':fmtP(f.rechP)}</td></tr>`;}).join('');
-  $('rFoot').innerHTML=`<tr class="tot"><td class="l" colspan="2">Total (todos los vendedores)</td><td>${fmt$(E.TOTAL.rech)}</td><td>${fmt$(E.TOTAL.venta)}</td><td>${fmtP(E.TOTAL.rechP||0)}</td></tr>`;
+  $('rHead').innerHTML='<tr><th class="l">Cód</th><th class="l">Vendedor</th><th>Rechazos $</th><th>Venta</th><th>% Rechazos</th><th class="l">Motivo principal</th></tr>';
+  $('rBody').innerHTML=[...lista].sort((a,b)=>b.filas.TOTAL.rech-a.filas.TOTAL.rech).map(v=>{const f=v.filas.TOTAL, k='RV|'+v.c, ab=abiertosP.has(k);
+    const mv=motivosDe(v.c), tm=mv.reduce((a,o)=>a+o.imp,0), top=mv[0];
+    return `<tr><td class="l"><button class="tg" type="button" data-pg="${k}" aria-expanded="${ab}" aria-label="Ver motivos, clientes y productos de ${esc(v.n)}">${ab?'−':'+'}</button>${v.c}</td><td class="l">${esc(v.n)}</td><td>${fmt$(f.rech)}<span class="bar"><i style="width:${Math.max(f.rech,0)/maxR*100}%"></i></span></td><td>${fmt$(f.venta)}</td><td>${f.rechP==null?'—':fmtP(f.rechP)}</td><td class="l">${top? esc(titulo(top.m))+(tm>0.5? ' <span class="muted">('+fmtP(top.imp/tm)+')</span>' : '') : '<span class="muted">—</span>'}</td></tr>`
+      + (ab? filaMotivos(k,v.c,esc(v.n),6,'',undefined,true) : '');}).join('');
+  $('rFoot').innerHTML=`<tr class="tot"><td class="l" colspan="2">Total (todos los vendedores)</td><td>${fmt$(E.TOTAL.rech)}</td><td>${fmt$(E.TOTAL.venta)}</td><td>${fmtP(E.TOTAL.rechP||0)}</td><td></td></tr>`;
 
   // rechazos por motivo: del vendedor elegido arriba, o de todos (como el total de rechazos)
   const mot=motivosDe(sel);
@@ -382,9 +383,10 @@ function motivosDe(cod,g){
     .filter(o=>Math.abs(o.imp)>0.5).sort((a,b)=>b.imp-a.imp);
 }
 // fila "Rechazos por motivo" con su +, y al abrirla la tabla de motivos (mismo formato que las categorias)
-function filaMotivos(k,cod,quien,ncols,span,g){
-  const ab=abiertosP.has(k), mot=motivosDe(cod,g), tot=mot.reduce((a,o)=>a+o.imp,0), n=mot.reduce((a,o)=>a+o.n,0);
+function filaMotivos(k,cod,quien,ncols,span,g,soloTabla){
+  const ab=soloTabla||abiertosP.has(k), mot=motivosDe(cod,g), tot=mot.reduce((a,o)=>a+o.imp,0), n=mot.reduce((a,o)=>a+o.n,0);
   let h=`<tr class="rmot"><td class="l"${span}><button class="tg" type="button" data-pg="${k}" aria-expanded="${ab}" aria-label="Ver rechazos por motivo de ${quien}">${ab?'−':'+'}</button>Rechazos por motivo${g? ' · '+NOMBRE_G[g] : ''}</td><td colspan="${ncols-(span?2:1)}" class="l">${fmt$(tot)} en ${fmtN(n)} comprobante${n===1?'':'s'}</td></tr>`;
+  if(soloTabla) h='';   // en la solapa de rechazos la fila del vendedor ya hace de encabezado
   if(ab){ const max=Math.max(1,...mot.map(o=>o.imp));
     const body=mot.length? mot.map(o=>{ const km=k+'|'+o.m, abm=abiertosP.has(km);
         return `<tr><td class="l"><button class="tg" type="button" data-pg="${esc(km)}" aria-expanded="${abm}" aria-label="Ver clientes con rechazo por ${esc(o.m)}">${abm?'−':'+'}</button>${esc(titulo(o.m))}</td><td>${fmt$(o.imp)}<span class="cbar"><i style="width:${Math.max(o.imp,0)/max*100}%;background:#FF6B6B"></i></span></td><td>${tot>0.5? fmtP(o.imp/tot) : '—'}</td><td>${fmtN(o.n)}</td></tr>`
@@ -455,6 +457,7 @@ $('fVend').addEventListener('change',render);
 $('vHead').addEventListener('click',e=>{ const th=e.target.closest('th[data-k]'); if(!th) return; const k=th.dataset.k; if(sortK===k) sortD*=-1; else { sortK=k; sortD=(k==='c'||k==='n')?1:-1; } render(); });
 const togP=e=>{ const b=e.target.closest('[data-pg]'); if(!b) return false; const k=b.dataset.pg; abiertosP.has(k)?abiertosP.delete(k):abiertosP.add(k); render(); return true; };
 $('eqBody').addEventListener('click',togP);
+$('rBody').addEventListener('click',togP);
 $('vBody').addEventListener('click',e=>{ if(togP(e)) return; const b=e.target.closest('[data-tg]'); if(!b) return; const c=+b.dataset.tg; abiertos.has(c)?abiertos.delete(c):abiertos.add(c); render(); });
 $('tgAll').addEventListener('click',()=>{ const todos=D.vendedores.every(v=>abiertos.has(v.c)); abiertos=new Set(todos?[]:D.vendedores.map(v=>v.c)); render(); });
 $('fMes').addEventListener('change',e=>{ cargarMes(e.target.value).catch(err=>mostrarError(err.message+'.')); });
