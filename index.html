@@ -252,7 +252,7 @@ function render(){
     if(g==='TOTAL') return `<tr class="tot"><td class="l">Total</td>${celdas(E[g])}</tr>`;
     const k='E|'+g, ab=abiertosP.has(k);
     return `<tr class="g-${g}"><td class="l">${btnP(k,ab,NOMBRE_G[g])}${NOMBRE_G[g]}</td>${celdas(E[g])}</tr>`
-      + (ab? filasProv(D.vendedores,g,E[g].base,k,'') : '');
+      + (ab? filasCat(D.vendedores,g,E[g].base,'') : '');
   }).join('');
 
   const emp=$('fEmp').value;
@@ -269,7 +269,7 @@ function render(){
     let h=`<tr class="${ab?'vcab':''}"><td class="l"><button class="tg" type="button" data-tg="${v.c}" aria-expanded="${ab}" aria-label="Ver empresas de ${esc(v.n)}">${ab?'−':'+'}</button>${v.c}</td><td class="l">${esc(v.n)}</td>${ab? `<td colspan="${COLS.length}"></td>` : celdas(v.filas[emp])}</tr>`;
     if(ab) h+=CFG.grupos.map(g=>{ const k=v.c+'|'+g, abp=abiertosP.has(k);
         return `<tr class="det g-${g}"><td class="l" colspan="2">${btnP(k,abp,NOMBRE_G[g]+' de '+esc(v.n))}${NOMBRE_G[g]}</td>${celdas(v.filas[g])}</tr>`
-          + (abp? filasProv([v],g,v.filas[g].base,k,' colspan="2"') : ''); }).join('')
+          + (abp? filasCat([v],g,v.filas[g].base,' colspan="2"') : ''); }).join('')
       + `<tr class="vtot"><td class="l" colspan="2">Total ${esc(v.n)}</td>${celdas(v.filas.TOTAL)}</tr>`;
     return h; }).join('');
   $('vFoot').innerHTML=`<tr class="tot"><td class="l" colspan="2">Total equipo · ${NOMBRE_G[emp]}</td>${celdas(E[emp])}</tr>`;
@@ -299,13 +299,15 @@ function provFilas(vs,g,base){
     return {P, n:titulo(n), f:fila(x,base), cats}; })
     .filter(o=>Math.abs(o.f.venta)>0.5||o.f.ccc).sort((a,b)=>b.f.venta-a.f.venta);
 }
-// filas de proveedores (y, si se abre el proveedor, sus categorias) debajo de una empresa
-function filasProv(vs,g,base,clave,span){
-  return provFilas(vs,g,base).map(o=>{ const k=clave+'|'+o.P, ab=abiertosP.has(k);
-    return `<tr class="prov g-${g}"><td class="l"${span}>${btnP(esc(k),ab,esc(o.n))}${esc(o.n)}</td>${celdas(o.f)}</tr>`
-      + (ab? o.cats.map(c=>`<tr class="cat2 g-${g}"><td class="l"${span}>${esc(c.n)}</td>${celdas(c.f)}</tr>`).join('') : ''); }).join('');
+// categorias de una empresa (juntando todos sus proveedores), debajo de la fila de la empresa
+function filasCat(vs,g,base,span){
+  const cs={};
+  for(const n of CFG.nomenclador[g]){ const P=n.trim().toUpperCase();
+    for(const v of vs){ const p=v.prov[P]; for(const c in p.cats){ const a=cs[c]||(cs[c]={venta:0,net:0,cos:0,ccc:0,rech:0}); for(const k in a) a[k]+=p.cats[c][k]; } } }
+  return Object.entries(cs).map(([c,a])=>({n:c,f:fila(a,base)})).filter(o=>Math.abs(o.f.venta)>0.5||o.f.ccc).sort((a,b)=>b.f.venta-a.f.venta)
+    .map(o=>`<tr class="prov g-${g}"><td class="l"${span}>${esc(o.n)}</td>${celdas(o.f)}</tr>`).join('');
 }
-const btnP=(k,ab,txt)=>`<button class="tg" type="button" data-pg="${k}" aria-expanded="${ab}" aria-label="Ver proveedores de ${txt}">${ab?'−':'+'}</button>`;
+const btnP=(k,ab,txt)=>`<button class="tg" type="button" data-pg="${k}" aria-expanded="${ab}" aria-label="Ver categorías de ${txt}">${ab?'−':'+'}</button>`;
 
 function arrancar(txt,nombre,ym){
   try{
