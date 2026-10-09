@@ -1,0 +1,5 @@
+# La pagina solo necesita index.html: los CSV del historial se leen directo del repo
+exclude:
+  - meses
+  - robot
+  - '*.csv'
