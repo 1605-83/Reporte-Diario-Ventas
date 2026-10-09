@@ -8,23 +8,23 @@
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;800;900&display=swap" rel="stylesheet">
 <style>
 :root{
---bg:#E3F2EF; --panel:#F1FAF8; --line:#A9D3CB; --ink:#000; --ink2:#22403B; --input:#fff;
+--bg:#000; --panel:#F1FAF8; --line:#A9D3CB; --ink:#000; --ink2:#22403B; --input:#fff;
 --marca:#0F5257; --claro:#8EE3D9; --bar:#D3ECE7;
 --ok:#1E8E5A; --mid:#E0A100; --low:#D62839;
 }
-@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#E3F2EF; --ink:#000; } }
-:root[data-theme="dark"]{ --bg:#E3F2EF; --ink:#000; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#000; --ink:#000; } }
+:root[data-theme="dark"]{ --bg:#000; --ink:#000; }
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:"Archivo",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;font-variant-numeric:tabular-nums;line-height:1.4}
+body{margin:0;background:var(--bg);color:#fff;font-family:"Archivo",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;font-variant-numeric:tabular-nums;line-height:1.4}
 .wrap{max-width:1320px;margin:0 auto;padding:28px 20px 48px}
-header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px 16px;border-bottom:3px solid var(--ink);padding-bottom:14px}
+header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px 16px;border-bottom:3px solid #fff;padding-bottom:14px}
 .titulo{flex:1 1 100%;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 0;margin:0 0 6px;padding:10px 18px;background:var(--marca);color:#fff;border-radius:8px;font-size:clamp(1.05rem,1.9vw,1.45rem);font-weight:700;letter-spacing:.02em;line-height:1.2}
 .titulo .t-marca{font-weight:900;color:var(--claro);text-transform:uppercase}
 .titulo .t-marca::before,.titulo .t-mes::before{content:"·";margin:0 .6em;color:rgba(255,255,255,.55);font-weight:400}
 .titulo .t-mes{font-weight:500;color:rgba(255,255,255,.85);text-transform:capitalize}
 .titulo .t-mes:empty{display:none}
 @media (min-width:900px){.titulo{flex-wrap:nowrap;white-space:nowrap}}
-.sub{margin:0;font-size:.95rem;color:var(--ink2)}
+.sub{margin:0;font-size:.95rem;color:#D7E7E4}
 .controls{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end;font-size:.85rem}
 .controls label{display:flex;flex-direction:column;gap:3px}
 select,input{font:inherit;color:var(--ink);background:var(--input);border:1px solid var(--line);border-radius:6px;padding:6px 8px}
@@ -32,20 +32,27 @@ input[type=number]{width:84px}
 button{font:inherit;cursor:pointer;background:var(--ink);color:#fff;border:0;border-radius:6px;padding:7px 12px}
 .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:22px}
 @media (max-width:1000px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
-.kpi{padding:14px 16px;border:2px solid var(--ink);border-radius:10px;box-shadow:5px 5px 0 var(--ink);background:#fff;min-width:0}
+.kpi{padding:14px 16px;border:2px solid #fff;border-radius:10px;box-shadow:5px 5px 0 var(--claro);background:#fff;color:#000;min-width:0}
 .kpi .l{font-size:.8rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
 .kpi .v{font-size:clamp(1.3rem,2.4vw,1.9rem);font-weight:800;margin:4px 0 2px;overflow-wrap:anywhere}
-.kpi .n{font-size:.8rem;color:var(--ink2)}
+.kpi .n{font-size:.8rem;color:#22403B}
 .kpi.c1{background:#C9F0E8}.kpi.c2{background:#FFF1B8}.kpi.c3{background:#D9E8FF}.kpi.c4{background:#FFD9D2}
 h2{font-size:1.15rem;margin:30px 0 0;font-weight:800}
-.nota{font-size:.82rem;color:var(--ink2);margin:4px 0 0}
-.tbl{overflow-x:auto;margin-top:12px;border:1px solid var(--ink);border-radius:8px;background:var(--panel)}
+.nota{font-size:.82rem;color:#C9DAD7;margin:4px 0 0}
+.tbl{overflow-x:auto;margin-top:12px;color:#000;border:1px solid #fff;border-radius:8px;background:var(--panel)}
 table{width:100%;border-collapse:collapse;font-size:.88rem;min-width:1040px}
-th,td{padding:7px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th,td{padding:7px 10px;text-align:right;border-bottom:1px solid #4A5A57;white-space:nowrap}
+.g-SOFTYS td,td.g-SOFTYS{background:#DCEBFF}
+.g-AYUDIN td,td.g-AYUDIN{background:#DDF5D8}
+.g-ILOLAY td,td.g-ILOLAY{background:#FFF6C7}
+.g-GEORGALOS td,td.g-GEORGALOS{background:#FFE3CC}
+.g-RIOSMA td,td.g-RIOSMA{background:#F1E1FF}
+.g-CEPAS td,td.g-CEPAS{background:#FFDDE6}
+.g-OTM td,td.g-OTM{background:#E8E8E8}
 th{position:sticky;top:0;background:var(--marca);color:#fff;font-weight:600;font-size:.8rem}
 th.s{cursor:pointer;user-select:none}
 .l{text-align:left}
-tbody tr:hover td{background:#fff}
+tbody tr:hover td{filter:brightness(1.04)}
 tr.tot td{font-weight:800;background:var(--bar);border-top:2px solid var(--ink)}
 tr.sub td{background:#fff;font-size:.84rem}
 tr.sub td:first-child{padding-left:34px}
@@ -58,11 +65,12 @@ tr.sub td:first-child{padding-left:34px}
 .desp>summary::-webkit-details-marker{display:none}
 .desp>summary::after{content:"▼";font-size:.8rem}
 .desp[open]>summary::after{content:"▲"}
-.desp .in{padding:14px}
+.desp .in{padding:14px;color:#000}
+.desp .in .nota{color:#22403B}
 .desp .tbl{margin-top:0}
 .bar{display:inline-block;width:110px;height:9px;border:1px solid var(--ink);border-radius:2px;background:#fff;vertical-align:middle;margin-left:8px;overflow:hidden}
 .bar i{display:block;height:100%;background:var(--low)}
-#estado{margin-top:22px;padding:14px;border:1px dashed var(--ink);border-radius:8px;background:var(--panel)}
+#estado{margin-top:22px;padding:14px;border:1px dashed #fff;border-radius:8px;background:var(--panel);color:#000}
 #app{display:none}
 </style>
 </head>
@@ -212,7 +220,7 @@ function render(){
 
   const head=first=>`<tr><th class="l">${first}</th>${COLS.map(c=>`<th>${c[1]}</th>`).join('')}</tr>`;
   $('eqHead').innerHTML=head('Empresa');
-  $('eqBody').innerHTML=[...CFG.grupos,'TOTAL'].map(g=>`<tr class="${g==='TOTAL'?'tot':''}"><td class="l">${NOMBRE_G[g]}</td>${celdas(E[g])}</tr>`).join('');
+  $('eqBody').innerHTML=[...CFG.grupos,'TOTAL'].map(g=>`<tr class="${g==='TOTAL'?'tot':'g-'+g}"><td class="l">${NOMBRE_G[g]}</td>${celdas(E[g])}</tr>`).join('');
 
   const emp=$('fEmp').value;
   const COLS_V=[['c','Cód'],['n','Vendedor'],...COLS];
@@ -223,7 +231,7 @@ function render(){
   $('vBody').innerHTML=rs.map(({v})=>{
     const ab=abiertos.has(v.c);
     let h=`<tr><td class="l"><button class="tg" type="button" data-tg="${v.c}" aria-expanded="${ab}" aria-label="Ver empresas de ${esc(v.n)}">${ab?'−':'+'}</button>${v.c}</td><td class="l">${esc(v.n)}</td>${celdas(v.filas[emp])}</tr>`;
-    if(ab) h+=[...CFG.grupos,'TOTAL'].filter(g=>g!==emp).map(g=>`<tr class="sub"><td class="l" colspan="2">${NOMBRE_G[g]}</td>${celdas(v.filas[g])}</tr>`).join('');
+    if(ab) h+=[...CFG.grupos,'TOTAL'].filter(g=>g!==emp).map(g=>`<tr class="sub ${g==='TOTAL'?'':'g-'+g}"><td class="l" colspan="2">${NOMBRE_G[g]}</td>${celdas(v.filas[g])}</tr>`).join('');
     return h; }).join('');
   $('vFoot').innerHTML=`<tr class="tot"><td class="l" colspan="2">Total equipo · ${NOMBRE_G[emp]}</td>${celdas(E[emp])}</tr>`;
   $('tgAll').textContent = D.vendedores.every(v=>abiertos.has(v.c)) ? 'Cerrar todos' : 'Abrir todos';
@@ -236,7 +244,7 @@ function render(){
 
   const GS=[...CFG.grupos,'TOTAL'], mp=x=>x==null?'<span class="muted">—</span>':fmtP(x);
   $('mHead').innerHTML=`<tr><th class="l">Cód</th><th class="l">Vendedor</th>${GS.map(g=>`<th>${NOMBRE_G[g]}</th>`).join('')}</tr>`;
-  $('mBody').innerHTML=D.vendedores.map(v=>`<tr><td class="l">${v.c}</td><td class="l">${esc(v.n)}</td>${GS.map(g=>`<td>${mp(v.filas[g].margen)}</td>`).join('')}</tr>`).join('');
+  $('mBody').innerHTML=D.vendedores.map(v=>`<tr><td class="l">${v.c}</td><td class="l">${esc(v.n)}</td>${GS.map(g=>`<td class="${g==='TOTAL'?'':'g-'+g}">${mp(v.filas[g].margen)}</td>`).join('')}</tr>`).join('');
   $('mFoot').innerHTML=`<tr class="tot"><td class="l" colspan="2">Total</td>${GS.map(g=>`<td>${mp(E[g].margen)}</td>`).join('')}</tr>`;
 }
 
