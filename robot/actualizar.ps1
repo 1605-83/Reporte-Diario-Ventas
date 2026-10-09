@@ -26,7 +26,7 @@ $CONFIG = @{
                 'PORTA HNOS S.A','PRIMEROS PRODUCTOS PEHUENIA','PRO DE MAN S.A','INDUSTRIAS QUIMICAS Y MINERAS TIMBO S.A','LINEA DORADA S.A')
     desde = '2026-08-01'; porMes = $true; futuro = 7   # la base tiene ventas desde el 1/8/2026
     columnas = @('Cliente','FechaComprobante','FechaEntrega','NroComprobante','TipoDeVenta','Empresa','Codigo','CantBase','ImporteNetoItem',
-                 'ImporteItem','RazonSocial','CodVendedor','Vendedor','Articulo','PrecioCosto','Proveedor','Categoria')
+                 'ImporteItem','RazonSocial','CodVendedor','Vendedor','Articulo','PrecioCosto','Proveedor','Categoria','FechaCarga')
   }
 }
 $cfg = $CONFIG[$Repo]
@@ -228,6 +228,9 @@ if ($cfg.porMes) {
     $mesClave = $m.ToString('yyyy-MM')
     $previos = @(Get-ChildItem -Path $dir -Filter "ventas-$mesClave-*.csv" -File)
     if ($m -lt $mesActual.AddMonths(-1) -and $previos.Count) { Write-Host "$mesClave : ya guardado"; $m = $m.AddMonths(1); continue }
+    # corridas de cada hora: el mes anterior solo se rehace en la primera del dia (antes de las 9)
+    $horaArg = (Get-Date).ToUniversalTime().AddHours(-3).Hour
+    if ($m -lt $mesActual -and $previos.Count -and $horaArg -ge 9) { Write-Host "$mesClave : se rehace en la corrida de la manana"; $m = $m.AddMonths(1); continue }
     $fin = $m.AddMonths(1).AddDays(-1); if ($fin -gt $hasta) { $fin = $hasta }
     $filasMes = @(Consultar $m $fin)
     if ($filasMes.Count -eq 0) { Write-Host "$mesClave : sin ventas todavia"; $m = $m.AddMonths(1); continue }

@@ -99,6 +99,7 @@ tr.det td:first-child{padding-left:34px}
   <p class="sub" id="hSub">Cargando ventas…</p>
   <div class="controls">
     <label>Mes <select id="fMes"></select></label>
+    <label>Día <select id="fDia"></select></label>
     <label>Días transcurridos <input type="number" id="dT" min="1" max="31"></label>
     <label>Días hábiles del mes <input type="number" id="dH" min="1" max="31"></label>
   </div>
@@ -166,7 +167,8 @@ function parseCSV(t){
 }
 
 // ---- Calculo: mismas reglas que el Excel "Reporte Diario Ventas LP - ELB" ----
-function procesar(txt, nombre, ymPedido){
+// dia: 'dd-mm-aaaa' = solo la venta CARGADA ese dia (FechaCarga); vacio = el mes entero (por fecha de entrega)
+function procesar(txt, nombre, ymPedido, dia){
   const R=parseCSV(txt).filter(r=>r.length>5); const H=R.shift().map(h=>h.trim());
   const ix=n=>{const i=H.indexOf(n); if(i<0) throw new Error('Falta la columna '+n); return i;};
   const I={cli:ix('Cliente'),fc:ix('FechaComprobante'),nro:ix('NroComprobante'),cant:ix('CantBase'),neto:ix('ImporteNetoItem'),imp:ix('ImporteItem'),cv:ix('CodVendedor'),vn:ix('Vendedor'),costo:ix('PrecioCosto'),prov:ix('Proveedor')};
@@ -174,10 +176,12 @@ function procesar(txt, nombre, ymPedido){
   const vta={}, uni={}, net={}, cos={}, rech={}, nomCSV={}, fechas=new Set();
   const pv={}, pn={}, pc={}, pu={}, pr={};   // lo mismo por vendedor y proveedor
   const kv={}, kn={}, kc={}, ku={}, kr={}, catsDe={};   // y por vendedor, proveedor y categoria
-  const icat=H.indexOf('Categoria');
+  const icat=H.indexOf('Categoria'), icar=H.indexOf('FechaCarga'), cargas=new Set();
   const add=(o,k,x)=>{o[k]=(o[k]||0)+x;};
   for(const r of R){
     const v=parseInt(r[I.cv],10); if(isNaN(v)) continue;
+    const car=icar>=0? (r[icar]||'').trim() : ''; if(car) cargas.add(car);
+    if(dia && car!==dia) continue;
     const g=GRUPO[(r[I.prov]||'').trim().toUpperCase()]||null;
     const imp=num(r[I.imp]), ne=num(r[I.neto]), co=num(r[I.costo]), ca=num(r[I.cant]), cli=String(r[I.cli]).trim();
     const fc=(r[I.fc]||'').trim(); if(/^\d{4}-\d{2}-\d{2}$/.test(fc)) fechas.add(fc);
@@ -199,11 +203,16 @@ function procesar(txt, nombre, ymPedido){
   const hoy=new Date(Date.now()-3*3600e3).toISOString().slice(0,10);
   const fs=[...fechas].filter(d=>d<=hoy).sort(); const ult=fs[fs.length-1]||hoy; const ym=ymPedido||ult.slice(0,7);
   const OBJ=(CFG.objetivosPorMes||{})[ym] || (CFG.mes===ym ? {vend:Object.fromEntries(CFG.vendedores.map(v=>[v.c,v.o])), equipo:CFG.equipoObj} : null);
+  // dias habiles del mes; en la vista de un dia el objetivo es el del mes dividido por los dias habiles
+  const [y,mo]=ym.split('-').map(Number);
+  let dH=0; const nd=new Date(y,mo,0).getDate();
+  for(let d=1;d<=nd;d++){ const wd=new Date(y,mo-1,d).getDay(), iso=ym+'-'+String(d).padStart(2,'0'); if(wd>0&&wd<6&&!FERIADOS.has(iso)) dH++; }
+  const fObj=dia? 1/dH : 1;
   const marg=k=> net[k]? (net[k]-(cos[k]||0))/net[k] : null;
   const G=CFG.grupos;
   const vendedores=CFG.vendedores.map(cv=>{
     const filas={}; let tv=0, to=0;
-    for(const g of G){ const venta=vta[cv.c+'|'+g]||0, obj=(OBJ&&OBJ.vend[cv.c]? OBJ.vend[cv.c][g] : 0)||0; tv+=venta; to+=obj;
+    for(const g of G){ const venta=vta[cv.c+'|'+g]||0, obj=((OBJ&&OBJ.vend[cv.c]? OBJ.vend[cv.c][g] : 0)||0)*fObj; tv+=venta; to+=obj;
       filas[g]={venta,obj,base:cv.b,ccc:ccc[cv.c+'|'+g]||0,margen:marg(cv.c+'|'+g)}; }
     const rv=Math.abs(rech[cv.c]||0);
     filas.TOTAL={venta:tv,obj:to,base:cv.b,ccc:ccc[cv.c+'|*']||0,margen:marg(cv.c+'|*'),rech:rv,rechP:tv? rv/tv : null};
@@ -216,24 +225,24 @@ function procesar(txt, nombre, ymPedido){
   const equipo={};
   let tv=0;
   for(const g of G){ const venta=vendedores.reduce((a,v)=>a+v.filas[g].venta,0); tv+=venta;
-    equipo[g]={venta,obj:OBJ? (OBJ.equipo[g]||0) : 0,base:CFG.equipoBase[g],ccc:vendedores.reduce((a,v)=>a+v.filas[g].ccc,0),margen:marg('*|'+g)}; }
+    equipo[g]={venta,obj:OBJ? (OBJ.equipo[g]||0)*fObj : 0,base:CFG.equipoBase[g],ccc:vendedores.reduce((a,v)=>a+v.filas[g].ccc,0),margen:marg('*|'+g)}; }
   const rt=Math.abs(Object.values(rech).reduce((a,x)=>a+x,0));
-  equipo.TOTAL={venta:tv,obj:G.reduce((a,g)=>a+(OBJ? (OBJ.equipo[g]||0) : 0),0),base:CFG.equipoBase.TOTAL,ccc:vendedores.reduce((a,v)=>a+v.filas.TOTAL.ccc,0),margen:marg('*|*'),rech:rt,rechP:tv? rt/tv : null};
+  equipo.TOTAL={venta:tv,obj:G.reduce((a,g)=>a+(OBJ? (OBJ.equipo[g]||0)*fObj : 0),0),base:CFG.equipoBase.TOTAL,ccc:vendedores.reduce((a,v)=>a+v.filas.TOTAL.ccc,0),margen:marg('*|*'),rech:rt,rechP:tv? rt/tv : null};
   // dias: con ventas facturadas en el mes (hasta hoy) y habiles del mes
-  const [y,mo]=ym.split('-').map(Number);
   let dT=fs.filter(d=>d.startsWith(ym)).length||1;
-  let dH=0; const nd=new Date(y,mo,0).getDate();
-  for(let d=1;d<=nd;d++){ const wd=new Date(y,mo-1,d).getDay(), iso=ym+'-'+String(d).padStart(2,'0'); if(wd>0&&wd<6&&!FERIADOS.has(iso)) dH++; }
   if(ym<hoy.slice(0,7)) dT=dH;   // mes cerrado: ya pasaron todos los dias habiles (la tendencia es la venta real)
   const st=(nombre||'').match(/(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})\d{2}/);
   const corte= st? `${st[3]}/${st[2]}/${st[1]} ${st[4]}:${st[5]}` : ult.split('-').reverse().join('/');
-  return {vendedores,equipo,dT,dH,ym,mes:MESES[mo-1]+' '+y,corte,conObj:!!OBJ,objCat:(CFG.objCatPorMes||{})[ym]||null};
+  // dias de carga del mes (para el selector Dia), del mas nuevo al mas viejo
+  const diasCarga=[...cargas].filter(d=>/^\d{2}-\d{2}-\d{4}$/.test(d) && d.slice(6)+'-'+d.slice(3,5)===ym).sort((a,b)=>(b.slice(6)+b.slice(3,5)+b.slice(0,2)).localeCompare(a.slice(6)+a.slice(3,5)+a.slice(0,2)));
+  return {vendedores,equipo,dT,dH,ym,mes:MESES[mo-1]+' '+y,corte,conObj:!!OBJ,objCat:(CFG.objCatPorMes||{})[ym]||null,dia:dia||'',fObj,diasCarga};
 }
 
 // ---- Dibujo ----
 let D=null, abiertos=new Set(), sortK='c', sortD=1;
 const STORE='reporte-diario-dias';
-function dias(){ return {dT:+$('dT').value||D.dT, dH:+$('dH').value||D.dH}; }
+function dias(){ if(D.dia) return {dT:1,dH:1};   // un dia: el ideal es el 100% del objetivo diario y la tendencia es la venta del dia
+  return {dT:+$('dT').value||D.dT, dH:+$('dH').value||D.dH}; }
 function chipA(a,ideal){ if(a==null) return '<span class="muted">—</span>'; const r=a/ideal; const c=r>=1?'#7CFF6B':r>=.85?'#FFE14D':'#FF6B6B'; return `<span class="chip" style="background:${c}">${fmtP(a)}</span>`; }
 function calc(f){ const {dT,dH}=dias(); const tend=f.venta/dT*dH; return {...f, alc:f.obj? f.venta/f.obj:null, tend, alcT:f.obj? tend/f.obj:null, cob:f.base? f.ccc/f.base:null}; }
 const COLS=[['obj','Objetivo'],['venta','Venta'],['alc','% Alcance'],['tend','Tendencia $'],['cob','% Cobertura'],['base','Base'],['ccc','CCC'],['margen','% Margen'],['rechP','% Rechazos']];
@@ -245,9 +254,15 @@ function celdas(f){ const {dT,dH}=dias(), ideal=dT/dH, x=calc(f);
 function render(){
   const {dT,dH}=dias(), E=D.equipo, T=calc(E.TOTAL);
   $('kpis').innerHTML=[
-    ['c1','Venta del mes (con IVA)',fmt$(T.venta),`Objetivo ${fmt$(T.obj)}`],
-    ['c2','% Alcance',fmtP(T.alc||0),`Ideal hoy ${fmtP(dT/dH)} · ${dT} de ${dH} días hábiles`],
-    ['c3','Tendencia al cierre',fmt$(T.tend),`Al ritmo actual, ${dT} de ${dH} días hábiles`],
+    ...(D.dia ? [
+      ['c1','Venta del día (con IVA)',fmt$(T.venta),`Cargada el ${D.dia.replace(/-/g,'/')}`],
+      ['c2','% Alcance del día',fmtP(T.alc||0),`Objetivo del día ${fmt$(T.obj)}`],
+      ['c3','Falta para el objetivo',fmt$(Math.max((T.obj||0)-T.venta,0)),`Objetivo del mes ÷ ${D.dH} días hábiles`]
+    ] : [
+      ['c1','Venta del mes (con IVA)',fmt$(T.venta),`Objetivo ${fmt$(T.obj)}`],
+      ['c2','% Alcance',fmtP(T.alc||0),`Ideal hoy ${fmtP(dT/dH)} · ${dT} de ${dH} días hábiles`],
+      ['c3','Tendencia al cierre',fmt$(T.tend),`Al ritmo actual, ${dT} de ${dH} días hábiles`]
+    ]),
     ['c4','Cobertura',fmtP(T.cob||0),`${fmtN(T.ccc)} clientes con compra de ${fmtN(T.base)}`],
     ['c1','% Margen',T.margen==null?'—':fmtP(T.margen),'Sobre venta neta sin IVA'],
     ['c4','Rechazos',fmt$(E.TOTAL.rech),`${fmtP(E.TOTAL.rechP||0)} de la venta`],
@@ -315,7 +330,7 @@ function filasCat(vs,g,ncols,titulo,cccTotal){
   for(const n of CFG.nomenclador[g]){ const P=n.trim().toUpperCase();
     for(const v of vs){ const p=v.prov[P]; for(const c in p.cats){ const a=cs[c]||(cs[c]={venta:0,ccc:0}); a.venta+=p.cats[c].venta; a.ccc+=p.cats[c].ccc; } } }
   const OC=D.objCat, obj={};
-  if(OC) for(const v of vs){ const o=(OC[v.c]||{})[g]||{}; for(const c in o) obj[c]=(obj[c]||0)+o[c]; }
+  if(OC) for(const v of vs){ const o=(OC[v.c]||{})[g]||{}; for(const c in o) obj[c]=(obj[c]||0)+o[c]*D.fObj; }
   const orden=(CFG.ordenCat||{})[g]||[];
   const nombres=[...new Set([...orden.filter(c=>obj[c]||cs[c]), ...Object.keys(cs).filter(c=>!orden.includes(c)).sort((a,b)=>cs[b].venta-cs[a].venta)])]
     .filter(c=>obj[c]||(cs[c]&&(Math.abs(cs[c].venta)>0.5||cs[c].ccc)));
@@ -330,9 +345,15 @@ function filasCat(vs,g,ncols,titulo,cccTotal){
 }
 const btnP=(k,ab,txt)=>`<button class="tg" type="button" data-pg="${k}" aria-expanded="${ab}" aria-label="Ver categorías de ${txt}">${ab?'−':'+'}</button>`;
 
-function arrancar(txt,nombre,ym){
+const DIAS_SEM=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+function arrancar(txt,nombre,ym,dia){
   try{
-    D=procesar(txt,nombre,ym);
+    D=procesar(txt,nombre,ym,dia);
+    const hoyDmy=new Date(Date.now()-3*3600e3).toISOString().slice(0,10).split('-').reverse().join('-');
+    $('fDia').innerHTML='<option value="">Mes completo</option>'+D.diasCarga.map(d=>{ const [dd,mm,yy]=d.split('-'); const ds=DIAS_SEM[new Date(+yy,+mm-1,+dd).getDay()];
+      return `<option value="${d}">${d===hoyDmy?'Hoy · ':''}${ds} ${dd}/${mm}</option>`; }).join('');
+    $('fDia').value=D.dia;
+    $('dT').disabled=$('dH').disabled=!!D.dia;
     let st={}; try{ st=JSON.parse(localStorage.getItem(STORE)||'{}')[D.ym]||{}; }catch(e){}
     $('dT').value=st.dT||D.dT; $('dH').value=st.dH||D.dH;
     $('hMes').textContent=D.mes; document.title='Reporte diario de ventas LP · ELB, '+D.mes;
@@ -341,6 +362,7 @@ function arrancar(txt,nombre,ym){
     $('fEmp').innerHTML=['TOTAL',...CFG.grupos].map(g=>`<option value="${g}">${NOMBRE_G[g]}</option>`).join('');
     $('estado').style.display='none'; $('app').style.display='block';
     if(!D.conObj) $('hSub').textContent+=' · Sin objetivos cargados para este mes';
+    if(D.dia) $('hSub').textContent=`Venta cargada el ${D.dia.replace(/-/g,'/')} · ${$('hSub').textContent}`;
     render();
   }catch(e){ mostrarError('No se pudo procesar el archivo: '+e.message); }
 }
@@ -358,15 +380,21 @@ async function listarMeses(){
   if(!lst.length) throw new Error('Todavía no hay meses cargados en el repositorio');
   return lst;
 }
-async function cargarMes(ym){
+async function cargarMes(ym,dia){
   const it=MESES_REPO.find(x=>x.ym===ym); if(!it) return;
-  if(!CACHE[ym]){
+  if(!CACHE[ym]||CACHE[ym].nombre!==it.nombre){
     $('hSub').textContent='Cargando '+nombreMes(ym)+'…';
     const d=await fetch(it.url+'?t='+Date.now()); if(!d.ok) throw new Error('No se pudo descargar '+it.nombre);
-    CACHE[ym]=new TextDecoder('windows-1252').decode(await d.arrayBuffer());
+    CACHE[ym]={nombre:it.nombre, txt:new TextDecoder('windows-1252').decode(await d.arrayBuffer())};
   }
-  arrancar(CACHE[ym], it.nombre, ym);
+  arrancar(CACHE[ym].txt, it.nombre, ym, dia||'');
 }
+// en vivo: cada 10 minutos se fija si el robot subio datos nuevos del mes que se esta viendo y, si hay, los carga
+setInterval(async()=>{ try{
+  if(!D) return; const lst=await listarMeses(); const nuevo=lst.find(x=>x.ym===D.ym), viejo=MESES_REPO.find(x=>x.ym===D.ym);
+  MESES_REPO=lst; if(nuevo&&viejo&&nuevo.sello!==viejo.sello) await cargarMes(D.ym, D.dia);
+} catch(e){} }, 10*60*1000);
+$('fDia').addEventListener('change',e=>{ cargarMes(D.ym, e.target.value).catch(err=>mostrarError(err.message+'.')); });
 $('csvFile').addEventListener('change',async e=>{ const f=e.target.files[0]; if(f) arrancar(new TextDecoder('windows-1252').decode(await f.arrayBuffer()), f.name); });
 ['dT','dH'].forEach(id=>$(id).addEventListener('input',()=>{ if(!D) return; try{ const all=JSON.parse(localStorage.getItem(STORE)||'{}'); all[D.ym]={dT:+$('dT').value,dH:+$('dH').value}; localStorage.setItem(STORE,JSON.stringify(all)); }catch(e){} render(); }));
 $('fEmp').addEventListener('change',render);
