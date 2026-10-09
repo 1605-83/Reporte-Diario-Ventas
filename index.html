@@ -58,6 +58,7 @@ tr.tot td{font-weight:900;background:var(--marca);color:#fff;border-top:2px soli
 tr.vtot td{background:var(--marca);color:#fff;font-weight:900;border-top:2px solid #000;border-bottom:3px solid #000}
 tr.vtot td:first-child{padding-left:34px}
 tr.vcab td{background:#fff;font-weight:900}
+tr.pcab td{font-weight:900;border-top:2px solid #000}
 tr.det td{background:#fff;font-size:.96rem}
 tr.det.g-SOFTYS td{background:#DCEBFF}tr.det.g-AYUDIN td{background:#DDF5D8}tr.det.g-ILOLAY td{background:#FFF6C7}tr.det.g-GEORGALOS td{background:#FFE3CC}tr.det.g-RIOSMA td{background:#F1E1FF}tr.det.g-CEPAS td{background:#FFDDE6}tr.det.g-OTM td{background:#E8E8E8}
 tr.det td:first-child{padding-left:34px}
@@ -111,6 +112,13 @@ tr.det td:first-child{padding-left:34px}
   <div class="tbl"><table><thead id="vHead"></thead><tbody id="vBody"></tbody><tfoot id="vFoot"></tfoot></table></div>
 
   <details class="desp">
+    <summary>Proveedores por empresa</summary>
+    <div class="in">
+      <p class="nota" style="margin:0 0 10px">Venta con IVA de cada proveedor dentro de su empresa, para el mes, vendedor y empresa elegidos arriba. CCC: clientes con compra neta de ese proveedor.</p>
+      <div class="tbl"><table style="min-width:760px"><thead id="pHead"></thead><tbody id="pBody"></tbody></table></div>
+    </div>
+  </details>
+  <details class="desp">
     <summary>Rechazos por vendedor</summary>
     <div class="in">
       <p class="nota" style="margin:0 0 10px">Notas de crédito (devoluciones por rechazo y por canje) netas de notas de débito, con IVA, sobre la venta del vendedor.</p>
@@ -159,6 +167,7 @@ function procesar(txt, nombre, ymPedido){
   const I={cli:ix('Cliente'),fc:ix('FechaComprobante'),nro:ix('NroComprobante'),cant:ix('CantBase'),neto:ix('ImporteNetoItem'),imp:ix('ImporteItem'),cv:ix('CodVendedor'),vn:ix('Vendedor'),costo:ix('PrecioCosto'),prov:ix('Proveedor')};
   const VEND=new Map(CFG.vendedores.map(v=>[v.c,v]));
   const vta={}, uni={}, net={}, cos={}, rech={}, nomCSV={}, fechas=new Set();
+  const pv={}, pn={}, pc={}, pu={}, pr={};   // lo mismo por vendedor y proveedor
   const add=(o,k,x)=>{o[k]=(o[k]||0)+x;};
   for(const r of R){
     const v=parseInt(r[I.cv],10); if(isNaN(v)) continue;
@@ -171,7 +180,9 @@ function procesar(txt, nombre, ymPedido){
     if(g){ add(vta,v+'|'+g,imp); add(net,v+'|'+g,ne); add(cos,v+'|'+g,co); if(delReporte){ add(net,'*|'+g,ne); add(cos,'*|'+g,co); } add(uni,v+'|'+g+'|'+cli,ca); }
     add(net,v+'|*',ne); add(cos,v+'|*',co); if(delReporte){ add(net,'*|*',ne); add(cos,'*|*',co); } add(uni,v+'|*|'+cli,ca);
     const tc=(r[I.nro]||'').trim().slice(0,3).toUpperCase(); if(tc==='NCR'||tc==='NDB') add(rech,v,imp);
+    if(g){ const kp=v+'|'+(r[I.prov]||'').trim().toUpperCase(); add(pv,kp,imp); add(pn,kp,ne); add(pc,kp,co); add(pu,kp+'|'+cli,ca); if(tc==='NCR'||tc==='NDB') add(pr,kp,imp); }
   }
+  const pccc={}; for(const k in pu){ if(pu[k]>=1){ const p=k.split('|'); add(pccc,p[0]+'|'+p[1],1); } }
   const ccc={}; for(const k in uni){ if(uni[k]>=1){ const p=k.split('|'); add(ccc,p[0]+'|'+p[1],1); } }
   // mes del archivo y sus objetivos (solo hay objetivos para los meses cargados en CFG)
   const hoy=new Date(Date.now()-3*3600e3).toISOString().slice(0,10);
@@ -185,7 +196,10 @@ function procesar(txt, nombre, ymPedido){
       filas[g]={venta,obj,base:cv.b,ccc:ccc[cv.c+'|'+g]||0,margen:marg(cv.c+'|'+g)}; }
     const rv=Math.abs(rech[cv.c]||0);
     filas.TOTAL={venta:tv,obj:to,base:cv.b,ccc:ccc[cv.c+'|*']||0,margen:marg(cv.c+'|*'),rech:rv,rechP:tv? rv/tv : null};
-    return {c:cv.c,n:cv.n||nomCSV[cv.c]||('Vendedor '+cv.c),filas};
+    const prov={};
+    for(const g of G) for(const nom of CFG.nomenclador[g]){ const P=nom.trim().toUpperCase(), k=cv.c+'|'+P;
+      prov[P]={g,venta:pv[k]||0,net:pn[k]||0,cos:pc[k]||0,ccc:pccc[k]||0,rech:Math.abs(pr[k]||0)}; }
+    return {c:cv.c,n:cv.n||nomCSV[cv.c]||('Vendedor '+cv.c),filas,prov};
   });
   const equipo={};
   let tv=0;
@@ -261,6 +275,17 @@ function render(){
   $('mHead').innerHTML=`<tr><th class="l">Cód</th><th class="l">Vendedor</th>${GS.map(g=>`<th>${NOMBRE_G[g]}</th>`).join('')}</tr>`;
   $('mBody').innerHTML=lista.map(v=>`<tr><td class="l">${v.c}</td><td class="l">${esc(v.n)}</td>${GS.map(g=>`<td class="${g==='TOTAL'?'':'g-'+g}">${mp(v.filas[g].margen)}</td>`).join('')}</tr>`).join('');
   $('mFoot').innerHTML=`<tr class="tot"><td class="l" colspan="2">Total</td>${GS.map(g=>`<td>${mp(E[g].margen)}</td>`).join('')}</tr>`;
+
+  // ---- Proveedores por empresa (respeta mes, vendedor y empresa elegidos) ----
+  const sumar=(P)=>lista.reduce((a,v)=>{ const x=v.prov[P]; a.venta+=x.venta; a.net+=x.net; a.cos+=x.cos; a.ccc+=x.ccc; a.rech+=x.rech; return a; },{venta:0,net:0,cos:0,ccc:0,rech:0});
+  const celdasP=(x,base)=>`<td>${fmt$(x.venta)}</td><td>${base? fmtP(x.venta/base) : '<span class="muted">—</span>'}</td><td>${fmtN(x.ccc)}</td><td>${x.net? fmtP((x.net-x.cos)/x.net) : '<span class="muted">—</span>'}</td><td>${fmt$(x.rech)}</td>`;
+  $('pHead').innerHTML='<tr><th class="l">Empresa / proveedor</th><th>Venta</th><th>% de la empresa</th><th>CCC</th><th>% Margen</th><th>Rechazos $</th></tr>';
+  $('pBody').innerHTML=(emp==='TOTAL'? CFG.grupos : [emp]).map(g=>{
+    const ps=CFG.nomenclador[g].map(n=>{ const P=n.trim().toUpperCase(); return {n:titulo(n), x:sumar(P)}; }).filter(o=>Math.abs(o.x.venta)>0.5||o.x.ccc).sort((a,b)=>b.x.venta-a.x.venta);
+    const t=ps.reduce((a,o)=>{ for(const k in a) a[k]+=o.x[k]; return a; },{venta:0,net:0,cos:0,ccc:0,rech:0});
+    return `<tr class="g-${g} pcab"><td class="l">${NOMBRE_G[g]} <span class="muted">(${ps.length} proveedor${ps.length===1?'':'es'})</span></td>${celdasP(t,t.venta)}</tr>`
+      + ps.map(o=>`<tr class="det g-${g}"><td class="l">${esc(o.n)}</td>${celdasP(o.x,t.venta)}</tr>`).join('');
+  }).join('');
 }
 
 function arrancar(txt,nombre,ym){
