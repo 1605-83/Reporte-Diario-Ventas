@@ -213,7 +213,7 @@ function render(){
   $('kpis').innerHTML=[
     ['c1','Venta del mes (con IVA)',fmt$(T.venta),`Objetivo ${fmt$(T.obj)}`],
     ['c2','% Alcance',fmtP(T.alc||0),`Ideal hoy ${fmtP(dT/dH)} · ${dT} de ${dH} días hábiles`],
-    ['c3','Tendencia al cierre',fmt$(T.tend),`Al ritmo actual, ${dT} de ${dH} d],
+    ['c3','Tendencia al cierre',fmt$(T.tend),`Al ritmo actual, ${dT} de ${dH} días hábiles`],
     ['c4','Cobertura',fmtP(T.cob||0),`${fmtN(T.ccc)} clientes con compra de ${fmtN(T.base)}`],
     ['c1','% Margen',T.margen==null?'—':fmtP(T.margen),'Sobre venta neta sin IVA'],
     ['c4','Rechazos',fmt$(E.TOTAL.rech),`${fmtP(E.TOTAL.rechP||0)} de la venta`],
