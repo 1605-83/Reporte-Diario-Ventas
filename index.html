@@ -314,11 +314,12 @@ function render(){
   const mm={};
   for(const v in D.motivos){ if(sel && +v!==sel) continue;
     for(const m in D.motivos[v]){ const x=mm[m]||(mm[m]={imp:0,comp:new Set()}); x.imp+=D.motivos[v][m].imp; D.motivos[v][m].comp.forEach(c=>x.comp.add(c)); } }
-  const mot=Object.entries(mm).map(([m,x])=>({m,imp:Math.abs(x.imp),n:x.comp.size})).filter(o=>o.imp>0.5).sort((a,b)=>b.imp-a.imp);
+  // las notas de credito vienen en negativo y las de debito en positivo: el rechazo es -importe (el debito resta, como en el total)
+  const mot=Object.entries(mm).map(([m,x])=>({m,imp:-x.imp,n:x.comp.size})).filter(o=>Math.abs(o.imp)>0.5).sort((a,b)=>b.imp-a.imp);
   const totM=mot.reduce((a,o)=>a+o.imp,0), maxM=Math.max(1,...mot.map(o=>o.imp));
   $('rmQuien').textContent=sel? '· '+(D.vendedores.find(v=>v.c===sel)||{n:'vendedor '+sel}).n : '· todos los vendedores';
   $('rmHead').innerHTML='<tr><th class="l">Motivo</th><th>Rechazos $</th><th>% del total</th><th>Comprobantes</th></tr>';
-  $('rmBody').innerHTML=mot.length? mot.map(o=>`<tr><td class="l">${esc(titulo(o.m))}</td><td>${fmt$(o.imp)}<span class="bar"><i style="width:${o.imp/maxM*100}%"></i></span></td><td>${totM? fmtP(o.imp/totM) : '—'}</td><td>${fmtN(o.n)}</td></tr>`).join('')
+  $('rmBody').innerHTML=mot.length? mot.map(o=>`<tr><td class="l">${esc(titulo(o.m))}</td><td>${fmt$(o.imp)}<span class="bar"><i style="width:${Math.max(o.imp,0)/maxM*100}%"></i></span></td><td>${totM>0.5? fmtP(o.imp/totM) : '—'}</td><td>${fmtN(o.n)}</td></tr>`).join('')
     : '<tr><td class="l" colspan="4">Sin rechazos en este período.</td></tr>';
   $('rmFoot').innerHTML=`<tr class="tot"><td class="l">Total</td><td>${fmt$(totM)}</td><td>100,0%</td><td>${fmtN(mot.reduce((a,o)=>a+o.n,0))}</td></tr>`;
 
