@@ -195,9 +195,10 @@ function procesar(txt, nombre, ymPedido){
   equipo.TOTAL={venta:tv,obj:G.reduce((a,g)=>a+(OBJ? (OBJ.equipo[g]||0) : 0),0),base:CFG.equipoBase.TOTAL,ccc:vendedores.reduce((a,v)=>a+v.filas.TOTAL.ccc,0),margen:marg('*|*'),rech:rt,rechP:tv? rt/tv : null};
   // dias: con ventas facturadas en el mes (hasta hoy) y habiles del mes
   const [y,mo]=ym.split('-').map(Number);
-  const dT=fs.filter(d=>d.startsWith(ym)).length||1;
+  let dT=fs.filter(d=>d.startsWith(ym)).length||1;
   let dH=0; const nd=new Date(y,mo,0).getDate();
   for(let d=1;d<=nd;d++){ const wd=new Date(y,mo-1,d).getDay(), iso=ym+'-'+String(d).padStart(2,'0'); if(wd>0&&wd<6&&!FERIADOS.has(iso)) dH++; }
+  if(ym<hoy.slice(0,7)) dT=dH;   // mes cerrado: ya pasaron todos los dias habiles (la tendencia es la venta real)
   const st=(nombre||'').match(/(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})\d{2}/);
   const corte= st? `${st[3]}/${st[2]}/${st[1]} ${st[4]}:${st[5]}` : ult.split('-').reverse().join('/');
   return {vendedores,equipo,dT,dH,ym,mes:MESES[mo-1]+' '+y,corte,conObj:!!OBJ};
