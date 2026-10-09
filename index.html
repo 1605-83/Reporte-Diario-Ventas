@@ -283,6 +283,7 @@ function render(){
   $('pBody').innerHTML=(emp==='TOTAL'? CFG.grupos : [emp]).map(g=>{
     const ps=CFG.nomenclador[g].map(n=>{ const P=n.trim().toUpperCase(); return {n:titulo(n), x:sumar(P)}; }).filter(o=>Math.abs(o.x.venta)>0.5||o.x.ccc).sort((a,b)=>b.x.venta-a.x.venta);
     const t=ps.reduce((a,o)=>{ for(const k in a) a[k]+=o.x[k]; return a; },{venta:0,net:0,cos:0,ccc:0,rech:0});
+    t.ccc=lista.reduce((a,v)=>a+v.filas[g].ccc,0);   // clientes de la empresa sin contar dos veces al que compra a varios proveedores
     return `<tr class="g-${g} pcab"><td class="l">${NOMBRE_G[g]} <span class="muted">(${ps.length} proveedor${ps.length===1?'':'es'})</span></td>${celdasP(t,t.venta)}</tr>`
       + ps.map(o=>`<tr class="det g-${g}"><td class="l">${esc(o.n)}</td>${celdasP(o.x,t.venta)}</tr>`).join('');
   }).join('');
