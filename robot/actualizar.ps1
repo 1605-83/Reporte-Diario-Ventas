@@ -26,7 +26,7 @@ $CONFIG = @{
                 'PORTA HNOS S.A','PRIMEROS PRODUCTOS PEHUENIA','PRO DE MAN S.A','INDUSTRIAS QUIMICAS Y MINERAS TIMBO S.A','LINEA DORADA S.A')
     desde = '2026-08-01'; porMes = $true; futuro = 7   # la base tiene ventas desde el 1/8/2026
     columnas = @('Cliente','FechaComprobante','FechaEntrega','NroComprobante','TipoDeVenta','Empresa','Codigo','CantBase','ImporteNetoItem',
-                 'ImporteItem','RazonSocial','CodVendedor','Vendedor','Articulo','PrecioCosto','Proveedor')
+                 'ImporteItem','RazonSocial','CodVendedor','Vendedor','Articulo','PrecioCosto','Proveedor','Categoria')
   }
 }
 $cfg = $CONFIG[$Repo]
@@ -122,6 +122,8 @@ $EMPRESAS = @{ '3' = 'LAGOPUELO S.A'; '97' = 'Empresa LAGOPUELO'; '1' = 'ELEBES 
 $o = [char]0xF3; $e = [char]0xE9   # o y e con acento (el script queda en ASCII puro)
 $TIPOS = @{ 'VEN' = 'Venta'; 'DEB' = "Nota de D$($e)bito"; 'DEV-RE' = "Devoluci$($o)n por Rechazo"; 'DEV-CA' = "Devoluci$($o)n por Canje" }
 $ar = [Globalization.CultureInfo]::GetCultureInfo('es-AR')
+$TI = $ar.TextInfo
+$SIN_CAT = "Sin categor$([char]0xED)a"
 
 function Num($x, [int]$dec = 2) { if ($null -eq $x -or "$x" -eq '') { return '' }; ([double]$x).ToString("0.$('0' * $dec)", $ar).Replace('.', '') }
 function Dmy([string]$iso) { if ($iso -match '^(\d{4})-(\d{2})-(\d{2})') { "$($Matches[3])-$($Matches[2])-$($Matches[1])" } else { '' } }
@@ -173,6 +175,8 @@ foreach ($f in $filas) {
   $r.Proveedor = $f.proveedor_nombre
   $r.CondicionPago = $f.condicion_pago
   $r.Familia = $extra.familias.$art
+  # Categoria de producto (sacada del reporte de Gescom; la base no la tiene)
+  $r.Categoria = if ($extra.categorias.$art) { $extra.categorias.$art } elseif ($r.Familia) { $TI.ToTitleCase("$($r.Familia)".ToLower()) } else { $SIN_CAT }
   $r.CodSupervisor = $f.cod_supervisor
   $r.NomSupervisor = $f.supervisor
   $r.Origen = $f.origen
