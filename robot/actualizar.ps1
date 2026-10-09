@@ -184,6 +184,21 @@ foreach ($f in $filas) {
   }
   if (-not $cat -and $r.Familia) { $cat = $TI.ToTitleCase("$($r.Familia)".ToLower()) }
   if (-not $cat) { $cat = $extra.catProveedor.$provNom }   # proveedor con una sola categoria
+  # Categorias finales de cada empresa (lista cerrada): reglas que mandan, renombres, y lo que no es valido va por reglas o al defecto
+  $fin = $extra.catFinal.$provNom
+  if ($fin) {
+    $artNom = "$($f.articulo_nombre)".ToUpper()
+    $forzada = $null; foreach ($rg in $fin.forzar) { if ($artNom -match $rg[0]) { $forzada = $rg[1]; break } }
+    if ($forzada) { $cat = $forzada }
+    else {
+      if ($cat -and $fin.renombrar.PSObject.Properties.Name -contains $cat) { $cat = $fin.renombrar.$cat }
+      if ($fin.validas -notcontains $cat) {
+        $cat = $null; foreach ($rg in $fin.reglas) { if ($artNom -match $rg[0]) { $cat = $rg[1]; break } }
+        if (-not $cat) { $cat = $fin.defecto }
+      }
+    }
+  }
+  if (-not $cat -and $provNom) { $cat = $TI.ToTitleCase($provNom.ToLower()) }   # ultimo recurso: el proveedor
   $r.Categoria = if ($cat) { $cat } else { $SIN_CAT }
   $r.CodSupervisor = $f.cod_supervisor
   $r.NomSupervisor = $f.supervisor
