@@ -197,16 +197,16 @@ if ($cfg.porMes) {
   $mesActual = (Get-Date -Year $hoy.Year -Month $hoy.Month -Day 1).Date
   $m = (Get-Date -Year $desde.Year -Month $desde.Month -Day 1).Date
   while ($m -le $mesActual) {
-    $clave = $m.ToString('yyyy-MM')
-    $previos = @(Get-ChildItem -Path $dir -Filter "ventas-$clave-*.csv" -File)
-    if ($m -lt $mesActual.AddMonths(-1) -and $previos.Count) { Write-Host "$clave : ya guardado"; $m = $m.AddMonths(1); continue }
+    $mesClave = $m.ToString('yyyy-MM')
+    $previos = @(Get-ChildItem -Path $dir -Filter "ventas-$mesClave-*.csv" -File)
+    if ($m -lt $mesActual.AddMonths(-1) -and $previos.Count) { Write-Host "$mesClave : ya guardado"; $m = $m.AddMonths(1); continue }
     $fin = $m.AddMonths(1).AddDays(-1); if ($fin -gt $hasta) { $fin = $hasta }
     $filasMes = @(Consultar $m $fin)
-    if ($filasMes.Count -eq 0) { Write-Host "$clave : sin ventas todavia"; $m = $m.AddMonths(1); continue }
-    $destino = Join-Path $dir "ventas-$clave-$sello.csv"
+    if ($filasMes.Count -eq 0) { Write-Host "$mesClave : sin ventas todavia"; $m = $m.AddMonths(1); continue }
+    $destino = Join-Path $dir "ventas-$mesClave-$sello.csv"
     [IO.File]::WriteAllText($destino, (ArmarCsv $filasMes), [Text.Encoding]::GetEncoding(1252))
     $previos | Where-Object { $_.FullName -ne $destino } | Remove-Item -Force
-    Write-Host "$Repo $clave : $($filasMes.Count) renglones, datos al $($corte.ToString('dd/MM/yyyy HH:mm')) -> $(Split-Path $destino -Leaf)"
+    Write-Host "$Repo $mesClave : $($filasMes.Count) renglones, datos al $($corte.ToString('dd/MM/yyyy HH:mm')) -> $(Split-Path $destino -Leaf)"
     $m = $m.AddMonths(1)
   }
   # los CSV sueltos de la raiz ya no se usan en este tablero
