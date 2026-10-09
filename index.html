@@ -59,6 +59,8 @@ tr.vtot td{background:var(--marca);color:#fff;font-weight:900;border-top:2px sol
 tr.vtot td:first-child{padding-left:34px}
 tr.vcab td{background:#fff;font-weight:900}
 tr.rmot td{background:#FFE9E6;font-weight:700}
+tr.cat tr.clirech td{background:#FFF6F4;font-weight:500;font-size:.9rem}
+tr.cat tr.clirech td:first-child{padding-left:46px}
 tr.prov td{font-size:.93rem;font-weight:600;font-style:italic}
 tr.prov td:first-child{padding-left:58px}
 tr.cat>td{background:#F7FBFF;padding:10px 14px 14px 44px;text-align:left;white-space:normal}
@@ -180,7 +182,7 @@ function procesar(txt, nombre, ymPedido, dia){
   const pv={}, pn={}, pc={}, pu={}, pr={};   // lo mismo por vendedor y proveedor
   const kv={}, kn={}, kc={}, ku={}, kr={}, catsDe={};   // y por vendedor, proveedor y categoria
   const icat=H.indexOf('Categoria'), icar=H.indexOf('FechaCarga'), cargas=new Set();
-  const imot=H.indexOf('MotivoDevolucion'), motivos={};   // rechazos por vendedor y motivo: {v:{motivo:{imp, comp:Set}}}
+  const imot=H.indexOf('MotivoDevolucion'), irs=H.indexOf('RazonSocial'), motivos={};   // rechazos por vendedor y motivo: {v:{motivo:{imp, comp:Set, cli:{cod:{imp,comp:Set,rs}}}}}
   const add=(o,k,x)=>{o[k]=(o[k]||0)+x;};
   for(const r of R){
     const v=parseInt(r[I.cv],10); if(isNaN(v)) continue;
@@ -196,7 +198,8 @@ function procesar(txt, nombre, ymPedido, dia){
     add(net,v+'|*',ne); add(cos,v+'|*',co); if(delReporte){ add(net,'*|*',ne); add(cos,'*|*',co); } add(uni,v+'|*|'+cli,ca);
     const tc=(r[I.nro]||'').trim().slice(0,3).toUpperCase(); if(tc==='NCR'||tc==='NDB') add(rech,v,imp);
     if(tc==='NCR'||tc==='NDB'){ const m=(imot>=0? (r[imot]||'').trim() : '')||(tc==='NDB'? 'Nota de débito' : 'Sin motivo cargado');
-      const mv=motivos[v]||(motivos[v]={}), x=mv[m]||(mv[m]={imp:0,comp:new Set()}); x.imp+=imp; x.comp.add((r[I.nro]||'').trim()); }
+      const mv=motivos[v]||(motivos[v]={}), x=mv[m]||(mv[m]={imp:0,comp:new Set(),cli:{}}), nro=(r[I.nro]||'').trim(); x.imp+=imp; x.comp.add(nro);
+      const xc=x.cli[cli]||(x.cli[cli]={imp:0,comp:new Set(),rs:(irs>=0? (r[irs]||'').trim() : '')}); xc.imp+=imp; xc.comp.add(nro); }
     if(g){ const kp=v+'|'+(r[I.prov]||'').trim().toUpperCase(); add(pv,kp,imp); add(pn,kp,ne); add(pc,kp,co); add(pu,kp+'|'+cli,ca); if(tc==='NCR'||tc==='NDB') add(pr,kp,imp);
       const cat=(icat>=0? (r[icat]||'') : '').trim()||'Sin categoría', kk=kp+'|'+cat;
       (catsDe[kp]||(catsDe[kp]=new Set())).add(cat);
@@ -363,16 +366,21 @@ function filasCat(vs,g,ncols,titulo,cccTotal){
 function motivosDe(cod){
   const mm={};
   for(const v in D.motivos){ if(cod && +v!==cod) continue;
-    for(const m in D.motivos[v]){ const x=mm[m]||(mm[m]={imp:0,comp:new Set()}); x.imp+=D.motivos[v][m].imp; D.motivos[v][m].comp.forEach(c=>x.comp.add(c)); } }
+    for(const m in D.motivos[v]){ const s=D.motivos[v][m], x=mm[m]||(mm[m]={imp:0,comp:new Set(),cli:{}}); x.imp+=s.imp; s.comp.forEach(c=>x.comp.add(c));
+      for(const c in s.cli){ const y=x.cli[c]||(x.cli[c]={imp:0,comp:new Set(),rs:s.cli[c].rs}); y.imp+=s.cli[c].imp; s.cli[c].comp.forEach(n=>y.comp.add(n)); } } }
   // las notas de credito vienen en negativo y las de debito en positivo: el rechazo es -importe (el debito resta, como en el total)
-  return Object.entries(mm).map(([m,x])=>({m,imp:-x.imp,n:x.comp.size})).filter(o=>Math.abs(o.imp)>0.5).sort((a,b)=>b.imp-a.imp);
+  return Object.entries(mm).map(([m,x])=>({m,imp:-x.imp,n:x.comp.size,
+      clientes:Object.entries(x.cli).map(([c,y])=>({c,rs:y.rs,imp:-y.imp,n:y.comp.size})).filter(o=>Math.abs(o.imp)>0.5).sort((a,b)=>b.imp-a.imp)}))
+    .filter(o=>Math.abs(o.imp)>0.5).sort((a,b)=>b.imp-a.imp);
 }
 // fila "Rechazos por motivo" con su +, y al abrirla la tabla de motivos (mismo formato que las categorias)
 function filaMotivos(k,cod,quien,ncols,span){
   const ab=abiertosP.has(k), mot=motivosDe(cod), tot=mot.reduce((a,o)=>a+o.imp,0), n=mot.reduce((a,o)=>a+o.n,0);
   let h=`<tr class="rmot"><td class="l"${span}><button class="tg" type="button" data-pg="${k}" aria-expanded="${ab}" aria-label="Ver rechazos por motivo de ${quien}">${ab?'−':'+'}</button>Rechazos por motivo</td><td colspan="${ncols-(span?2:1)}" class="l">${fmt$(tot)} en ${fmtN(n)} comprobante${n===1?'':'s'}</td></tr>`;
   if(ab){ const max=Math.max(1,...mot.map(o=>o.imp));
-    const body=mot.length? mot.map(o=>`<tr><td class="l">${esc(titulo(o.m))}</td><td>${fmt$(o.imp)}<span class="cbar"><i style="width:${Math.max(o.imp,0)/max*100}%;background:#FF6B6B"></i></span></td><td>${tot>0.5? fmtP(o.imp/tot) : '—'}</td><td>${fmtN(o.n)}</td></tr>`).join('')
+    const body=mot.length? mot.map(o=>{ const km=k+'|'+o.m, abm=abiertosP.has(km);
+        return `<tr><td class="l"><button class="tg" type="button" data-pg="${esc(km)}" aria-expanded="${abm}" aria-label="Ver clientes con rechazo por ${esc(o.m)}">${abm?'−':'+'}</button>${esc(titulo(o.m))}</td><td>${fmt$(o.imp)}<span class="cbar"><i style="width:${Math.max(o.imp,0)/max*100}%;background:#FF6B6B"></i></span></td><td>${tot>0.5? fmtP(o.imp/tot) : '—'}</td><td>${fmtN(o.n)}</td></tr>`
+          + (abm? o.clientes.map(c=>`<tr class="clirech"><td class="l">${esc(c.c)} · ${esc(titulo(c.rs)||'Cliente '+c.c)}</td><td>${fmt$(c.imp)}</td><td>${o.imp>0.5? fmtP(c.imp/o.imp) : '—'}</td><td>${fmtN(c.n)}</td></tr>`).join('') : ''); }).join('')
       : '<tr><td class="l" colspan="4">Sin rechazos en este período.</td></tr>';
     h+=`<tr class="cat"><td colspan="${ncols}"><table><thead><tr><th class="l">Motivo</th><th>Rechazos $</th><th>% del total</th><th>Comprobantes</th></tr></thead><tbody>${body}</tbody>`
       +`<tfoot><tr><td class="l">Total ${quien}</td><td>${fmt$(tot)}</td><td>100,0%</td><td>${fmtN(n)}</td></tr></tfoot></table></td></tr>`; }
