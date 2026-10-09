@@ -197,7 +197,8 @@ if ($cfg.porMes) {
   # (devoluciones y correcciones tardias); los meses mas viejos ya guardados no se vuelven a bajar ----
   $dir = Join-Path (Resolve-Path $Salida) 'meses'
   New-Item -ItemType Directory -Force $dir | Out-Null
-  $sello = $corte.ToString('yyyyMMdd-HHmmss')
+  # hora de los datos + hora de la corrida: cada corrida deja un nombre nuevo y nadie recibe una copia vieja del CSV
+  $sello = $corte.ToString('yyyyMMdd-HHmmss') + '-r' + (Get-Date).ToUniversalTime().ToString('yyyyMMddHHmmss')
   $mesActual = (Get-Date -Year $hoy.Year -Month $hoy.Month -Day 1).Date
   $m = (Get-Date -Year $desde.Year -Month $desde.Month -Day 1).Date
   while ($m -le $mesActual) {

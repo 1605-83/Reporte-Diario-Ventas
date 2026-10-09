@@ -331,7 +331,7 @@ async function listarMeses(){
   const r=await fetch('https://api.github.com/repos/'+REPO+'/contents/meses',{cache:'no-store'});
   if(!r.ok) throw new Error('No se pudo leer el repositorio ('+r.status+')');
   const por={};
-  for(const f of await r.json()){ const m=f.name.match(/^ventas-(\d{4}-\d{2})-(\d{8}-\d{6})\.csv$/i); if(!m) continue;
+  for(const f of await r.json()){ const m=f.name.match(/^ventas-(\d{4}-\d{2})-(\d{8}-\d{6}(?:-r\d{14})?)\.csv$/i); if(!m) continue;
     if(!por[m[1]]||por[m[1]].sello<m[2]) por[m[1]]={ym:m[1],sello:m[2],url:f.download_url,nombre:f.name}; }
   const lst=Object.values(por).sort((a,b)=>b.ym.localeCompare(a.ym));
   if(!lst.length) throw new Error('Todavía no hay meses cargados en el repositorio');
