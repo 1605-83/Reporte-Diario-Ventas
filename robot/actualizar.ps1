@@ -176,7 +176,15 @@ foreach ($f in $filas) {
   $r.CondicionPago = $f.condicion_pago
   $r.Familia = $extra.familias.$art
   # Categoria de producto (sacada del reporte de Gescom; la base no la tiene)
-  $r.Categoria = if ($extra.categorias.$art) { $extra.categorias.$art } elseif ($r.Familia) { $TI.ToTitleCase("$($r.Familia)".ToLower()) } else { $SIN_CAT }
+  $cat = $extra.categorias.$art; $provNom = "$($f.proveedor_nombre)".Trim()
+  if (-not $cat -or $extra.catGenericas -contains $cat) {
+    # articulo nuevo o con categoria generica: reglas por nombre del articulo
+    $artNom = "$($f.articulo_nombre)".ToUpper()
+    foreach ($rg in $extra.catReglas) { if ($rg.p -eq $provNom -and $artNom -match $rg.r) { $cat = $rg.c; break } }
+  }
+  if (-not $cat -and $r.Familia) { $cat = $TI.ToTitleCase("$($r.Familia)".ToLower()) }
+  if (-not $cat) { $cat = $extra.catProveedor.$provNom }   # proveedor con una sola categoria
+  $r.Categoria = if ($cat) { $cat } else { $SIN_CAT }
   $r.CodSupervisor = $f.cod_supervisor
   $r.NomSupervisor = $f.supervisor
   $r.Origen = $f.origen
