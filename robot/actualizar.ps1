@@ -26,7 +26,7 @@ $CONFIG = @{
                 'PORTA HNOS S.A','PRIMEROS PRODUCTOS PEHUENIA','PRO DE MAN S.A','INDUSTRIAS QUIMICAS Y MINERAS TIMBO S.A','LINEA DORADA S.A')
     desde = '2026-08-01'; porMes = $true; futuro = 7   # la base tiene ventas desde el 1/8/2026
     columnas = @('Cliente','FechaComprobante','FechaEntrega','NroComprobante','TipoDeVenta','Empresa','Codigo','CantBase','ImporteNetoItem',
-                 'ImporteItem','RazonSocial','CodVendedor','Vendedor','Articulo','PrecioCosto','Proveedor','Categoria','FechaCarga')
+                 'ImporteItem','RazonSocial','CodVendedor','Vendedor','Articulo','PrecioCosto','Proveedor','Categoria','FechaCarga','MotivoDevolucion')
   }
 }
 $cfg = $CONFIG[$Repo]

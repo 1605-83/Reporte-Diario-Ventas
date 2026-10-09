@@ -129,6 +129,8 @@ tr.det td:first-child{padding-left:34px}
     <div class="in">
       <p class="nota" style="margin:0 0 10px">Notas de crédito (devoluciones por rechazo y por canje) netas de notas de débito, con IVA, sobre la venta del vendedor.</p>
       <div class="tbl"><table style="min-width:640px"><thead id="rHead"></thead><tbody id="rBody"></tbody><tfoot id="rFoot"></tfoot></table></div>
+      <h3 style="margin:18px 0 6px;font-size:1.05rem">Rechazos por motivo <span id="rmQuien" style="font-weight:500"></span></h3>
+      <div class="tbl"><table style="min-width:560px"><thead id="rmHead"></thead><tbody id="rmBody"></tbody><tfoot id="rmFoot"></tfoot></table></div>
     </div>
   </details>
   <details class="desp">
@@ -177,6 +179,7 @@ function procesar(txt, nombre, ymPedido, dia){
   const pv={}, pn={}, pc={}, pu={}, pr={};   // lo mismo por vendedor y proveedor
   const kv={}, kn={}, kc={}, ku={}, kr={}, catsDe={};   // y por vendedor, proveedor y categoria
   const icat=H.indexOf('Categoria'), icar=H.indexOf('FechaCarga'), cargas=new Set();
+  const imot=H.indexOf('MotivoDevolucion'), motivos={};   // rechazos por vendedor y motivo: {v:{motivo:{imp, comp:Set}}}
   const add=(o,k,x)=>{o[k]=(o[k]||0)+x;};
   for(const r of R){
     const v=parseInt(r[I.cv],10); if(isNaN(v)) continue;
@@ -191,6 +194,8 @@ function procesar(txt, nombre, ymPedido, dia){
     if(g){ add(vta,v+'|'+g,imp); add(net,v+'|'+g,ne); add(cos,v+'|'+g,co); if(delReporte){ add(net,'*|'+g,ne); add(cos,'*|'+g,co); } add(uni,v+'|'+g+'|'+cli,ca); }
     add(net,v+'|*',ne); add(cos,v+'|*',co); if(delReporte){ add(net,'*|*',ne); add(cos,'*|*',co); } add(uni,v+'|*|'+cli,ca);
     const tc=(r[I.nro]||'').trim().slice(0,3).toUpperCase(); if(tc==='NCR'||tc==='NDB') add(rech,v,imp);
+    if(tc==='NCR'||tc==='NDB'){ const m=(imot>=0? (r[imot]||'').trim() : '')||(tc==='NDB'? 'Nota de débito' : 'Sin motivo cargado');
+      const mv=motivos[v]||(motivos[v]={}), x=mv[m]||(mv[m]={imp:0,comp:new Set()}); x.imp+=imp; x.comp.add((r[I.nro]||'').trim()); }
     if(g){ const kp=v+'|'+(r[I.prov]||'').trim().toUpperCase(); add(pv,kp,imp); add(pn,kp,ne); add(pc,kp,co); add(pu,kp+'|'+cli,ca); if(tc==='NCR'||tc==='NDB') add(pr,kp,imp);
       const cat=(icat>=0? (r[icat]||'') : '').trim()||'Sin categoría', kk=kp+'|'+cat;
       (catsDe[kp]||(catsDe[kp]=new Set())).add(cat);
@@ -235,7 +240,7 @@ function procesar(txt, nombre, ymPedido, dia){
   const corte= st? `${st[3]}/${st[2]}/${st[1]} ${st[4]}:${st[5]}` : ult.split('-').reverse().join('/');
   // dias de carga del mes (para el selector Dia), del mas nuevo al mas viejo
   const diasCarga=[...cargas].filter(d=>/^\d{2}-\d{2}-\d{4}$/.test(d) && d.slice(6)+'-'+d.slice(3,5)===ym).sort((a,b)=>(b.slice(6)+b.slice(3,5)+b.slice(0,2)).localeCompare(a.slice(6)+a.slice(3,5)+a.slice(0,2)));
-  return {vendedores,equipo,dT,dH,ym,mes:MESES[mo-1]+' '+y,corte,conObj:!!OBJ,objCat:(CFG.objCatPorMes||{})[ym]||null,dia:dia||'',fObj,diasCarga};
+  return {vendedores,equipo,dT,dH,ym,mes:MESES[mo-1]+' '+y,corte,conObj:!!OBJ,objCat:(CFG.objCatPorMes||{})[ym]||null,dia:dia||'',fObj,diasCarga,motivos};
 }
 
 // ---- Dibujo ----
@@ -305,6 +310,18 @@ function render(){
     return `<tr><td class="l">${v.c}</td><td class="l">${esc(v.n)}</td><td>${fmt$(f.rech)}<span class="bar"><i style="width:${f.rech/maxR*100}%"></i></span></td><td>${fmt$(f.venta)}</td><td>${f.rechP==null?'—':fmtP(f.rechP)}</td></tr>`;}).join('');
   $('rFoot').innerHTML=`<tr class="tot"><td class="l" colspan="2">Total (todos los vendedores)</td><td>${fmt$(E.TOTAL.rech)}</td><td>${fmt$(E.TOTAL.venta)}</td><td>${fmtP(E.TOTAL.rechP||0)}</td></tr>`;
 
+  // rechazos por motivo: del vendedor elegido arriba, o de todos (como el total de rechazos)
+  const mm={};
+  for(const v in D.motivos){ if(sel && +v!==sel) continue;
+    for(const m in D.motivos[v]){ const x=mm[m]||(mm[m]={imp:0,comp:new Set()}); x.imp+=D.motivos[v][m].imp; D.motivos[v][m].comp.forEach(c=>x.comp.add(c)); } }
+  const mot=Object.entries(mm).map(([m,x])=>({m,imp:Math.abs(x.imp),n:x.comp.size})).filter(o=>o.imp>0.5).sort((a,b)=>b.imp-a.imp);
+  const totM=mot.reduce((a,o)=>a+o.imp,0), maxM=Math.max(1,...mot.map(o=>o.imp));
+  $('rmQuien').textContent=sel? '· '+(D.vendedores.find(v=>v.c===sel)||{n:'vendedor '+sel}).n : '· todos los vendedores';
+  $('rmHead').innerHTML='<tr><th class="l">Motivo</th><th>Rechazos $</th><th>% del total</th><th>Comprobantes</th></tr>';
+  $('rmBody').innerHTML=mot.length? mot.map(o=>`<tr><td class="l">${esc(titulo(o.m))}</td><td>${fmt$(o.imp)}<span class="bar"><i style="width:${o.imp/maxM*100}%"></i></span></td><td>${totM? fmtP(o.imp/totM) : '—'}</td><td>${fmtN(o.n)}</td></tr>`).join('')
+    : '<tr><td class="l" colspan="4">Sin rechazos en este período.</td></tr>';
+  $('rmFoot').innerHTML=`<tr class="tot"><td class="l">Total</td><td>${fmt$(totM)}</td><td>100,0%</td><td>${fmtN(mot.reduce((a,o)=>a+o.n,0))}</td></tr>`;
+
   const GS=[...CFG.grupos,'TOTAL'], mp=x=>x==null?'<span class="muted">—</span>':fmtP(x);
   $('mHead').innerHTML=`<tr><th class="l">Cód</th><th class="l">Vendedor</th>${GS.map(g=>`<th>${NOMBRE_G[g]}</th>`).join('')}</tr>`;
   $('mBody').innerHTML=lista.map(v=>`<tr><td class="l">${v.c}</td><td class="l">${esc(v.n)}</td>${GS.map(g=>`<td class="${g==='TOTAL'?'':'g-'+g}">${mp(v.filas[g].margen)}</td>`).join('')}</tr>`).join('');
@@ -338,7 +355,7 @@ function filasCat(vs,g,ncols,titulo,cccTotal){
   const max=Math.max(1,...nombres.map(c=>cs[c]?cs[c].venta:0));
   const {dT,dH}=dias(), ideal=dT/dH;
   const nada='<span class="muted">—</span>';
-  const fil=(n,f,o,ccc)=>`<td class="l">${n}</td><td>${o? fmt$(o) : nada}</td><td>${fmt$(f)}<span class="cbar"><i style="width:${Math.max(f,0)/max*100}%"></i></span></td><td>${o? chipA(f/o,ideal) : nada}</td><td>${o? fmt$(Math.max(o-f,0)) : nada}</td><td>${tot? fmtP(f/tot) : nada}</td><td>${fmtN(ccc)}</td>`;
+  const fil=(n,f,o,ccc)=>`<td class="l">${n}</td><td>${o? fmt$(o) : nada}</td><td>${fmt$(f)}<span class="cbar"><i style="width:${Math.max(f,0)/max*100}%"></i></span></td><td>${o? chipA(f/o,ideal) : nada}</td><td>${o? fmt$(Math.max(o-f,0)) : nada}</td><td>${tot>0.5? fmtP(f/tot) : nada}</td><td>${fmtN(ccc)}</td>`;
   const body=nombres.map(c=>{ const f=cs[c]?cs[c].venta:0; return `<tr${f||obj[c]?'':' class="cero"'}>${fil(esc(c),f,obj[c]||0,cs[c]?cs[c].ccc:0)}</tr>`; }).join('');
   return `<tr class="cat"><td colspan="${ncols}"><table><thead><tr><th class="l">Categoría</th><th>Objetivo $</th><th>Facturación</th><th>Alcance %</th><th>Falta $</th><th>% de la empresa</th><th>Clientes con compra</th></tr></thead>`
     + `<tbody>${body}</tbody><tfoot><tr>${fil('Total '+titulo,tot,totObj,cccTotal)}</tr></tfoot></table></td></tr>`;
