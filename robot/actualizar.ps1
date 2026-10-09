@@ -47,7 +47,7 @@ function Pedir([string]$metodo, [string]$ruta, $cuerpo) {
   $j
 }
 
-# ---- Periodo: por FECHA DE ENTREGA, del 1 del mes a hoy (hora argentina) ----
+# ---- Periodo: por FECHA DE COMPROBANTE, del 1 del mes a hoy (hora argentina) ----
 $hoy = (Get-Date).ToUniversalTime().AddHours(-3).Date
 if ($cfg.desde) { $desde = [datetime]::ParseExact($cfg.desde, 'yyyy-MM-dd', $null) }
 else { $desde = (Get-Date -Year $hoy.Year -Month $hoy.Month -Day 1).Date.AddMonths(1 - $cfg.meses) }
@@ -60,7 +60,8 @@ try {
   if ($v.actualizado) { $corte = ([datetime]::Parse($v.actualizado, [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::AdjustToUniversal)).AddHours(-3) }
 } catch { Write-Warning "No se pudo leer /estado: $_" }
 
-$hasta = $hoy.AddDays([int]$cfg.futuro)   # futuro: entregas ya cargadas para los proximos dias
+# Todos los tableros toman la venta por FECHA DE COMPROBANTE (pedido de Bruno, 9/10/2026): solo lo facturado, hasta hoy
+$hasta = $hoy
 
 function Consultar([datetime]$d1, [datetime]$d2) {
   if ($cfg.nombres) {
@@ -68,7 +69,10 @@ function Consultar([datetime]$d1, [datetime]$d2) {
     $prov = "SELECT codigo FROM proveedores WHERE nombre IN ($lista)"
   } else { $prov = ($cfg.proveedores | ForEach-Object { "'$_'" }) -join ',' }
   $sql = @"
-SELECT v.id, v.fecha, COALESCE(NULLIF(v.entrega,''), v.fecha) AS entrega, v.tipo, v.empresa, v.cliente,
+SELECT v.id, v.fecha, COALESCE(NULLIF(v.entrega,''), v.fecha) AS entrega, v.tipo,
+       -- FECHA DE COMPROBANTE: la base no la guarda. Medido contra el reporte de Gescom (12.411 renglones, oct 2026):
+       -- facturas y canjes = fecha de entrega (99,4%); NC por rechazo y notas de debito = dia de carga de la nota (100%)
+       (CASE WHEN v.tipo IN ('DEV-RE','DEB') THEN v.fecha ELSE COALESCE(NULLIF(v.entrega,''), v.fecha) END) AS fecha_comp, v.empresa, v.cliente,
        v.vendedor, v.reparto, v.chofer, COALESCE(ch.nombre, v.chofer) AS chofer_nombre, v.comprobante,
        v.ref_id, v.directa, v.origen, v.motivo,
        i.articulo, i.cantidad, i.factor, i.neto, i.total, i.precio_costo, i.precio_unitario,
@@ -88,7 +92,9 @@ LEFT JOIN empleados su ON su.codigo = e.superior
 LEFT JOIN empleados ch ON ch.codigo = v.chofer
 WHERE a.proveedor IN ($prov)
   AND v.tipo IN ('VEN','DEB','DEV-RE','DEV-CA')
-  AND COALESCE(NULLIF(v.entrega,''), v.fecha) BETWEEN '$($d1.ToString('yyyy-MM-dd'))' AND '$($d2.ToString('yyyy-MM-dd'))'
+  AND NULLIF(v.comprobante,'') IS NOT NULL
+  AND (CASE WHEN v.tipo IN ('DEV-RE','DEB') THEN v.fecha ELSE COALESCE(NULLIF(v.entrega,''), v.fecha) END)
+      BETWEEN '$($d1.ToString('yyyy-MM-dd'))' AND '$($d2.ToString('yyyy-MM-dd'))'
 ORDER BY v.id, i.orden
 "@
   $r = Pedir 'POST' '/consulta' @{ sql = $sql }
@@ -148,7 +154,7 @@ foreach ($f in $filas) {
   $r.Cliente = $cli
   $r.Direccion = $extra.direcciones.$cli
   $r.Localidad = $f.localidad
-  $r.FechaComprobante = if ($pend) { '' } else { $f.entrega }
+  $r.FechaComprobante = if ($pend) { '' } else { $f.fecha_comp }
   $r.FechaEntrega = Dmy $f.entrega
   $r.FechaCarga = Dmy $f.fecha
   $r.NroComprobante = if ($pend) { "VEN-$($f.id)" } else { "$($f.comprobante)-$($f.id)" }
@@ -253,5 +259,5 @@ Get-ChildItem -Path $Salida -Filter '*.csv' -File | Where-Object { $_.FullName -
 
 $n = ($filas | Measure-Object).Count
 $neto = ($filas | ForEach-Object { if ($_.tipo -like 'DEV-*') { -[double]$_.neto } else { [double]$_.neto } } | Measure-Object -Sum).Sum
-Write-Host "$Repo : $n renglones, entrega $($desde.ToString('dd/MM/yyyy')) a $($hasta.ToString('dd/MM/yyyy')),venta neta $([math]::Round($neto).ToString('N0', $ar)) (sin IVA), datos al $($corte.ToString('dd/MM/yyyy HH:mm'))"
+Write-Host "$Repo : $n renglones, comprobantes del $($desde.ToString('dd/MM/yyyy')) a $($hasta.ToString('dd/MM/yyyy')),venta neta $([math]::Round($neto).ToString('N0', $ar)) (sin IVA), datos al $($corte.ToString('dd/MM/yyyy HH:mm'))"
 Write-Host "Archivo: $nombre"
