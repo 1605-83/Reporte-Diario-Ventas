@@ -273,21 +273,22 @@ function celdas(f){ const {dT,dH}=dias(), ideal=dT/dH, x=calc(f);
 
 function render(){
   const {dT,dH}=dias(), E=D.equipo, T=calc(E.TOTAL);
+  // orden pedido por Bruno: objetivo, venta, tendencia, alcance, cobertura, margen, rechazos, vendedores (el corte va en el subtitulo)
   $('kpis').innerHTML=[
+    ['c2','Objetivo del mes',T.obj? fmt$(T.obj/(D.fObj||1)) : '—',D.dia? `Objetivo del día ${fmt$(T.obj)}` : `Con IVA · ${CFG.grupos.length} empresas`],
     ...(D.dia ? [
       ['c1','Venta del día (con IVA)',fmt$(T.venta),`Cargada el ${D.dia.replace(/-/g,'/')}`],
-      ['c2','% Alcance del día',fmtP(T.alc||0),`Objetivo del día ${fmt$(T.obj)}`],
-      ['c3','Falta para el objetivo',fmt$(Math.max((T.obj||0)-T.venta,0)),`Objetivo del mes ÷ ${D.dH} días hábiles`]
+      ['c3','Falta para el objetivo',fmt$(Math.max((T.obj||0)-T.venta,0)),`Objetivo del mes ÷ ${D.dH} días hábiles`],
+      ['c2','% Alcance del día',fmtP(T.alc||0),`Objetivo del día ${fmt$(T.obj)}`]
     ] : [
       ['c1','Venta del mes (con IVA)',fmt$(T.venta),`Objetivo ${fmt$(T.obj)}`],
-      ['c2','% Alcance',fmtP(T.alc||0),`Ideal hoy ${fmtP(dT/dH)} · ${dT} de ${dH} días hábiles`],
-      ['c3','Tendencia al cierre',fmt$(T.tend),`Al ritmo actual, ${dT} de ${dH} días hábiles`]
+      ['c3','Tendencia al cierre',fmt$(T.tend),`Al ritmo actual, ${dT} de ${dH} días hábiles`],
+      ['c2','% Alcance',fmtP(T.alc||0),`Ideal hoy ${fmtP(dT/dH)} · ${dT} de ${dH} días hábiles`]
     ]),
     ['c4','Cobertura',fmtP(T.cob||0),`${fmtN(T.ccc)} clientes con compra de ${fmtN(T.base)}`],
     ['c1','% Margen',T.margen==null?'—':fmtP(T.margen),'Sobre venta neta sin IVA'],
     ['c4','Rechazos',fmt$(E.TOTAL.rech),`${fmtP(E.TOTAL.rechP||0)} de la venta`],
-    ['c3','Vendedores',fmtN(D.vendedores.length),'Del reporte de objetivos'],
-    ['c2','Objetivo total',T.obj? fmt$(T.obj/(D.fObj||1)) : '—',`Objetivo del mes con IVA · ${CFG.grupos.length} empresas`]   // el corte queda en el subtitulo
+    ['c3','Vendedores',fmtN(D.vendedores.length),'Del reporte de objetivos']
   ].map(k=>`<div class="kpi ${k[0]}"><div class="l">${k[1]}</div><div class="v">${k[2]}</div><div class="n">${k[3]}</div></div>`).join('');
 
   const head=first=>`<tr><th class="l">${first}</th>${COLS.map(c=>`<th>${c[1]}</th>`).join('')}</tr>`;
