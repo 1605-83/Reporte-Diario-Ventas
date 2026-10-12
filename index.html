@@ -464,6 +464,7 @@ function arrancar(txt,nombre,ym,dia){
     if(!D.conObj) $('hSub').textContent+=' · Sin objetivos cargados para este mes';
     if(!D.dia) $('hSub').textContent=`Venta por ${NOMBRE_TIPO[TIPO_F]} · ${$('hSub').textContent}`;
     if(D.dia) $('hSub').textContent=`Venta cargada el ${D.dia.replace(/-/g,'/')} · ${$('hSub').textContent}`;
+    $('hSub').hidden=true;   // la fecha de los datos va arriba a la derecha
     render();
   }catch(e){ mostrarError('No se pudo procesar el archivo: '+e.message); }
 }
@@ -484,7 +485,7 @@ async function listarMeses(){
 async function cargarMes(ym,dia){
   const it=MESES_REPO.find(x=>x.ym===ym); if(!it) return;
   if(!CACHE[ym]||CACHE[ym].nombre!==it.nombre){
-    $('hSub').textContent='Cargando '+nombreMes(ym)+'…';
+    $('hSub').hidden=false; $('hSub').textContent='Cargando '+nombreMes(ym)+'…';
     const d=await fetch(it.url+'?t='+Date.now()); if(!d.ok) throw new Error('No se pudo descargar '+it.nombre);
     CACHE[ym]={nombre:it.nombre, txt:new TextDecoder('windows-1252').decode(await d.arrayBuffer())};
   }
