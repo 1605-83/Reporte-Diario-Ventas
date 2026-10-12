@@ -32,18 +32,17 @@ input[type=number]{width:84px}
 button{font:inherit;cursor:pointer;background:var(--ink);color:#fff;border:0;border-radius:6px;padding:7px 12px}
 .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:16px}
 @media (max-width:1000px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
-.kpi{padding:8px 12px;border:2px solid #fff;border-radius:8px;box-shadow:3px 3px 0 var(--claro);background:#fff;color:#000;min-width:0}
-.kpi .l{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+.kpi{--kc:#fff;padding:8px 12px;border:2px solid var(--kc);border-radius:10px;box-shadow:0 0 0 1px var(--kc),0 0 14px -2px var(--kc);background:#000;color:#fff;min-width:0}
+.kpi .l{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--kc)}
 .kpi .v{font-size:clamp(1.05rem,1.7vw,1.35rem);font-weight:800;margin:2px 0 1px;overflow-wrap:anywhere}
-.kpi .n{font-size:.72rem;color:#22403B}
+.kpi .n{font-size:.72rem;color:#C9D4D2}
 .mini{margin-top:6px}
-.mplot{position:relative;display:flex;align-items:flex-end;gap:2px;height:44px;border-bottom:1px solid rgba(0,0,0,.4)}
-.mb{flex:1 1 0;min-width:2px;background:#1E2B29;border-radius:3px 3px 0 0;transition:opacity .12s}
-.mplot:hover .mb{opacity:.4}.mplot .mb:hover,.mb:focus{opacity:1;outline:none;background:#000}
-.mref{position:absolute;left:0;right:0;border-top:2px dashed #000;pointer-events:none}
-.mlab{display:flex;gap:2px;margin-top:2px;font-size:.6rem;color:#22403B;line-height:1.1}.mlab span{flex:1 1 0;min-width:0;text-align:center;overflow:hidden;white-space:nowrap}
-#tip{position:fixed;z-index:60;display:none;pointer-events:none;max-width:280px;padding:6px 9px;border-radius:6px;background:#000;color:#fff;font-size:.8rem;line-height:1.3;box-shadow:0 2px 8px rgba(0,0,0,.35)}
-.kpi.c1{background:#C9F0E8}.kpi.c2{background:#FFF1B8}.kpi.c3{background:#D9E8FF}.kpi.c4{background:#FFD9D2}
+.mplot{position:relative;display:flex;align-items:flex-end;gap:3px;height:46px;border-bottom:1px solid rgba(255,255,255,.35)}
+.mb{flex:1 1 0;min-width:2px;background:var(--kc);border-radius:3px 3px 0 0;transition:opacity .12s}
+.mplot:hover .mb{opacity:.35}.mplot .mb:hover,.mb:focus{opacity:1;outline:none}
+.mlab{display:flex;gap:3px;margin-top:3px;font-size:.6rem;color:#C9D4D2;line-height:1.1}.mlab span{flex:1 1 0;min-width:0;text-align:center;overflow:hidden;white-space:nowrap}
+#tip{position:fixed;z-index:60;display:none;pointer-events:none;max-width:280px;padding:6px 9px;border-radius:6px;background:#fff;color:#000;border:1px solid #000;font-size:.8rem;font-weight:600;line-height:1.3;box-shadow:0 2px 10px rgba(0,0,0,.6)}
+.kpi.c1{--kc:#3DDBB4}.kpi.c2{--kc:#FFD23F}.kpi.c3{--kc:#5AA9FF}.kpi.c4{--kc:#FF7A66}
 h2{font-size:1.15rem;margin:30px 0 0;font-weight:800}
 .nota{font-size:.82rem;color:#C9DAD7;margin:4px 0 0}
 .tbl{overflow-x:auto;margin-top:12px;color:#000;border:1px solid #fff;border-radius:8px;background:var(--panel)}
@@ -287,14 +286,15 @@ function render(){
   // ---- mini graficos de barras de cada indicador (al pasar el mouse muestra el dato de cada barra) ----
   const KG=CFG.grupos, kIdeal=dT/dH, XG=Object.fromEntries(KG.map(g=>[g,calc(E[g])]));
   const CORTO={SOFTYS:'SOF',AYUDIN:'AYU',ILOLAY:'ILO',GEORGALOS:'GEO',RIOSMA:'RIO',CEPAS:'CEP',OTM:'OTM'};
+  const COLOR_G={SOFTYS:'#4EA8FF',AYUDIN:'#5BD67A',ILOLAY:'#FFD23F',GEORGALOS:'#FF9F45',RIOSMA:'#B98CFF',CEPAS:'#FF6F91',OTM:'#C3CAD1'};   // mismos tonos que las filas de cada empresa
   const mini=(items,ref,refTxt,etiq=true)=>{
-    const vals=items.map(i=>Math.max(+i.v||0,0)), max=(Math.max(ref||0,...vals,0)*1.08)||1;
+    const vals=items.map(i=>Math.max(+i.v||0,0)), max=(Math.max(...vals,0)*1.08)||1;
     return `<div class="mini" role="img" aria-label="${esc(items.map(i=>i.tip).join('; '))}"><div class="mplot">`
-      + items.map((i,n)=>`<span class="mb" tabindex="0" data-tip="${esc(i.tip)}" style="height:${Math.max(vals[n]/max*100,1.5)}%"></span>`).join('')
-      + (ref!=null? `<i class="mref" style="bottom:${ref/max*100}%"></i>` : '') + '</div>'
+      + items.map((i,n)=>`<span class="mb" tabindex="0" data-tip="${esc(i.tip)}" style="height:${Math.max(vals[n]/max*100,1.5)}%${i.col? ';background:'+i.col : ''}"></span>`).join('')
+      + '</div>'
       + (etiq? `<div class="mlab">${items.map(i=>`<span>${esc(i.c||'')}</span>`).join('')}</div>` : '')
       + (refTxt? `<div class="mlab"><span style="text-align:left">${esc(refTxt)}</span></div>` : '') + '</div>'; };
-  const porG=(f,tip,ref,refTxt)=>mini(KG.map(g=>({c:CORTO[g]||g.slice(0,3), v:f(g), tip:`${NOMBRE_G[g]||g}: ${tip(g)}`})),ref,refTxt);
+  const porG=(f,tip)=>mini(KG.map(g=>({c:CORTO[g]||g.slice(0,3), col:COLOR_G[g], v:f(g), tip:`${NOMBRE_G[g]||g}: ${tip(g)}`})));
   const diasMes=Object.keys(D.porDia||{}).filter(d=>d.startsWith(D.ym)).sort();
   const gVenta= D.dia || !diasMes.length ? porG(g=>E[g].venta, g=>fmt$(E[g].venta))
     : mini(diasMes.map(d=>{ const [y,m,dd]=d.split('-'); return {c:dd, v:D.porDia[d], tip:`${DIAS_SEM[new Date(+y,+m-1,+dd).getDay()]} ${dd}/${m}: ${fmt$(D.porDia[d])}`}; }), null, 'Venta de cada día');
@@ -309,13 +309,13 @@ function render(){
       ['c3','Falta para el objetivo',fmt$(Math.max((T.obj||0)-T.venta,0)),`Objetivo del mes ÷ ${D.dH} días hábiles`,
         porG(g=>Math.max((E[g].obj||0)-E[g].venta,0), g=>`faltan ${fmt$(Math.max((E[g].obj||0)-E[g].venta,0))}`)],
       ['c2','% Alcance del día',fmtP(T.alc||0),`Objetivo del día ${fmt$(T.obj)}`,
-        porG(g=>XG[g].alc, g=>XG[g].alc==null? 'sin objetivo' : `${fmtP(XG[g].alc)} (${fmt$(E[g].venta)} de ${fmt$(E[g].obj)})`, 1, '– – 100% del objetivo del día')]
+        porG(g=>XG[g].alc, g=>XG[g].alc==null? 'sin objetivo' : `${fmtP(XG[g].alc)} (${fmt$(E[g].venta)} de ${fmt$(E[g].obj)})`)]
     ] : [
       ['c1','Venta del mes (con IVA)',fmt$(T.venta),`Objetivo ${fmt$(T.obj)}`, gVenta],
       ['c3','Tendencia al cierre',fmt$(T.tend),`Al ritmo actual, ${dT} de ${dH} días hábiles`,
-        porG(g=>XG[g].alcT, g=>`${fmt$(XG[g].tend)}${XG[g].alcT==null? '' : ' = '+fmtP(XG[g].alcT)+' del objetivo'}`, 1, '– – 100% del objetivo')],
+        porG(g=>XG[g].alcT, g=>`${fmt$(XG[g].tend)}${XG[g].alcT==null? '' : ' = '+fmtP(XG[g].alcT)+' del objetivo'}`)],
       ['c2','% Alcance',fmtP(T.alc||0),`Ideal hoy ${fmtP(kIdeal)} · ${dT} de ${dH} días hábiles`,
-        porG(g=>XG[g].alc, g=>XG[g].alc==null? 'sin objetivo' : `${fmtP(XG[g].alc)} (${fmt$(E[g].venta)} de ${fmt$(E[g].obj)})`, kIdeal, `– – ideal hoy ${fmtP(kIdeal)}`)]
+        porG(g=>XG[g].alc, g=>XG[g].alc==null? 'sin objetivo' : `${fmtP(XG[g].alc)} (${fmt$(E[g].venta)} de ${fmt$(E[g].obj)})`)]
     ]),
     ['c4','Cobertura',fmtP(T.cob||0),`${fmtN(T.ccc)} clientes con compra de ${fmtN(T.base)}`,
       porG(g=>XG[g].cob, g=>XG[g].cob==null? 'sin base' : `${fmtP(XG[g].cob)} · ${fmtN(E[g].ccc)} de ${fmtN(E[g].base)} clientes`)],
@@ -324,7 +324,7 @@ function render(){
     ['c4','Rechazos',fmt$(E.TOTAL.rech),`${fmtP(E.TOTAL.rechP||0)} de la venta`,
       porG(rG, g=>`${fmt$(rG(g))}${E[g].venta? ' · '+fmtP(rG(g)/E[g].venta)+' de su venta' : ''}`)],
     ['c3','Vendedores',fmtN(D.vendedores.length),'Del reporte de objetivos',
-      mini(vOrd.map(o=>({v:o.x.alc, tip:`${o.v.c} · ${o.v.n}: ${o.x.alc==null? 'sin objetivo' : fmtP(o.x.alc)+' de alcance'}`})), kIdeal, `Alcance de cada vendedor · – – ideal ${fmtP(kIdeal)}`, false)]
+      mini(vOrd.map(o=>({v:o.x.alc, tip:`${o.v.c} · ${o.v.n}: ${o.x.alc==null? 'sin objetivo' : fmtP(o.x.alc)+' de alcance'}`})), null, 'Alcance de cada vendedor, de mayor a menor', false)]
   ].map(k=>`<div class="kpi ${k[0]}"><div class="l">${k[1]}</div><div class="v">${k[2]}</div><div class="n">${k[3]}</div>${k[4]||''}</div>`).join('');
 
   const head=first=>`<tr><th class="l">${first}</th>${COLS.map(c=>`<th>${c[1]}</th>`).join('')}</tr>`;
