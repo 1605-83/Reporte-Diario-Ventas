@@ -36,6 +36,13 @@ button{font:inherit;cursor:pointer;background:var(--ink);color:#fff;border:0;bor
 .kpi .l{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
 .kpi .v{font-size:clamp(1.05rem,1.7vw,1.35rem);font-weight:800;margin:2px 0 1px;overflow-wrap:anywhere}
 .kpi .n{font-size:.72rem;color:#22403B}
+.mini{margin-top:6px}
+.mplot{position:relative;display:flex;align-items:flex-end;gap:2px;height:44px;border-bottom:1px solid rgba(0,0,0,.4)}
+.mb{flex:1 1 0;min-width:2px;background:#1E2B29;border-radius:3px 3px 0 0;transition:opacity .12s}
+.mplot:hover .mb{opacity:.4}.mplot .mb:hover,.mb:focus{opacity:1;outline:none;background:#000}
+.mref{position:absolute;left:0;right:0;border-top:2px dashed #000;pointer-events:none}
+.mlab{display:flex;gap:2px;margin-top:2px;font-size:.6rem;color:#22403B;line-height:1.1}.mlab span{flex:1 1 0;min-width:0;text-align:center;overflow:hidden;white-space:nowrap}
+#tip{position:fixed;z-index:60;display:none;pointer-events:none;max-width:280px;padding:6px 9px;border-radius:6px;background:#000;color:#fff;font-size:.8rem;line-height:1.3;box-shadow:0 2px 8px rgba(0,0,0,.35)}
 .kpi.c1{background:#C9F0E8}.kpi.c2{background:#FFF1B8}.kpi.c3{background:#D9E8FF}.kpi.c4{background:#FFD9D2}
 h2{font-size:1.15rem;margin:30px 0 0;font-weight:800}
 .nota{font-size:.82rem;color:#C9DAD7;margin:4px 0 0}
@@ -188,12 +195,14 @@ function procesar(txt, nombre, ymPedido, dia){
   const icat=H.indexOf('Categoria'), icar=H.indexOf('FechaCarga'), ient=H.indexOf('FechaEntrega'), cargas=new Set();
   const imot=H.indexOf('MotivoDevolucion'), irs=H.indexOf('RazonSocial'), icod=H.indexOf('Codigo'), iart=H.indexOf('Articulo'), motivos={};   // rechazos por vendedor y motivo: {v:{motivo:{imp, comp:Set, cli:{cod:{imp,comp:Set,rs}}}}}
   const add=(o,k,x)=>{o[k]=(o[k]||0)+x;};
+  const porDia={}, rechG={};
   for(const r of R){
     const v=parseInt(r[I.cv],10); if(isNaN(v)) continue;
     const car=icar>=0? (r[icar]||'').trim() : ''; if(car) cargas.add(car);
     if(dia && car!==dia) continue;
+    let fx='';
     if(!dia){   // el CSV del mes trae los renglones con cualquiera de las tres fechas en el mes: se queda con los de la fecha elegida
-      const fx= TIPO_F==='comp'? (r[I.fc]||'').trim() : dmyIso(TIPO_F==='ent'? (ient>=0? (r[ient]||'').trim() : '') : car);
+      fx= TIPO_F==='comp'? (r[I.fc]||'').trim() : dmyIso(TIPO_F==='ent'? (ient>=0? (r[ient]||'').trim() : '') : car);
       if(!/^\d{4}-\d{2}-\d{2}$/.test(fx)) continue;
       if(ymPedido && fx.slice(0,7)!==ymPedido) continue;
       fechas.add(fx); }
@@ -205,6 +214,8 @@ function procesar(txt, nombre, ymPedido, dia){
     if(g){ add(vta,v+'|'+g,imp); add(net,v+'|'+g,ne); add(cos,v+'|'+g,co); if(delReporte){ add(net,'*|'+g,ne); add(cos,'*|'+g,co); } add(uni,v+'|'+g+'|'+cli,ca); }
     add(net,v+'|*',ne); add(cos,v+'|*',co); if(delReporte){ add(net,'*|*',ne); add(cos,'*|*',co); } add(uni,v+'|*|'+cli,ca);
     const tc=(r[I.nro]||'').trim().slice(0,3).toUpperCase(); if(tc==='NCR'||tc==='NDB') add(rech,v,imp);
+    // para los graficos de los indicadores: venta por dia y rechazos por empresa (solo vendedores del reporte, como el total)
+    if(delReporte && g){ if(fx) add(porDia,fx,imp); if(tc==='NCR'||tc==='NDB') add(rechG,g,imp); }
     if(tc==='NCR'||tc==='NDB'){ const m=(imot>=0? (r[imot]||'').trim() : '')||(tc==='NDB'? 'Nota de débito' : 'Sin motivo cargado');
       // se guarda por vendedor ("2") y por vendedor y empresa ("2|SOFTYS")
       for(const key of (g? [String(v), v+'|'+g] : [String(v)])){
@@ -255,7 +266,7 @@ function procesar(txt, nombre, ymPedido, dia){
   const corte= st? `${st[3]}/${st[2]}/${st[1]} ${st[4]}:${st[5]}` : ult.split('-').reverse().join('/');
   // dias de carga del mes (para el selector Dia), del mas nuevo al mas viejo
   const diasCarga=[...cargas].filter(d=>/^\d{2}-\d{2}-\d{4}$/.test(d) && d.slice(6)+'-'+d.slice(3,5)===ym).sort((a,b)=>(b.slice(6)+b.slice(3,5)+b.slice(0,2)).localeCompare(a.slice(6)+a.slice(3,5)+a.slice(0,2)));
-  return {vendedores,equipo,dT,dH,ym,mes:MESES[mo-1]+' '+y,corte,conObj:!!OBJ,objCat:(CFG.objCatPorMes||{})[ym]||null,dia:dia||'',fObj,diasCarga,motivos};
+  return {vendedores,equipo,dT,dH,ym,mes:MESES[mo-1]+' '+y,corte,conObj:!!OBJ,objCat:(CFG.objCatPorMes||{})[ym]||null,dia:dia||'',fObj,diasCarga,motivos,porDia,rechG};
 }
 
 // ---- Dibujo ----
@@ -273,23 +284,48 @@ function celdas(f){ const {dT,dH}=dias(), ideal=dT/dH, x=calc(f);
 
 function render(){
   const {dT,dH}=dias(), E=D.equipo, T=calc(E.TOTAL);
+  // ---- mini graficos de barras de cada indicador (al pasar el mouse muestra el dato de cada barra) ----
+  const KG=CFG.grupos, kIdeal=dT/dH, XG=Object.fromEntries(KG.map(g=>[g,calc(E[g])]));
+  const CORTO={SOFTYS:'SOF',AYUDIN:'AYU',ILOLAY:'ILO',GEORGALOS:'GEO',RIOSMA:'RIO',CEPAS:'CEP',OTM:'OTM'};
+  const mini=(items,ref,refTxt,etiq=true)=>{
+    const vals=items.map(i=>Math.max(+i.v||0,0)), max=(Math.max(ref||0,...vals,0)*1.08)||1;
+    return `<div class="mini" role="img" aria-label="${esc(items.map(i=>i.tip).join('; '))}"><div class="mplot">`
+      + items.map((i,n)=>`<span class="mb" tabindex="0" data-tip="${esc(i.tip)}" style="height:${Math.max(vals[n]/max*100,1.5)}%"></span>`).join('')
+      + (ref!=null? `<i class="mref" style="bottom:${ref/max*100}%"></i>` : '') + '</div>'
+      + (etiq? `<div class="mlab">${items.map(i=>`<span>${esc(i.c||'')}</span>`).join('')}</div>` : '')
+      + (refTxt? `<div class="mlab"><span style="text-align:left">${esc(refTxt)}</span></div>` : '') + '</div>'; };
+  const porG=(f,tip,ref,refTxt)=>mini(KG.map(g=>({c:CORTO[g]||g.slice(0,3), v:f(g), tip:`${NOMBRE_G[g]||g}: ${tip(g)}`})),ref,refTxt);
+  const diasMes=Object.keys(D.porDia||{}).filter(d=>d.startsWith(D.ym)).sort();
+  const gVenta= D.dia || !diasMes.length ? porG(g=>E[g].venta, g=>fmt$(E[g].venta))
+    : mini(diasMes.map(d=>{ const [y,m,dd]=d.split('-'); return {c:dd, v:D.porDia[d], tip:`${DIAS_SEM[new Date(+y,+m-1,+dd).getDay()]} ${dd}/${m}: ${fmt$(D.porDia[d])}`}; }), null, 'Venta de cada día');
+  const vOrd=D.vendedores.map(v=>({v,x:calc(v.filas.TOTAL)})).sort((a,b)=>(b.x.alc||0)-(a.x.alc||0));
+  const rG=g=>Math.abs((D.rechG||{})[g]||0);
   // orden pedido por Bruno: objetivo, venta, tendencia, alcance, cobertura, margen, rechazos, vendedores (el corte va en el subtitulo)
   $('kpis').innerHTML=[
-    ['c2','Objetivo del mes',T.obj? fmt$(T.obj/(D.fObj||1)) : '—',D.dia? `Objetivo del día ${fmt$(T.obj)}` : `Con IVA · ${CFG.grupos.length} empresas`],
+    ['c2','Objetivo del mes',T.obj? fmt$(T.obj/(D.fObj||1)) : '—',D.dia? `Objetivo del día ${fmt$(T.obj)}` : `Con IVA · ${CFG.grupos.length} empresas`,
+      porG(g=>E[g].obj, g=>`${fmt$(E[g].obj)} · ${fmtP((E[g].obj||0)/(T.obj||1))} del total`)],
     ...(D.dia ? [
-      ['c1','Venta del día (con IVA)',fmt$(T.venta),`Cargada el ${D.dia.replace(/-/g,'/')}`],
-      ['c3','Falta para el objetivo',fmt$(Math.max((T.obj||0)-T.venta,0)),`Objetivo del mes ÷ ${D.dH} días hábiles`],
-      ['c2','% Alcance del día',fmtP(T.alc||0),`Objetivo del día ${fmt$(T.obj)}`]
+      ['c1','Venta del día (con IVA)',fmt$(T.venta),`Cargada el ${D.dia.replace(/-/g,'/')}`, gVenta],
+      ['c3','Falta para el objetivo',fmt$(Math.max((T.obj||0)-T.venta,0)),`Objetivo del mes ÷ ${D.dH} días hábiles`,
+        porG(g=>Math.max((E[g].obj||0)-E[g].venta,0), g=>`faltan ${fmt$(Math.max((E[g].obj||0)-E[g].venta,0))}`)],
+      ['c2','% Alcance del día',fmtP(T.alc||0),`Objetivo del día ${fmt$(T.obj)}`,
+        porG(g=>XG[g].alc, g=>XG[g].alc==null? 'sin objetivo' : `${fmtP(XG[g].alc)} (${fmt$(E[g].venta)} de ${fmt$(E[g].obj)})`, 1, '– – 100% del objetivo del día')]
     ] : [
-      ['c1','Venta del mes (con IVA)',fmt$(T.venta),`Objetivo ${fmt$(T.obj)}`],
-      ['c3','Tendencia al cierre',fmt$(T.tend),`Al ritmo actual, ${dT} de ${dH} días hábiles`],
-      ['c2','% Alcance',fmtP(T.alc||0),`Ideal hoy ${fmtP(dT/dH)} · ${dT} de ${dH} días hábiles`]
+      ['c1','Venta del mes (con IVA)',fmt$(T.venta),`Objetivo ${fmt$(T.obj)}`, gVenta],
+      ['c3','Tendencia al cierre',fmt$(T.tend),`Al ritmo actual, ${dT} de ${dH} días hábiles`,
+        porG(g=>XG[g].alcT, g=>`${fmt$(XG[g].tend)}${XG[g].alcT==null? '' : ' = '+fmtP(XG[g].alcT)+' del objetivo'}`, 1, '– – 100% del objetivo')],
+      ['c2','% Alcance',fmtP(T.alc||0),`Ideal hoy ${fmtP(kIdeal)} · ${dT} de ${dH} días hábiles`,
+        porG(g=>XG[g].alc, g=>XG[g].alc==null? 'sin objetivo' : `${fmtP(XG[g].alc)} (${fmt$(E[g].venta)} de ${fmt$(E[g].obj)})`, kIdeal, `– – ideal hoy ${fmtP(kIdeal)}`)]
     ]),
-    ['c4','Cobertura',fmtP(T.cob||0),`${fmtN(T.ccc)} clientes con compra de ${fmtN(T.base)}`],
-    ['c1','% Margen',T.margen==null?'—':fmtP(T.margen),'Sobre venta neta sin IVA'],
-    ['c4','Rechazos',fmt$(E.TOTAL.rech),`${fmtP(E.TOTAL.rechP||0)} de la venta`],
-    ['c3','Vendedores',fmtN(D.vendedores.length),'Del reporte de objetivos']
-  ].map(k=>`<div class="kpi ${k[0]}"><div class="l">${k[1]}</div><div class="v">${k[2]}</div><div class="n">${k[3]}</div></div>`).join('');
+    ['c4','Cobertura',fmtP(T.cob||0),`${fmtN(T.ccc)} clientes con compra de ${fmtN(T.base)}`,
+      porG(g=>XG[g].cob, g=>XG[g].cob==null? 'sin base' : `${fmtP(XG[g].cob)} · ${fmtN(E[g].ccc)} de ${fmtN(E[g].base)} clientes`)],
+    ['c1','% Margen',T.margen==null?'—':fmtP(T.margen),'Sobre venta neta sin IVA',
+      porG(g=>E[g].margen, g=>E[g].margen==null? 'sin dato' : fmtP(E[g].margen))],
+    ['c4','Rechazos',fmt$(E.TOTAL.rech),`${fmtP(E.TOTAL.rechP||0)} de la venta`,
+      porG(rG, g=>`${fmt$(rG(g))}${E[g].venta? ' · '+fmtP(rG(g)/E[g].venta)+' de su venta' : ''}`)],
+    ['c3','Vendedores',fmtN(D.vendedores.length),'Del reporte de objetivos',
+      mini(vOrd.map(o=>({v:o.x.alc, tip:`${o.v.c} · ${o.v.n}: ${o.x.alc==null? 'sin objetivo' : fmtP(o.x.alc)+' de alcance'}`})), kIdeal, `Alcance de cada vendedor · – – ideal ${fmtP(kIdeal)}`, false)]
+  ].map(k=>`<div class="kpi ${k[0]}"><div class="l">${k[1]}</div><div class="v">${k[2]}</div><div class="n">${k[3]}</div>${k[4]||''}</div>`).join('');
 
   const head=first=>`<tr><th class="l">${first}</th>${COLS.map(c=>`<th>${c[1]}</th>`).join('')}</tr>`;
   $('eqHead').innerHTML=head('Empresa');
@@ -467,6 +503,14 @@ $('rHead').addEventListener('click',e=>{ const th=e.target.closest('th[data-rk]'
   if(rSortK===k) rSortD*=-1; else { rSortK=k; rSortD=(k==='c'||k==='n'||k==='mot')?1:-1; } render(); });
 $('vBody').addEventListener('click',e=>{ if(togP(e)) return; const b=e.target.closest('[data-tg]'); if(!b) return; const c=+b.dataset.tg; abiertos.has(c)?abiertos.delete(c):abiertos.add(c); render(); });
 $('tgAll').addEventListener('click',()=>{ const todos=D.vendedores.every(v=>abiertos.has(v.c)); abiertos=new Set(todos?[]:D.vendedores.map(v=>v.c)); render(); });
+// cartel de los mini graficos: mouse, toque o teclado (Tab) sobre una barra
+const TIP=document.createElement('div'); TIP.id='tip'; TIP.setAttribute('role','tooltip'); document.body.appendChild(TIP);
+function verTip(el,x,y){ TIP.textContent=el.dataset.tip; TIP.style.display='block'; const w=TIP.offsetWidth, h=TIP.offsetHeight;
+  TIP.style.left=Math.min(Math.max(8,x-w/2),innerWidth-w-8)+'px'; TIP.style.top=(y-h-12<8? y+18 : y-h-12)+'px'; }
+document.addEventListener('mousemove',e=>{ const el=e.target.closest&&e.target.closest('.mb'); if(el) verTip(el,e.clientX,e.clientY); else if(TIP.style.display!=='none' && document.activeElement?.className!=='mb') TIP.style.display='none'; });
+document.addEventListener('pointerdown',e=>{ const el=e.target.closest&&e.target.closest('.mb'); if(el) verTip(el,e.clientX,e.clientY); else TIP.style.display='none'; });
+document.addEventListener('focusin',e=>{ if(e.target.classList&&e.target.classList.contains('mb')){ const r=e.target.getBoundingClientRect(); verTip(e.target,r.left+r.width/2,r.top); } });
+document.addEventListener('focusout',()=>{ TIP.style.display='none'; });
 $('fMes').addEventListener('change',e=>{ cargarMes(e.target.value).catch(err=>mostrarError(err.message+'.')); });
 $('fTipo').value=TIPO_F;
 $('fTipo').addEventListener('change',e=>{ TIPO_F=e.target.value; try{ localStorage.setItem('reporte-tipo-fecha',TIPO_F); }catch(err){}
