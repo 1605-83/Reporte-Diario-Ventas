@@ -287,7 +287,7 @@ function render(){
     ['c1','% Margen',T.margen==null?'—':fmtP(T.margen),'Sobre venta neta sin IVA'],
     ['c4','Rechazos',fmt$(E.TOTAL.rech),`${fmtP(E.TOTAL.rechP||0)} de la venta`],
     ['c3','Vendedores',fmtN(D.vendedores.length),'Del reporte de objetivos'],
-    ['c2','Corte',D.corte,'Datos de la base de Gescom']
+    ['c2','Objetivo total',T.obj? fmt$(T.obj/(D.fObj||1)) : '—',`Objetivo del mes con IVA · ${CFG.grupos.length} empresas`]   // el corte queda en el subtitulo
   ].map(k=>`<div class="kpi ${k[0]}"><div class="l">${k[1]}</div><div class="v">${k[2]}</div><div class="n">${k[3]}</div></div>`).join('');
 
   const head=first=>`<tr><th class="l">${first}</th>${COLS.map(c=>`<th>${c[1]}</th>`).join('')}</tr>`;
