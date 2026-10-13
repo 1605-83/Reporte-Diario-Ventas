@@ -456,7 +456,7 @@ function arrancar(txt,nombre,ym,dia){
     let st={}; try{ st=JSON.parse(localStorage.getItem(STORE)||'{}')[D.ym]||{}; }catch(e){}
     $('dT').value=st.dT||D.dT; $('dH').value=st.dH||D.dH;
     $('hMes').textContent=D.mes; document.title='Reporte diario de ventas LP · ELB, '+D.mes;
-    $('hAct').textContent=`Datos de ventas al ${D.corte}${/:/.test(D.corte)?' hs':''}`;
+    $('hAct').textContent=`Datos de ventas al ${D.corte}${/:/.test(D.corte)?' hs':''} · Se actualiza solo: lun a vie cada hora, de 7:10 a 17:10 hs`;
     $('hSub').textContent=`Corte al ${D.corte} · Lago Puelo S.A. y Elebes · ${D.vendedores.length} vendedores`;
     $('fVend').innerHTML='<option value="">Todos</option>'+[...D.vendedores].sort((a,b)=>a.c-b.c).map(v=>`<option value="${v.c}">${v.c} · ${esc(v.n||'Vendedor '+v.c)}</option>`).join('');
     $('fEmp').innerHTML=['TOTAL',...CFG.grupos].map(g=>`<option value="${g}">${NOMBRE_G[g]}</option>`).join('');
