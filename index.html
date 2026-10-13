@@ -190,7 +190,15 @@ function procesar(txt, nombre, ymPedido, dia){
   const ix=n=>{const i=H.indexOf(n); if(i<0) throw new Error('Falta la columna '+n); return i;};
   const I={cli:ix('Cliente'),fc:ix('FechaComprobante'),nro:ix('NroComprobante'),cant:ix('CantBase'),neto:ix('ImporteNetoItem'),imp:ix('ImporteItem'),cv:ix('CodVendedor'),vn:ix('Vendedor'),costo:ix('PrecioCosto'),prov:ix('Proveedor')};
   // cada mes puede tener sus propios vendedores y bases (historial); si no, los actuales
-  const OM=(CFG.objetivosPorMes||{})[ymPedido]||null, LISTA=(OM&&OM.vendedores)||CFG.vendedores, BASES_EQ=(OM&&OM.equipoBase)||CFG.equipoBase;
+  // mes en curso: la base de cada vendedor es su cartera en Gescom (carteras.json); la del equipo por empresa suma
+  // las bases de los vendedores con objetivo en esa empresa. Los meses del historial usan las bases que tenian.
+  const OM=(CFG.objetivosPorMes||{})[ymPedido]||null;
+  let LISTA=(OM&&OM.vendedores)||CFG.vendedores, BASES_EQ=(OM&&OM.equipoBase)||CFG.equipoBase;
+  if(!(OM&&OM.vendedores) && CART && CART.v){
+    LISTA=CFG.vendedores.map(v=>CART.v[String(v.c)]? {...v, b:CART.v[String(v.c)].length} : v);
+    BASES_EQ={TOTAL:LISTA.reduce((a,v)=>a+(v.b||0),0)};
+    for(const g of CFG.grupos) BASES_EQ[g]=LISTA.reduce((a,v)=>a+(((v.o||{})[g]||0)>0? (v.b||0) : 0),0);
+  }
   const VEND=new Map(LISTA.map(v=>[v.c,v]));
   const vta={}, uni={}, net={}, cos={}, rech={}, nomCSV={}, fechas=new Set();
   const pv={}, pn={}, pc={}, pu={}, pr={};   // lo mismo por vendedor y proveedor
@@ -469,6 +477,9 @@ function arrancar(txt,nombre,ym,dia){
   }catch(e){ mostrarError('No se pudo procesar el archivo: '+e.message); }
 }
 function mostrarError(m){ $('estado').firstChild.textContent=m+' Podés abrir el CSV manualmente: '; $('manual').style.display='block'; }
+// carteras de clientes por vendedor: carteras.json, lo arma el robot con los clientes activos de la ficha de Gescom
+const CARTERAS=fetch('carteras.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok? r.json() : null).catch(()=>null);
+let CART=null;
 // ---- Historial: un CSV por mes en la carpeta meses/ del repo (lo arma el robot) ----
 let MESES_REPO=[]; const CACHE={};
 const nombreMes=ym=>{ const [y,m]=ym.split('-').map(Number); const t=MESES[m-1]+' '+y; return t[0].toUpperCase()+t.slice(1); };
@@ -522,6 +533,7 @@ $('fTipo').value=TIPO_F;
 $('fTipo').addEventListener('change',e=>{ TIPO_F=e.target.value; try{ localStorage.setItem('reporte-tipo-fecha',TIPO_F); }catch(err){}
   if(D) cargarMes(D.ym, D.dia).catch(err=>mostrarError(err.message+'.')); });
 (async()=>{ try{
+  CART=await CARTERAS;
   MESES_REPO=await listarMeses();
   $('fMes').innerHTML=MESES_REPO.map(x=>`<option value="${x.ym}">${nombreMes(x.ym)}</option>`).join('');
   const hoyYm=new Date(Date.now()-3*3600e3).toISOString().slice(0,7);
