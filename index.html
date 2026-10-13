@@ -23,8 +23,6 @@ header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:fle
 .titulo .t-marca::before,.titulo .t-mes::before{content:"·";margin:0 .6em;color:rgba(255,255,255,.55);font-weight:400}
 .titulo .t-mes{font-weight:500;color:#fff;text-transform:capitalize}
 .titulo .t-mes:empty{display:none}
-.titulo .t-act{margin-left:auto;padding:0 0 0 12px;background:#000;color:#fff;font-size:.55em;font-weight:500;white-space:nowrap;align-self:center}
-.titulo .t-act:empty{display:none}
 @media (min-width:900px){.titulo{flex-wrap:nowrap;white-space:nowrap}}
 .sub{margin:0;font-size:.95rem;color:#D7E7E4}
 .controls{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end;font-size:.85rem}
@@ -108,7 +106,7 @@ tr.det td:first-child{padding-left:34px}
 <body>
 <div class="wrap">
 <header>
-  <h1 class="titulo"><span class="t-txt">Reporte diario de ventas</span><span class="t-marca">Lago Puelo · Elebes</span><span class="t-mes" id="hMes"></span><span class="t-act" id="hAct"></span></h1>
+  <h1 class="titulo"><span class="t-txt">Reporte diario de ventas</span><span class="t-marca">Lago Puelo · Elebes</span><span class="t-mes" id="hMes"></span></h1>
   <p class="sub" id="hSub">Cargando ventas…</p>
   <div class="controls">
     <label>Fecha <select id="fTipo"><option value="comp">De comprobante</option><option value="ent">De entrega</option><option value="car">De carga</option></select></label>
@@ -127,7 +125,7 @@ tr.det td:first-child{padding-left:34px}
   <section class="kpis" id="kpis"></section>
 
   <h2>Total equipo de ventas</h2>
-  <p class="nota">Venta con IVA, neta de devoluciones. Tendencia = venta ÷ días transcurridos × días hábiles. El color del alcance compara contra el avance ideal de días.</p>
+  <p class="nota">Venta con IVA, neta de devoluciones. Tendencia = venta ÷ días transcurridos × días hábiles. Color del alcance: rojo menos de 50%, amarillo de 50% a 79%, verde 80% o más.</p>
   <div class="tbl"><table><thead id="eqHead"></thead><tbody id="eqBody"></tbody></table></div>
 
   <h2>Por vendedor</h2>
@@ -277,7 +275,7 @@ let D=null, abiertos=new Set(), sortK='c', sortD=1, rSortK='rech', rSortD=-1;
 const STORE='reporte-diario-dias';
 function dias(){ if(D.dia) return {dT:1,dH:1};   // un dia: el ideal es el 100% del objetivo diario y la tendencia es la venta del dia
   return {dT:+$('dT').value||D.dT, dH:+$('dH').value||D.dH}; }
-function chipA(a,ideal){ if(a==null) return '<span class="muted">—</span>'; const r=a/ideal; const c=r>=1?'#7CFF6B':r>=.85?'#FFE14D':'#FF6B6B'; return `<span class="chip" style="background:${c}">${fmtP(a)}</span>`; }
+function chipA(a,ideal){ if(a==null) return '<span class="muted">—</span>'; const c=a>=.8?'#7CFF6B':a>=.5?'#FFE14D':'#FF6B6B';   // rangos fijos: menos de 50% rojo, 50 a 79% amarillo, 80% o mas verde return `<span class="chip" style="background:${c}">${fmtP(a)}</span>`; }
 function calc(f){ const {dT,dH}=dias(); const tend=f.venta/dT*dH; return {...f, alc:f.obj? f.venta/f.obj:null, tend, alcT:f.obj? tend/f.obj:null, cob:f.base? f.ccc/f.base:null}; }
 const COLS=[['obj','Objetivo'],['venta','Venta'],['alc','% Alcance'],['tend','Tendencia $'],['cob','% Cobertura'],['base','Base'],['ccc','CCC'],['margen','% Margen'],['rechP','% Rechazos']];
 function celdas(f){ const {dT,dH}=dias(), ideal=dT/dH, x=calc(f);
@@ -456,7 +454,6 @@ function arrancar(txt,nombre,ym,dia){
     let st={}; try{ st=JSON.parse(localStorage.getItem(STORE)||'{}')[D.ym]||{}; }catch(e){}
     $('dT').value=st.dT||D.dT; $('dH').value=st.dH||D.dH;
     $('hMes').textContent=D.mes; document.title='Reporte diario de ventas LP · ELB, '+D.mes;
-    $('hAct').textContent=`Datos de ventas al ${D.corte}${/:/.test(D.corte)?' hs':''}`;
     $('hSub').textContent=`Corte al ${D.corte} · Lago Puelo S.A. y Elebes · ${D.vendedores.length} vendedores`;
     $('fVend').innerHTML='<option value="">Todos</option>'+[...D.vendedores].sort((a,b)=>a.c-b.c).map(v=>`<option value="${v.c}">${v.c} · ${esc(v.n||'Vendedor '+v.c)}</option>`).join('');
     $('fEmp').innerHTML=['TOTAL',...CFG.grupos].map(g=>`<option value="${g}">${NOMBRE_G[g]}</option>`).join('');
@@ -464,7 +461,6 @@ function arrancar(txt,nombre,ym,dia){
     if(!D.conObj) $('hSub').textContent+=' · Sin objetivos cargados para este mes';
     if(!D.dia) $('hSub').textContent=`Venta por ${NOMBRE_TIPO[TIPO_F]} · ${$('hSub').textContent}`;
     if(D.dia) $('hSub').textContent=`Venta cargada el ${D.dia.replace(/-/g,'/')} · ${$('hSub').textContent}`;
-    $('hSub').hidden=true;   // la fecha de los datos va arriba a la derecha
     render();
   }catch(e){ mostrarError('No se pudo procesar el archivo: '+e.message); }
 }
@@ -485,7 +481,7 @@ async function listarMeses(){
 async function cargarMes(ym,dia){
   const it=MESES_REPO.find(x=>x.ym===ym); if(!it) return;
   if(!CACHE[ym]||CACHE[ym].nombre!==it.nombre){
-    $('hSub').hidden=false; $('hSub').textContent='Cargando '+nombreMes(ym)+'…';
+    $('hSub').textContent='Cargando '+nombreMes(ym)+'…';
     const d=await fetch(it.url+'?t='+Date.now()); if(!d.ok) throw new Error('No se pudo descargar '+it.nombre);
     CACHE[ym]={nombre:it.nombre, txt:new TextDecoder('windows-1252').decode(await d.arrayBuffer())};
   }
