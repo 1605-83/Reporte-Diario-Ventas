@@ -23,6 +23,8 @@ header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:fle
 .titulo .t-marca::before,.titulo .t-mes::before{content:"·";margin:0 .6em;color:rgba(255,255,255,.55);font-weight:400}
 .titulo .t-mes{font-weight:500;color:#fff;text-transform:capitalize}
 .titulo .t-mes:empty{display:none}
+.titulo .t-act{margin-left:auto;padding:0 0 0 12px;background:#000;color:#fff;font-size:.55em;font-weight:500;white-space:nowrap;align-self:center}
+.titulo .t-act:empty{display:none}
 @media (min-width:900px){.titulo{flex-wrap:nowrap;white-space:nowrap}}
 .sub{margin:0;font-size:.95rem;color:#D7E7E4}
 .controls{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end;font-size:.85rem}
@@ -106,7 +108,7 @@ tr.det td:first-child{padding-left:34px}
 <body>
 <div class="wrap">
 <header>
-  <h1 class="titulo"><span class="t-txt">Reporte diario de ventas</span><span class="t-marca">Lago Puelo · Elebes</span><span class="t-mes" id="hMes"></span></h1>
+  <h1 class="titulo"><span class="t-txt">Reporte diario de ventas</span><span class="t-marca">Lago Puelo · Elebes</span><span class="t-mes" id="hMes"></span><span class="t-act" id="hAct"></span></h1>
   <p class="sub" id="hSub">Cargando ventas…</p>
   <div class="controls">
     <label>Fecha <select id="fTipo"><option value="comp">De comprobante</option><option value="ent">De entrega</option><option value="car">De carga</option></select></label>
@@ -454,6 +456,7 @@ function arrancar(txt,nombre,ym,dia){
     let st={}; try{ st=JSON.parse(localStorage.getItem(STORE)||'{}')[D.ym]||{}; }catch(e){}
     $('dT').value=st.dT||D.dT; $('dH').value=st.dH||D.dH;
     $('hMes').textContent=D.mes; document.title='Reporte diario de ventas LP · ELB, '+D.mes;
+    $('hAct').textContent=`Datos de ventas al ${D.corte}${/:/.test(D.corte)?' hs':''}`;
     $('hSub').textContent=`Corte al ${D.corte} · Lago Puelo S.A. y Elebes · ${D.vendedores.length} vendedores`;
     $('fVend').innerHTML='<option value="">Todos</option>'+[...D.vendedores].sort((a,b)=>a.c-b.c).map(v=>`<option value="${v.c}">${v.c} · ${esc(v.n||'Vendedor '+v.c)}</option>`).join('');
     $('fEmp').innerHTML=['TOTAL',...CFG.grupos].map(g=>`<option value="${g}">${NOMBRE_G[g]}</option>`).join('');
@@ -461,6 +464,7 @@ function arrancar(txt,nombre,ym,dia){
     if(!D.conObj) $('hSub').textContent+=' · Sin objetivos cargados para este mes';
     if(!D.dia) $('hSub').textContent=`Venta por ${NOMBRE_TIPO[TIPO_F]} · ${$('hSub').textContent}`;
     if(D.dia) $('hSub').textContent=`Venta cargada el ${D.dia.replace(/-/g,'/')} · ${$('hSub').textContent}`;
+    $('hSub').hidden=true;   // la fecha de los datos va arriba a la derecha
     render();
   }catch(e){ mostrarError('No se pudo procesar el archivo: '+e.message); }
 }
@@ -481,7 +485,7 @@ async function listarMeses(){
 async function cargarMes(ym,dia){
   const it=MESES_REPO.find(x=>x.ym===ym); if(!it) return;
   if(!CACHE[ym]||CACHE[ym].nombre!==it.nombre){
-    $('hSub').textContent='Cargando '+nombreMes(ym)+'…';
+    $('hSub').hidden=false; $('hSub').textContent='Cargando '+nombreMes(ym)+'…';
     const d=await fetch(it.url+'?t='+Date.now()); if(!d.ok) throw new Error('No se pudo descargar '+it.nombre);
     CACHE[ym]={nombre:it.nombre, txt:new TextDecoder('windows-1252').decode(await d.arrayBuffer())};
   }
