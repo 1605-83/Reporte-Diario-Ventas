@@ -277,7 +277,7 @@ let D=null, abiertos=new Set(), sortK='c', sortD=1, rSortK='rech', rSortD=-1;
 const STORE='reporte-diario-dias';
 function dias(){ if(D.dia) return {dT:1,dH:1};   // un dia: el ideal es el 100% del objetivo diario y la tendencia es la venta del dia
   return {dT:+$('dT').value||D.dT, dH:+$('dH').value||D.dH}; }
-function chipA(a,ideal){ if(a==null) return '<span class="muted">—</span>'; const c=a>=.8?'#7CFF6B':a>=.5?'#FFE14D':'#FF6B6B';   // rangos fijos: menos de 50% rojo, 50 a 79% amarillo, 80% o mas verde return `<span class="chip" style="background:${c}">${fmtP(a)}</span>`; }
+function chipA(a,ideal){ if(a==null) return '<span class="muted">—</span>'; const c=a>=.8?'#7CFF6B':a>=.5?'#FFE14D':'#FF6B6B';   /* rangos fijos: menos de 50% rojo, 50 a 79% amarillo, 80% o mas verde */ return `<span class="chip" style="background:${c}">${fmtP(a)}</span>`; }
 function calc(f){ const {dT,dH}=dias(); const tend=f.venta/dT*dH; return {...f, alc:f.obj? f.venta/f.obj:null, tend, alcT:f.obj? tend/f.obj:null, cob:f.base? f.ccc/f.base:null}; }
 const COLS=[['obj','Objetivo'],['venta','Venta'],['alc','% Alcance'],['tend','Tendencia $'],['cob','% Cobertura'],['base','Base'],['ccc','CCC'],['margen','% Margen'],['rechP','% Rechazos']];
 function celdas(f){ const {dT,dH}=dias(), ideal=dT/dH, x=calc(f);
