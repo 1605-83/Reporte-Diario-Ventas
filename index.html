@@ -303,7 +303,7 @@ function calc(f){ const {dT,dH}=dias(); const tend=f.venta/dT*dH; return {...f, 
 const COLS=[['obj','Objetivo'],['venta','Venta'],['alc','% Alcance'],['tend','Tendencia $'],['cob','% Cobertura'],['base','Base'],['ccc','CCC'],['margen','% Margen'],['rechP','% Rechazos']];
 function celdas(f){ const {dT,dH}=dias(), ideal=dT/dH, x=calc(f);
   return [x.obj? fmt$(x.obj):'<span class="muted">—</span>', fmt$(x.venta), chipA(x.alc,ideal), fmt$(x.tend),
-    x.cob==null?'<span class="muted">—</span>':fmtP(x.cob), x.base? fmtN(x.base):'<span class="muted">—</span>', fmtN(x.ccc),
+    x.cob==null?'<span class="muted">—</span>':`<span class="chip" style="background:${x.cob>=.9?'#7CFF6B':x.cob>=.5?'#FFE14D':'#FF6B6B'}">${fmtP(x.cob)}</span>`, x.base? fmtN(x.base):'<span class="muted">—</span>', fmtN(x.ccc),
     x.margen==null?'<span class="muted">—</span>':fmtP(x.margen), x.rechP==null?'':fmtP(x.rechP)].map(c=>`<td>${c}</td>`).join(''); }
 
 function render(){
