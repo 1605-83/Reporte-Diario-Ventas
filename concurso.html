@@ -47,10 +47,22 @@ td{font-weight:600}
 tr.fila:hover td{background:#FFF4EA}
 button.tg{font:inherit;font-weight:900;width:26px;height:26px;border-radius:6px;border:1px solid #999;background:#fff;cursor:pointer;margin-right:6px}
 tr.det>td{background:#F6F6F6;white-space:normal;text-align:left;padding:12px}
-.detgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
-.detgrid table{background:#fff;border:1px solid #CCC;font-size:.88rem}
+/* detalle del vendedor: queda fijo al ancho visible aunque la tabla grande se corra hacia los costados */
+.detin{position:sticky;left:12px;width:min(1100px,calc(100vw - 56px))}
+.resumen{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-bottom:12px}
+.rc{background:#fff;border:1px solid #CCC;border-left:5px solid #FF7A1A;border-radius:8px;padding:8px 12px;min-width:0}
+.rc.si{border-left-color:var(--ok)}
+.rc span{display:block;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.03em;color:#555}
+.rc b{display:block;font-size:1.05rem;margin:2px 0}
+.rc small{display:block;font-size:.78rem;color:#555;white-space:normal}
+.detgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;align-items:start}
+.detgrid section{min-width:0}
+.detgrid .tw{overflow-x:auto;border:1px solid #CCC;border-radius:8px;background:#fff}
+.detgrid table{background:#fff;font-size:.86rem}
 .detgrid th{position:static;cursor:default}
-.detgrid h4{margin:0 0 6px;font-size:.95rem}
+.detgrid td.cli{white-space:normal;min-width:160px}
+.detgrid h4{margin:0 0 6px;font-size:.95rem;color:#000}
+@media (max-width:640px){.detin{left:6px;width:calc(100vw - 40px)}.detgrid{grid-template-columns:1fr}.detgrid table{font-size:.8rem}.resumen{grid-template-columns:1fr 1fr}.rc b{font-size:.95rem}}
 .falta{font-size:.85rem;margin:0 0 4px}
 .ok{color:var(--ok)}.mal{color:var(--low)}
 #estado{margin-top:14px;color:#FFD23F}
@@ -242,28 +254,36 @@ function dibujar(){
   $('main').innerHTML=h+'</tbody>';
 }
 
+// Detalle de un vendedor: arriba 3 tarjetas con lo que le falta, y abajo Empresas, Clientes clave y Cobertura en bloques
+// que se acomodan uno debajo del otro en el celular (el detalle queda fijo al ancho de la pantalla aunque la tabla se corra)
 function detalle(x){
-  const s=[];
-  // que le falta para el proximo escalon de volumen
   const pasos=[[LLAVE,'la llave del 90%'],[1,'el 100% (2 cupones)'],[1.1,'el 110% (3 cupones)'],[1.2,'el 120% (4 cupones)']];
   const sig=pasos.find(([p])=>(x.alc||0)<p);
-  s.push(`<p class="falta">${sig? `Le faltan <b>${fmt$(sig[0]*x.to-x.tv)}</b> para ${sig[1]}.` : '<span class="ok">Ya llegó al 120% del objetivo.</span>'} Venta ${fmt$(x.tv)} de ${fmt$(x.to)}.</p>`);
-  if(x.enCurso) s.push(`<p class="falta">Si mantiene el ritmo (${x.dT} de ${x.dH} días hábiles): cierra en ${fmt$(x.tend.tv)} = <b>${fmtP(x.tend.alc)}</b> del objetivo y <b>${x.tend.total} cupones</b>.</p>`);
   const sigP=Math.ceil((x.pts+1)/15)*15;
-  s.push(`<p class="falta">Proveedores: ${x.pts} puntos = ${x.cup.prov} cupones${x.cup.prov<5? ` · próximo cupón a los ${sigP} puntos` : ''}.</p>`);
-  let t=`<div class="detgrid"><div><h4>Empresas</h4><table><thead><tr><th class="l">Empresa</th><th>Objetivo</th><th>Venta</th><th>%</th><th>Falta</th><th>Puntos</th></tr></thead><tbody>`;
-  for(const p of x.prov) t+=`<tr><td class="l">${NOMBRE_G[p.g]}</td><td>${p.obj? fmt$(p.obj) : 'sin objetivo'}</td><td>${fmt$(p.venta)}</td><td class="${p.llega?'ok':p.obj?'mal':''}">${fmtP(p.p)}</td><td>${p.obj? (p.llega? '—' : fmt$(p.obj-p.venta)) : ''}</td><td>${p.pts? p.pts : p.obj? '0 / '+(PUNTOS[p.g]||0) : ''}</td></tr>`;
-  t+=`</tbody></table></div><div><h4>Clientes clave (${x.clave.filter(c=>c.compro).length} de ${x.clave.length} con compra)</h4><table><thead><tr><th class="l">Cliente</th><th>Compra 2 meses ant.</th><th>Este mes</th></tr></thead><tbody>`;
-  for(const c of x.clave) t+=`<tr><td class="l">${esc(c.cli)} · ${esc(titulo(c.rs))}</td><td>${fmt$(c.hist)}</td><td class="${c.compro?'ok':'mal'}">${c.compro?'Compró':'Falta'}</td></tr>`;
-  if(!x.clave.length) t+='<tr><td class="l" colspan="3">Sin historial de compras de los meses anteriores.</td></tr>';
-  t+=`</tbody></table></div><div><h4>Cobertura y rechazos</h4><table><tbody>
-    <tr><td class="l">Clientes con compra</td><td>${fmtN(x.ccc)} de ${fmtN(x.b||0)}</td></tr>
-    <tr><td class="l">% Cobertura</td><td>${fmtP(x.cobP)}</td></tr>
-    <tr><td class="l">Para 70% / 82%</td><td>${Math.max(0,Math.ceil(.7*(x.b||0))-x.ccc)} / ${Math.max(0,Math.ceil(.82*(x.b||0))-x.ccc)} clientes más</td></tr>
-    <tr><td class="l">Rechazos</td><td>${fmt$(x.rech)} (${fmtP(x.rechP)})</td></tr>
-    <tr><td class="l">Tope sin perder / para sumar</td><td>6% = ${fmt$(.06*x.tv)} · 2% = ${fmt$(.02*x.tv)}</td></tr>
-  </tbody></table></div></div>`;
-  return s.join('')+t;
+  const tarjeta=(t,v,n,cls='')=>`<div class="rc ${cls}"><span>${t}</span><b>${v}</b><small>${n}</small></div>`;
+  let h='<div class="detin"><div class="resumen">';
+  h+=tarjeta('Volumen', sig? `Faltan ${fmt$(sig[0]*x.to-x.tv)}` : 'Llegó al 120%', sig? `para ${sig[1]} · lleva ${fmt$(x.tv)} de ${fmt$(x.to)}` : `Venta ${fmt$(x.tv)} de ${fmt$(x.to)}`, sig? '' : 'si');
+  if(x.enCurso) h+=tarjeta('Si mantiene el ritmo', `${fmt$(x.tend.tv)} · ${fmtP(x.tend.alc)}`, `${x.tend.total} cupones al cierre · ${x.dT} de ${x.dH} días hábiles`);
+  h+=tarjeta('Proveedores', `${x.pts} puntos = ${x.cup.prov} cupones`, x.cup.prov<5? `próximo cupón a los ${sigP} puntos` : 'máximo de cupones por proveedores');
+  h+=tarjeta('Cobertura', `${fmtP(x.cobP)} · ${fmtN(x.ccc)} de ${fmtN(x.b||0)}`, `faltan ${Math.max(0,Math.ceil(.7*(x.b||0))-x.ccc)} clientes para 70% y ${Math.max(0,Math.ceil(.82*(x.b||0))-x.ccc)} para 82%`);
+  h+='</div><div class="detgrid">';
+  // Empresas
+  h+=`<section><h4>Empresas</h4><div class="tw"><table><thead><tr><th class="l">Empresa</th><th>Objetivo</th><th>Venta</th><th>%</th><th>Falta</th><th>Puntos</th></tr></thead><tbody>`;
+  for(const p of x.prov) h+=`<tr><td class="l">${NOMBRE_G[p.g]}</td><td>${p.obj? fmt$(p.obj) : '—'}</td><td>${fmt$(p.venta)}</td><td class="${p.llega?'ok':p.obj?'mal':''}">${fmtP(p.p)}</td><td>${p.obj? (p.llega? '—' : fmt$(p.obj-p.venta)) : ''}</td><td>${p.pts? p.pts : p.obj? '0 / '+(PUNTOS[p.g]||0) : ''}</td></tr>`;
+  h+='</tbody></table></div></section>';
+  // Clientes clave: primero los que faltan
+  const clave=[...x.clave].sort((a,b)=>(a.compro-b.compro)||(b.hist-a.hist)), nOk=x.clave.filter(c=>c.compro).length;
+  h+=`<section><h4>Clientes clave · ${nOk} de ${x.clave.length} ya compraron</h4><div class="tw"><table><thead><tr><th class="l">Cliente</th><th>Compra 2 meses ant.</th><th>Este mes</th></tr></thead><tbody>`;
+  for(const c of clave) h+=`<tr><td class="l cli">${esc(c.cli)} · ${esc(titulo(c.rs))}</td><td>${fmt$(c.hist)}</td><td class="${c.compro?'ok':'mal'}">${c.compro?'Compró':'Falta'}</td></tr>`;
+  if(!x.clave.length) h+='<tr><td class="l" colspan="3">Sin historial de compras de los meses anteriores.</td></tr>';
+  h+='</tbody></table></div></section>';
+  // Rechazos
+  h+=`<section><h4>Rechazos</h4><div class="tw"><table><tbody>
+    <tr><td class="l">Rechazos del mes</td><td>${fmt$(x.rech)} · ${fmtP(x.rechP)}</td></tr>
+    <tr><td class="l">Tope para no perder (6%)</td><td>${fmt$(.06*x.tv)}</td></tr>
+    <tr><td class="l">Tope para sumar (2%)</td><td>${fmt$(.02*x.tv)}</td></tr>
+  </tbody></table></div></section>`;
+  return h+'</div></div>';
 }
 
 document.addEventListener('click',e=>{
