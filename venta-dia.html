@@ -79,6 +79,36 @@ select,input{font:inherit;font-size:.95rem;color:var(--ink);background:#fff;bord
   .det{padding-left:12px}
 }
 .resm{display:none}
+/* graficos de los indicadores */
+.kpis{grid-template-columns:repeat(5,minmax(0,1fr))}
+@media (max-width:1250px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:800px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.kpis{grid-template-columns:1fr}.kpi{border-right:0;border-bottom:1px solid var(--line)}}
+.kpi .v{font-size:1.55rem}
+.kpi button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left}
+.gdias{display:flex;align-items:flex-end;gap:3px;height:54px;margin-top:12px;border-bottom:1px solid var(--line)}
+.gdias .gb{flex:1 1 0;min-width:4px;background:#BFD3F5;border-radius:3px 3px 0 0;transition:background .12s}
+.gdias .gb:hover{background:#7FA6EA}.gdias .gb.sel{background:var(--marca)}
+.gcap{display:flex;justify-content:space-between;font-size:.72rem;color:var(--ink2);margin-top:3px}
+.gfila{display:flex;align-items:center;gap:14px;margin-top:8px}
+.dona{width:112px;height:112px;flex:0 0 112px}
+.dona .seg{cursor:pointer;transition:stroke-width .12s,opacity .12s}
+.dona .seg:hover,.dona .seg.sel{stroke-width:18}.dona .seg.apag{opacity:.3}
+.dona .dc{font-size:17px;font-weight:700;fill:var(--ink)}.dona .ds{font-size:8.5px;fill:var(--ink2)}
+.n.col{flex-direction:column;gap:6px}
+.ley{border-radius:8px!important;padding:2px 6px!important;margin-left:-6px!important}
+.ley:hover,.ley.sel{background:#EEF3FF!important}
+.hb{display:flex;flex-direction:column;gap:5px;margin-top:10px}
+.hrow{display:grid!important;grid-template-columns:72px 1fr auto;align-items:center;gap:8px;font-size:.82rem;border-radius:6px!important;padding:2px 4px!important}
+.hrow.cli{grid-template-columns:18px 86px 1fr auto}
+.hrow:hover,.hrow.sel{background:#EEF3FF!important}.hrow.apag{opacity:.4}
+.hrow .hn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#444}
+.hrow .hbar{height:9px;background:#EEF0F3;border-radius:5px;overflow:hidden;min-width:30px}
+.hrow .hbar i{display:block;height:100%;border-radius:5px}
+.hrow .hv{font-weight:700;font-size:.8rem}
+.hrow .pos{width:18px;height:18px;border-radius:50%;background:#EEE;color:#555;font-size:.68rem;font-weight:700;display:flex;align-items:center;justify-content:center}
+.hrow.cli:nth-child(1) .pos{background:#B8860B;color:#fff}.hrow.cli:nth-child(2) .pos{background:#888;color:#fff}.hrow.cli:nth-child(3) .pos{background:#A0522D;color:#fff}
+#tip{position:fixed;z-index:60;display:none;pointer-events:none;max-width:280px;padding:6px 9px;border-radius:8px;background:#1F2328;color:#fff;font-size:.8rem;font-weight:500;box-shadow:0 2px 10px rgba(0,0,0,.25)}
 footer{margin-top:18px;font-size:.78rem;color:var(--ink2);text-align:center}
 </style>
 </head>
@@ -105,7 +135,8 @@ footer{margin-top:18px;font-size:.78rem;color:var(--ink2);text-align:center}
       <div id="filas"></div>
     </div>
   </div>
-  <footer>Datos de la base de Gescom · pedidos por fecha de carga, importes con IVA · se actualiza con el Reporte diario de ventas</footer>
+  <div id="tip" role="tooltip"></div>
+  <footer>Tocá los gráficos para filtrar: un día, un tipo de operación, una empresa o un cliente (tocando de nuevo se saca el filtro) · Datos de la base de Gescom · pedidos por fecha de carga, importes con IVA · se actualiza con el Reporte diario de ventas</footer>
 </div>
 <script>
 const REPO_RAW='https://raw.githubusercontent.com/1605-83/Reporte-Diario-Ventas/main/';
@@ -173,13 +204,36 @@ function dibujar(){
   const mix=comp.size? Object.values(mixC).reduce((a,s)=>a+s.size,0)/comp.size : 0;
   const porCli={}, rsCli={}; D.filter(x=>x.op==='VEN').forEach(x=>{ porCli[x.cli]=(porCli[x.cli]||0)+x.imp; rsCli[x.cli]=x.rs; });
   const top=Object.entries(porCli).sort((a,b)=>b[1]-a[1]).slice(0,5), topP=venta? top.reduce((a,t)=>a+t[1],0)/venta : 0;
+  // ---- graficos de los indicadores: cada uno se arma sin su propio filtro, asi se ven todas las opciones y la elegida resalta
+  const sin=skip=>FILAS.filter(x=>x.car===dia && (skip==='v'||!fv||String(x.v)===fv) && (skip==='o'||!fo||x.op===fo) && (skip==='e'||!fe||x.g===fe) && (!fc||x.cli===fc||x.rs.toLowerCase().includes(fc)));
+  // venta por dia del mes (barras; tocar un dia lo elige)
+  const ymd=d=>d.slice(6)+d.slice(3,5)+d.slice(0,2);
+  const porDia={}; FILAS.forEach(x=>{ if(x.op==='VEN' && (!fv||String(x.v)===fv) && (!fe||x.g===fe)) porDia[x.car]=(porDia[x.car]||0)+x.imp; });
+  const diasG=Object.keys(porDia).sort((a,b)=>ymd(a).localeCompare(ymd(b))), maxD=Math.max(1,...Object.values(porDia));
+  const gDias=`<div class="gdias">${diasG.map(d=>`<button type="button" class="gb${d===dia?' sel':''}" data-dia="${d}" data-tip="${fechaDia(d).txt}: ${fmt0(porDia[d])}" style="height:${Math.max(4,porDia[d]/maxD*100)}%"></button>`).join('')}</div><div class="gcap"><span>${diasG[0]? diasG[0].slice(0,5) : ''}</span><span>Venta por día del mes</span><span>${diasG.length? diasG[diasG.length-1].slice(0,5) : ''}</span></div>`;
+  // operaciones por tipo (dona; tocar filtra el tipo)
+  const Do=sin('o'), cnt={VEN:new Set(),DEV:new Set(),NDB:new Set()}; Do.forEach(x=>cnt[x.op].add(x.v+'|'+x.nro));
+  const seg=[['VEN','pedidos','var(--azul)',cnt.VEN.size],['DEV','devoluciones','var(--violeta)',cnt.DEV.size],['NDB','notas de débito','var(--naranja)',cnt.NDB.size]];
+  const dona=(partes,centro,sub)=>{ const tot=partes.reduce((a,p)=>a+p[3],0)||1, R=40, C=2*Math.PI*R; let ac=0;
+    return `<svg viewBox="0 0 100 100" class="dona" role="img" aria-label="${esc(sub)}"><circle cx="50" cy="50" r="${R}" fill="none" stroke="#EEF0F3" stroke-width="14"/>${partes.filter(p=>p[3]>0).map(p=>{ const l=p[3]/tot*C, s=`<circle class="seg${p[4]?' sel':''}${p[5]?' apag':''}" data-${p[6]||'op'}="${p[0]}" data-tip="${fmtN(p[3])} ${p[1]} (${Math.round(p[3]/tot*100)}%)" cx="50" cy="50" r="${R}" fill="none" stroke="${p[2]}" stroke-width="14" stroke-dasharray="${l} ${C-l}" stroke-dashoffset="${-ac}" transform="rotate(-90 50 50)"/>`; ac+=l; return s; }).join('')}<text x="50" y="48" text-anchor="middle" class="dc">${centro}</text><text x="50" y="62" text-anchor="middle" class="ds">${esc(sub)}</text></svg>`; };
+  const gOps=dona(seg.map(s=>[...s, fo===s[0], fo&&fo!==s[0], 'op']), fmtN(ops.length), 'operaciones');
+  // compradores contra no compradores de la ruta (dona; tocar "no compradores" ordena por no compra)
+  const rutaT=[...V.values()].reduce((a,v)=>a+(v.ruta? v.ruta.length : 0),0), cobR= rutaT? (rutaT-noComp)/rutaT : null;
+  const gComp=dona([['c','compradores de la ruta','var(--verde)',Math.max(0,rutaT-noComp),false,false,'nc'],['n','no compradores','var(--rojo)',noComp,sortK==='nc',false,'nc']], cobR==null? '—' : Math.round(cobR*100)+'%', 'de la ruta');
+  // venta por empresa (barras horizontales; tocar filtra la empresa)
+  const De=sin('e').filter(x=>x.op==='VEN'), porE={}; De.forEach(x=>porE[x.g]=(porE[x.g]||0)+x.imp);
+  const emps=Object.entries(porE).sort((a,b)=>b[1]-a[1]), maxE=Math.max(1,...emps.map(e=>e[1]));
+  const COLG={SOFTYS:'#3B7BE0',AYUDIN:'#3DAA5C',ILOLAY:'#E0B000',GEORGALOS:'#E07B2E',RIOSMA:'#9C5BD6',CEPAS:'#D6457A',OTM:'#7A8290'};
+  const gEmp=`<div class="hb">${emps.map(([g,x])=>`<button type="button" class="hrow${fe===g?' sel':''}${fe&&fe!==g?' apag':''}" data-emp="${g}" data-tip="${NOMBRE_G[g]}: ${fmt0(x)} (${Math.round(x/(venta||1)*100)}%)"><span class="hn">${NOMBRE_G[g]||g}</span><span class="hbar"><i style="width:${x/maxE*100}%;background:${COLG[g]||'#888'}"></i></span><span class="hv">${fmt0(x)}</span></button>`).join('')||'<span class="mut">Sin ventas</span>'}</div>`;
+  // top 5 clientes (barras; tocar filtra el cliente)
+  const maxT=Math.max(1,...top.map(t=>t[1]));
   $('kpis').innerHTML=`
-    <div class="kpi"><div class="l">$ Total preventa</div><div class="v">${fmt0(venta)}</div><div class="n"><span>Devoluciones <b>${fmt0(dev)}</b></span>${ndb? `<span>Notas de débito <b>${fmt0(ndb)}</b></span>` : ''}</div></div>
-    <div class="kpi"><div class="l">Operaciones</div><div class="v">${fmtN(ops.length)}</div><div class="n"><span><i class="dot" style="background:var(--azul)"></i><b>${nPed}</b> pedidos</span><span><i class="dot" style="background:var(--violeta)"></i><b>${nDev}</b> devoluciones</span>${nNdb? `<span><i class="dot" style="background:var(--naranja)"></i><b>${nNdb}</b> notas de débito</span>` : ''}</div></div>
-    <div class="kpi"><div class="l">Compradores</div><div class="v">${fmtN(comp.size)} ${CART? `<span class="rojo" style="font-size:.6em">${fmtN(noComp)}</span> <span style="font-size:.5em;color:var(--ink2)">no compradores</span>` : ''}</div><div class="n">${CART? `De la ruta del ${DIAS[f.getDay()]} en la cartera` : ''}</div></div>
-    <div class="kpi"><div class="l">Artículos</div><div class="v">${fmtN(arts.size)} <span style="font-size:.5em;color:var(--ink2)">distintos</span></div><div class="n">Mix <b>${mix.toLocaleString('es-AR',{maximumFractionDigits:1})}</b> por cliente</div></div>
+    <div class="kpi"><div class="l">$ Total preventa</div><div class="v">${fmt0(venta)}</div><div class="n"><span>Devoluciones <b>${fmt0(dev)}</b></span>${ndb? `<span>Notas de débito <b>${fmt0(ndb)}</b></span>` : ''}</div>${gDias}</div>
+    <div class="kpi"><div class="l">Operaciones</div><div class="gfila">${gOps}<div class="n col">${seg.map(s=>`<button type="button" class="ley${fo===s[0]?' sel':''}" data-op="${s[0]}"><i class="dot" style="background:${s[2]}"></i><b>${s[3]}</b> ${s[1]}</button>`).join('')}</div></div></div>
+    <div class="kpi"><div class="l">Compradores</div><div class="gfila">${gComp}<div class="n col"><span><i class="dot" style="background:var(--verde)"></i><b>${fmtN(comp.size)}</b> compradores</span>${CART? `<button type="button" class="ley${sortK==='nc'?' sel':''}" data-nc="n"><i class="dot" style="background:var(--rojo)"></i><b class="rojo">${fmtN(noComp)}</b> no compradores</button><span>Ruta del ${DIAS[f.getDay()]}: ${fmtN(rutaT)} clientes</span>` : ''}</div></div></div>
+    <div class="kpi"><div class="l"><span>Venta por empresa</span><span>${fmtN(arts.size)} artículos · mix ${mix.toLocaleString('es-AR',{maximumFractionDigits:1})}</span></div>${gEmp}</div>
     <div class="kpi"><div class="l"><span>★ Top 5 clientes</span><span>${Math.round(topP*100)}% del total</span></div>
-      <ul class="top">${top.map((t,i)=>`<li><span class="pos">${i+1}</span><span class="nom">${esc(t[0])} ${esc(rsCli[t[0]])}</span><span class="imp">${fmt0(t[1])}</span></li>`).join('')||'<li class="mut">Sin ventas</li>'}</ul></div>`;
+      <div class="hb">${top.map((t,i)=>`<button type="button" class="hrow cli${fc===t[0]?' sel':''}" data-cli="${esc(t[0])}" data-tip="${esc(t[0])} ${esc(rsCli[t[0]])}: ${fmt0(t[1])}"><span class="pos">${i+1}</span><span class="hn">${esc(titulo(rsCli[t[0]])||t[0])}</span><span class="hbar"><i style="width:${t[1]/maxT*100}%;background:#B8860B"></i></span><span class="hv">${fmt0(t[1])}</span></button>`).join('')||'<span class="mut">Sin ventas</span>'}</div></div>`;
   $('meta').textContent=`${txt} · ${fmtN(ops.length)} operaciones · datos al ${corte}`;
   // lista por vendedor
   const val={c:v=>v.c, n:v=>v.n, cli:v=>v.cli.size, ops:v=>v.ops.size, nc:v=>v.nc? v.nc.length : -1, tot:v=>v.tot};
@@ -212,11 +266,24 @@ function detalle(v){
   return t+'</div>';
 }
 
+// clics en los graficos: cada uno prende o apaga su filtro
+const tog=(id,val)=>{ $(id).value= $(id).value===val? '' : val; dibujar(); };
 document.addEventListener('click',e=>{
+  const k=e.target.closest('#kpis [data-dia],#kpis [data-op],#kpis [data-emp],#kpis [data-cli],#kpis [data-nc]');
+  if(k){ const d=k.dataset;
+    if(d.dia){ $('dia').value=d.dia; dibujar(); }
+    else if(d.op) tog('fOp',d.op);
+    else if(d.emp) tog('fEmp',d.emp);
+    else if(d.cli) tog('fCli',d.cli);
+    else if(d.nc){ if(sortK==='nc'){ sortK='c'; sortD=1; } else { sortK='nc'; sortD=-1; } dibujar(); document.querySelector('.lista').scrollIntoView({behavior:'smooth'}); }
+    return; }
   const op=e.target.closest('tr.op'); if(op){ const k=op.dataset.op; opsAb.has(k)? opsAb.delete(k) : opsAb.add(k); dibujar(); return; }
   const vr=e.target.closest('.vrow'); if(vr){ const c=+vr.dataset.v; abiertos.has(c)? abiertos.delete(c) : abiertos.add(c); dibujar(); return; }
   const th=e.target.closest('.th span[data-k]'); if(th){ const k=th.dataset.k; if(sortK===k) sortD=-sortD; else { sortK=k; sortD=(k==='c'||k==='n')? 1 : -1; } dibujar(); }
 });
+// globito con el dato al pasar por un grafico
+document.addEventListener('mouseover',e=>{ const t=e.target.closest&&e.target.closest('[data-tip]'), tp=$('tip'); if(!t){ tp.style.display='none'; return; } tp.textContent=t.dataset.tip; tp.style.display='block'; });
+document.addEventListener('mousemove',e=>{ const tp=$('tip'); if(tp.style.display==='block'){ tp.style.left=Math.min(e.clientX+12,innerWidth-tp.offsetWidth-8)+'px'; tp.style.top=(e.clientY+14)+'px'; } });
 document.addEventListener('keydown',e=>{ const vr=e.target.closest&&e.target.closest('.vrow'); if(vr && (e.key==='Enter'||e.key===' ')){ e.preventDefault(); vr.click(); } });
 ['dia','fVend','fOp','fEmp'].forEach(id=>$(id).addEventListener('change',dibujar));
 $('fCli').addEventListener('input',dibujar);
@@ -233,6 +300,7 @@ $('limpiar').addEventListener('click',()=>{ $('fVend').value=''; $('fCli').value
     const st=ult.match(/-(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})\d{2}/); corte= st? `${st[3]}/${st[2]}/${st[1]} ${st[4]}:${st[5]}` : '';
     const r=await fetch(REPO_RAW+ult.split('/').map(encodeURIComponent).join('/'),{cache:'no-store'});
     cargar(new TextDecoder('windows-1252').decode(await r.arrayBuffer()));
+    const ymA=(ult.match(/ventas-(\d{4})-(\d{2})-/)||[]); if(ymA[1]) FILAS=FILAS.filter(x=>x.car.slice(6)===ymA[1] && x.car.slice(3,5)===ymA[2]);   // solo los dias de carga del mes del archivo
     const ymd=d=>d.slice(6)+d.slice(3,5)+d.slice(0,2);
     const dias=[...new Set(FILAS.map(x=>x.car))].sort((a,b)=>ymd(b).localeCompare(ymd(a)));
     $('dia').innerHTML=dias.map(d=>`<option value="${d}">${fechaDia(d).txt}</option>`).join('');
