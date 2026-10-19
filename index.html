@@ -103,25 +103,12 @@ tr.det td:first-child{padding-left:34px}
 .bar i{display:block;height:100%;background:var(--low)}
 #estado{margin-top:22px;padding:14px;border:1px dashed #fff;border-radius:8px;background:var(--panel);color:#000}
 #app{display:none}
-/* solapas de la pantalla principal */
-.solapas{flex:1 1 100%;display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 4px}
-.solapas button{font:inherit;font-weight:800;font-size:.95rem;padding:9px 18px;border-radius:10px 10px 0 0;border:2px solid var(--marca);border-bottom-width:4px;background:#000;color:#fff;cursor:pointer}
-.solapas button[aria-selected="true"]{background:var(--marca);color:#fff}
-.solapas button:focus-visible{outline:3px solid #fff;outline-offset:2px}
-#pSoftys{display:none}
-#fSinSoftys{width:100%;height:calc(100vh - 150px);min-height:700px;border:1px solid #444;border-radius:8px;background:#F2F3F5}
-body.en-softys #pSoftys{display:block}
-body.en-softys #estado,body.en-softys #app,body.en-softys header .controls,body.en-softys #hSub{display:none!important}
 </style>
 </head>
 <body>
 <div class="wrap">
 <header>
   <h1 class="titulo"><span class="t-txt">Reporte diario de ventas</span><span class="t-marca">Lago Puelo · Elebes</span><span class="t-mes" id="hMes"></span><span class="t-act" id="hAct"></span></h1>
-  <nav class="solapas" role="tablist" aria-label="Pantallas del reporte">
-    <button type="button" role="tab" data-s="ventas" aria-selected="true">Reporte de ventas</button>
-    <button type="button" role="tab" data-s="softys" id="tabSoftys" aria-selected="false">Clientes sin compra Softys</button>
-  </nav>
   <p class="sub" id="hSub">Cargando ventas…</p>
   <div class="controls">
     <label>Fecha <select id="fTipo"><option value="comp">De comprobante</option><option value="ent">De entrega</option><option value="car">De carga</option></select></label>
@@ -164,24 +151,6 @@ body.en-softys #estado,body.en-softys #app,body.en-softys header .controls,body.
     </div>
   </details>
 </div>
-
-<!-- solapa Clientes sin Softys (repo Clientes-sin-Softys-LP-ELEBES): se carga recien al elegir la solapa -->
-<div id="pSoftys" role="tabpanel" aria-labelledby="tabSoftys">
-  <p class="nota" style="margin:14px 0 8px">Clientes de cada vendedor sin compra de Softys en 60 o 90 días, los que compraron el mes pasado, combos y cobertura del equipo. <a href="https://1605-83.github.io/Clientes-sin-Softys-LP-ELEBES/" target="_blank" rel="noopener" style="color:#fff">Abrir en pantalla completa</a></p>
-  <iframe id="fSinSoftys" title="Clientes sin compra Softys" data-src="https://1605-83.github.io/Clientes-sin-Softys-LP-ELEBES/"></iframe>
-</div>
-<script>
-// solapas de la pantalla principal: Reporte de ventas / Clientes sin Softys (la elegida se recuerda)
-function solapa(cual){
-  const sof= cual==='softys';
-  document.body.classList.toggle('en-softys',sof);
-  document.querySelectorAll('.solapas [role=tab]').forEach(b=>b.setAttribute('aria-selected', String(b.dataset.s===cual)));
-  if(sof){ const f=document.getElementById('fSinSoftys'); if(!f.src) f.src=f.dataset.src; }
-  try{ localStorage.setItem('reporte-solapa',cual); }catch(e){}
-}
-document.querySelectorAll('.solapas [role=tab]').forEach(b=>b.addEventListener('click',()=>solapa(b.dataset.s)));
-try{ if(localStorage.getItem('reporte-solapa')==='softys') solapa('softys'); }catch(e){}
-</script>
 </div>
 
 <script>
