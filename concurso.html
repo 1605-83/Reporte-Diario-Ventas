@@ -62,7 +62,11 @@ tr.det>td{background:#F6F6F6;white-space:normal;text-align:left;padding:12px}
 .detgrid th{position:static;cursor:default}
 .detgrid td.cli{white-space:normal;min-width:160px}
 .detgrid h4{margin:0 0 6px;font-size:.95rem;color:#000}
-@media (max-width:640px){.detin{left:6px;width:calc(100vw - 40px)}.detgrid{grid-template-columns:1fr}.detgrid table{font-size:.8rem}.resumen{grid-template-columns:1fr 1fr}.rc b{font-size:.95rem}}
+.emps{display:none}
+.emp{display:grid;grid-template-columns:1fr auto;gap:0 10px;padding:7px 10px;border-bottom:1px solid #DDD;background:#fff}
+.emp small{grid-column:1/-1;font-size:.76rem;color:#555}
+@media (max-width:640px){.detgrid section:first-child .tw{display:none}.emps{display:block;border:1px solid #CCC;border-radius:8px;overflow:hidden}
+.detin{left:6px;width:calc(100vw - 40px)}.detgrid{grid-template-columns:1fr}.detgrid table{font-size:.8rem}.resumen{grid-template-columns:1fr 1fr}.rc b{font-size:.95rem}}
 .falta{font-size:.85rem;margin:0 0 4px}
 .ok{color:var(--ok)}.mal{color:var(--low)}
 #estado{margin-top:14px;color:#FFD23F}
@@ -270,7 +274,11 @@ function detalle(x){
   // Empresas
   h+=`<section><h4>Empresas</h4><div class="tw"><table><thead><tr><th class="l">Empresa</th><th>Objetivo</th><th>Venta</th><th>%</th><th>Falta</th><th>Puntos</th></tr></thead><tbody>`;
   for(const p of x.prov) h+=`<tr><td class="l">${NOMBRE_G[p.g]}</td><td>${p.obj? fmt$(p.obj) : '—'}</td><td>${fmt$(p.venta)}</td><td class="${p.llega?'ok':p.obj?'mal':''}">${fmtP(p.p)}</td><td>${p.obj? (p.llega? '—' : fmt$(p.obj-p.venta)) : ''}</td><td>${p.pts? p.pts : p.obj? '0 / '+(PUNTOS[p.g]||0) : ''}</td></tr>`;
-  h+='</tbody></table></div></section>';
+  h+='</tbody></table></div>';
+  // en el celular, la misma informacion en dos renglones por empresa (sin correr la tabla de costado)
+  h+='<div class="emps">'+x.prov.map(p=>`<div class="emp"><b>${NOMBRE_G[p.g]}</b><b class="${p.llega?'ok':p.obj?'mal':''}">${fmtP(p.p)}</b>`
+    +`<small>${fmt$(p.venta)}${p.obj? ' de '+fmt$(p.obj) : ' · sin objetivo'}${p.obj&&!p.llega? ' · faltan '+fmt$(p.obj-p.venta) : ''}</small>`
+    +`<small>${p.pts? p.pts+' puntos' : p.obj? '0 de '+(PUNTOS[p.g]||0)+' puntos' : ''}</small></div>`).join('')+'</div></section>';
   // Clientes clave: primero los que faltan
   const clave=[...x.clave].sort((a,b)=>(a.compro-b.compro)||(b.hist-a.hist)), nOk=x.clave.filter(c=>c.compro).length;
   h+=`<section><h4>Clientes clave · ${nOk} de ${x.clave.length} ya compraron</h4><div class="tw"><table><thead><tr><th class="l">Cliente</th><th>Compra 2 meses ant.</th><th>Este mes</th></tr></thead><tbody>`;
