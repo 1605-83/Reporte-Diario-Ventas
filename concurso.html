@@ -58,8 +58,12 @@ tr.det>td{background:#F6F6F6;white-space:normal;text-align:left;padding:12px}
 .rc span{display:block;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.03em;color:#555}
 .rc b{display:block;font-size:1.05rem;margin:2px 0}
 .rc small{display:block;font-size:.78rem;color:#555;white-space:normal}
-.detgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;align-items:start}
-.detgrid section{min-width:0}
+.detgrid{display:block}
+details.blq{margin:0 0 8px;border:1px solid #CCC;border-radius:8px;background:#fff;overflow:hidden}
+details.blq>summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 12px;font-weight:800;color:#000}
+details.blq>summary::-webkit-details-marker{display:none}details.blq>summary::after{content:"+";font-size:1.2rem;font-weight:700}details.blq[open]>summary::after{content:"−"}
+details.blq[open]>summary{border-bottom:1px solid #CCC}details.blq .tw,details.blq .emps{border:0;border-radius:0}
+.detgrid details{min-width:0}
 .detgrid .tw{overflow-x:auto;border:1px solid #CCC;border-radius:8px;background:#fff}
 .detgrid table{background:#fff;font-size:.86rem}
 .detgrid th{position:static;cursor:default}
@@ -68,7 +72,7 @@ tr.det>td{background:#F6F6F6;white-space:normal;text-align:left;padding:12px}
 .emps{display:none}
 .emp{display:grid;grid-template-columns:1fr auto;gap:0 10px;padding:7px 10px;border-bottom:1px solid #DDD;background:#fff}
 .emp small{grid-column:1/-1;font-size:.76rem;color:#555}
-@media (max-width:640px){.detgrid section:first-child .tw{display:none}.emps{display:block;border:1px solid #CCC;border-radius:8px;overflow:hidden}
+@media (max-width:640px){.detgrid details:first-child .tw{display:none}.emps{display:block;border:1px solid #CCC;border-radius:8px;overflow:hidden}
 .detin{left:6px;width:calc(100vw - 40px)}.detgrid{grid-template-columns:1fr}.detgrid table{font-size:.8rem}.resumen{grid-template-columns:1fr 1fr}.rc b{font-size:.95rem}}
 .falta{font-size:.85rem;margin:0 0 4px}
 .ok{color:var(--ok)}.mal{color:var(--low)}
@@ -275,25 +279,26 @@ function detalle(x){
   h+=tarjeta('Cobertura', `${fmtP(x.cobP)} · ${fmtN(x.ccc)} de ${fmtN(x.b||0)}`, `faltan ${Math.max(0,Math.ceil(.7*(x.b||0))-x.ccc)} clientes para 70% y ${Math.max(0,Math.ceil(.82*(x.b||0))-x.ccc)} para 82%`);
   h+='</div><div class="detgrid">';
   // Empresas
-  h+=`<section><h4>Empresas</h4><div class="tw"><table><thead><tr><th class="l">Empresa</th><th>Objetivo</th><th>Venta</th><th>%</th><th>Falta</th><th>Puntos</th></tr></thead><tbody>`;
+  const nLlega=x.prov.filter(p=>p.llega).length, nObj=x.prov.filter(p=>p.obj).length;
+  h+=`<details class="blq"><summary>Empresas · ${nLlega} de ${nObj} llegan al objetivo</summary><div class="tw"><table><thead><tr><th class="l">Empresa</th><th>Objetivo</th><th>Venta</th><th>%</th><th>Falta</th><th>Puntos</th></tr></thead><tbody>`;
   for(const p of x.prov) h+=`<tr><td class="l">${NOMBRE_G[p.g]}</td><td>${p.obj? fmt$(p.obj) : '—'}</td><td>${fmt$(p.venta)}</td><td class="${p.llega?'ok':p.obj?'mal':''}">${fmtP(p.p)}</td><td>${p.obj? (p.llega? '—' : fmt$(p.obj-p.venta)) : ''}</td><td>${p.pts? p.pts : p.obj? '0 / '+(PUNTOS[p.g]||0) : ''}</td></tr>`;
   h+='</tbody></table></div>';
   // en el celular, la misma informacion en dos renglones por empresa (sin correr la tabla de costado)
   h+='<div class="emps">'+x.prov.map(p=>`<div class="emp"><b>${NOMBRE_G[p.g]}</b><b class="${p.llega?'ok':p.obj?'mal':''}">${fmtP(p.p)}</b>`
     +`<small>${fmt$(p.venta)}${p.obj? ' de '+fmt$(p.obj) : ' · sin objetivo'}${p.obj&&!p.llega? ' · faltan '+fmt$(p.obj-p.venta) : ''}</small>`
-    +`<small>${p.pts? p.pts+' puntos' : p.obj? '0 de '+(PUNTOS[p.g]||0)+' puntos' : ''}</small></div>`).join('')+'</div></section>';
+    +`<small>${p.pts? p.pts+' puntos' : p.obj? '0 de '+(PUNTOS[p.g]||0)+' puntos' : ''}</small></div>`).join('')+'</div></details>';
   // Clientes clave: primero los que faltan
   const clave=[...x.clave].sort((a,b)=>(a.compro-b.compro)||(b.hist-a.hist)), nOk=x.clave.filter(c=>c.compro).length;
-  h+=`<section><h4>Clientes clave · ${nOk} de ${x.clave.length} ya compraron</h4><div class="tw"><table><thead><tr><th class="l">Cliente</th><th>Compra 2 meses ant.</th><th>Este mes</th></tr></thead><tbody>`;
+  h+=`<details class="blq"><summary>Clientes clave · ${nOk} de ${x.clave.length} ya compraron</summary><div class="tw"><table><thead><tr><th class="l">Cliente</th><th>Compra 2 meses ant.</th><th>Este mes</th></tr></thead><tbody>`;
   for(const c of clave) h+=`<tr><td class="l cli">${esc(c.cli)} · ${esc(titulo(c.rs))}</td><td>${fmt$(c.hist)}</td><td class="${c.compro?'ok':'mal'}">${c.compro?'Compró':'Falta'}</td></tr>`;
   if(!x.clave.length) h+='<tr><td class="l" colspan="3">Sin historial de compras de los meses anteriores.</td></tr>';
-  h+='</tbody></table></div></section>';
+  h+='</tbody></table></div></details>';
   // Rechazos
-  h+=`<section><h4>Rechazos</h4><div class="tw"><table><tbody>
+  h+=`<details class="blq"><summary>Rechazos · ${fmt$(x.rech)} · ${fmtP(x.rechP)} de la venta</summary><div class="tw"><table><tbody>
     <tr><td class="l">Rechazos del mes</td><td>${fmt$(x.rech)} · ${fmtP(x.rechP)}</td></tr>
     <tr><td class="l">Tope para no perder (6%)</td><td>${fmt$(.06*x.tv)}</td></tr>
     <tr><td class="l">Tope para sumar (2%)</td><td>${fmt$(.02*x.tv)}</td></tr>
-  </tbody></table></div></section>`;
+  </tbody></table></div></details>`;
   return h+'</div></div>';
 }
 
