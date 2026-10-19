@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Venta del Día</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F2F3F5;--card:#fff;--ink:#1F2328;--ink2:#6B7280;--line:#E5E7EB;--marca:#2F6FDE;--verde:#7CC242;--rojo:#C0392B;--azul:#2F6FDE;--violeta:#7C4DDB;--naranja:#C7781A}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#F2F3F5; } }
+:root[data-theme="dark"]{ --bg:#F2F3F5; }
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Roboto,system-ui,-apple-system,"Segoe UI",Arial,sans-serif;font-variant-numeric:tabular-nums;line-height:1.35}
+.wrap{max-width:1500px;margin:0 auto;padding:20px 16px 40px}
+.card{background:var(--card);border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.head{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:16px 22px}
+.head h1{margin:0;font-size:1.45rem;font-weight:500}
+.head .meta{font-size:.9rem;color:var(--ink2);margin-top:2px}
+.head label{font-size:.85rem;color:var(--ink2);display:flex;align-items:center;gap:8px}
+select,input{font:inherit;font-size:.95rem;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 10px;width:100%}
+.head select{width:auto}
+.kpis{display:grid;grid-template-columns:1.3fr 1.6fr 1fr .9fr 1.6fr;margin-top:16px}
+@media (max-width:1100px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:600px){.kpis{grid-template-columns:1fr}}
+.kpi{padding:18px 22px;border-right:1px solid var(--line);min-width:0}
+.kpi:last-child{border-right:0}
+.kpi .l{font-size:.88rem;color:var(--ink2);display:flex;justify-content:space-between;gap:8px}
+.kpi .v{font-size:1.7rem;font-weight:500;margin:10px 0 8px}
+.kpi .n{font-size:.88rem;color:var(--ink2);display:flex;flex-wrap:wrap;gap:4px 14px}
+.kpi .n b{color:var(--ink);font-weight:700}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:1px}
+.rojo{color:var(--rojo)}
+.top{list-style:none;margin:8px 0 0;padding:0;font-size:.86rem}
+.top li{display:flex;align-items:center;gap:8px;margin:3px 0}
+.top .pos{flex:0 0 20px;height:20px;border-radius:50%;background:#EEE;color:#555;font-size:.72rem;font-weight:700;display:flex;align-items:center;justify-content:center}
+.top li:nth-child(1) .pos{background:#B8860B;color:#fff}.top li:nth-child(2) .pos{background:#888;color:#fff}.top li:nth-child(3) .pos{background:#A0522D;color:#fff}
+.top .nom{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#444}
+.top .imp{font-weight:700}
+.cuerpo{display:grid;grid-template-columns:290px 1fr;gap:16px;margin-top:16px;align-items:start}
+@media (max-width:900px){.cuerpo{grid-template-columns:1fr}}
+.filtros{padding:16px 20px}
+.filtros h3{margin:0 0 12px;font-size:.92rem;font-weight:500;color:var(--ink2)}
+.filtros label{display:block;font-size:.88rem;color:#555;margin:14px 0 6px}
+.filtros button{margin-top:16px;width:100%;font:inherit;padding:8px;border:1px solid var(--line);border-radius:10px;background:#fff;cursor:pointer}
+.lista{overflow:hidden}
+.th,.vrow{display:grid;grid-template-columns:44px 44px minmax(160px,1fr) 110px 120px 110px 140px;align-items:center;gap:8px;padding:12px 18px}
+.th{font-size:.88rem;font-weight:700;border-bottom:1px solid var(--line);background:#FAFAFA}
+.th span{cursor:pointer;user-select:none}
+.th .r,.vrow .r{text-align:right}
+.vrow{border-bottom:1px solid var(--line);cursor:pointer}
+.vrow:hover{background:#F8FAFF}
+.chev{font-size:1.1rem;color:#555;transition:transform .15s;text-align:center}
+.vrow.ab .chev{transform:rotate(90deg)}
+.av{width:34px;height:34px;border-radius:50%;background:#EEF0F3;color:#444;font-size:.75rem;font-weight:700;display:flex;align-items:center;justify-content:center}
+.vn{font-size:1.02rem;font-weight:500}
+.vn small{color:#999;font-weight:400;margin-left:6px}
+.mut{color:var(--ink2);font-size:.88rem}
+.mut b{color:var(--ink);font-weight:500}
+.tot{font-weight:700}
+.det{background:#FAFBFC;border-bottom:1px solid var(--line);padding:6px 18px 14px 60px;overflow-x:auto}
+.det table{width:100%;border-collapse:collapse;font-size:.9rem;min-width:640px}
+.det th,.det td{padding:7px 8px;border-bottom:1px solid #EDEDED;text-align:left;white-space:nowrap}
+.det th{font-size:.78rem;color:var(--ink2);font-weight:700;text-transform:uppercase}
+.det td.r,.det th.r{text-align:right}
+.det tr.op{cursor:pointer}.det tr.op:hover td{background:#F1F5FF}
+.det tr.it td{background:#fff;color:#444;font-size:.85rem}
+.tag{display:inline-block;padding:1px 8px;border-radius:999px;font-size:.78rem;font-weight:700}
+.t-VEN{background:#E6F0FF;color:var(--azul)}.t-DEV{background:#F1E9FF;color:var(--violeta)}.t-NDB{background:#FFF1DE;color:var(--naranja)}
+.nocomp{margin-top:8px;font-size:.85rem;color:#555;white-space:normal}
+.nocomp b{color:var(--rojo)}
+.vacio{padding:30px;text-align:center;color:var(--ink2)}
+@media (max-width:700px){
+  .th{display:none}
+  .vrow{grid-template-columns:24px 1fr auto;grid-template-areas:"c n t" "c m m"}
+  .vrow .av{display:none}.vrow .chev{grid-area:c}.vrow .vn{grid-area:n}.vrow .tot{grid-area:t}
+  .vrow .cl,.vrow .op2,.vrow .nc{grid-area:m;display:none}
+  .vrow .resm{display:block!important;grid-area:m}
+  .det{padding-left:12px}
+}
+.resm{display:none}
+footer{margin-top:18px;font-size:.78rem;color:var(--ink2);text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card head">
+    <div><h1>Venta del día</h1><div class="meta" id="meta">Cargando…</div></div>
+    <label>Día de carga <select id="dia"></select></label>
+  </div>
+
+  <div class="card kpis" id="kpis"></div>
+
+  <div class="cuerpo">
+    <div class="card filtros">
+      <h3>Filtros</h3>
+      <label for="fVend">Vendedor</label><select id="fVend"><option value="">Todos</option></select>
+      <label for="fCli">Cliente</label><input id="fCli" type="search" placeholder="Código o nombre">
+      <label for="fOp">Operación</label><select id="fOp"><option value="">Todas</option><option value="VEN">Pedidos (ventas)</option><option value="DEV">Devoluciones</option><option value="NDB">Notas de débito</option></select>
+      <label for="fEmp">Empresa</label><select id="fEmp"><option value="">Todas</option></select>
+      <button type="button" id="limpiar">Limpiar filtros</button>
+    </div>
+    <div class="card lista">
+      <div class="th"><span></span><span></span><span data-k="n">Vendedor</span><span class="r" data-k="cli">Clientes</span><span class="r" data-k="ops">Operaciones</span><span class="r" data-k="nc">No compra</span><span class="r" data-k="tot">Total</span></div>
+      <div id="filas"></div>
+    </div>
+  </div>
+  <footer>Datos de la base de Gescom · pedidos por fecha de carga, importes con IVA · se actualiza con el Reporte diario de ventas</footer>
+</div>
+<script>
+const REPO_RAW='https://raw.githubusercontent.com/1605-83/Reporte-Diario-Ventas/main/';
+const $=id=>document.getElementById(id);
+const fmt$=n=>'$ '+(Math.round(n*100)/100).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmt0=n=>'$ '+Math.round(n).toLocaleString('es-AR');
+const fmtN=n=>Math.round(n).toLocaleString('es-AR');
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const num=s=>{ s=String(s??'').trim(); return s? (parseFloat(s.replace(/\./g,'').replace(',','.'))||0) : 0; };
+const titulo=s=>{ s=(s||'').trim(); if(!(s===s.toUpperCase() && /[A-ZÁÉÍÓÚÑ]/.test(s))) return s; return s.toLowerCase().replace(/(^|[^a-záéíóúñü])([a-záéíóúñü])/g,(m,a,b)=>a+b.toUpperCase()); };
+const iniciales=n=>(n||'').trim().split(/\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
+const DIAS=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'], LETRA=['','L','M','X','J','V','S'];
+const fechaDia=d=>{ const [dd,mm,yy]=d.split('-'); const f=new Date(+yy,mm-1,+dd); return {f, txt:`${DIAS[f.getDay()]} ${dd}/${mm}/${yy}`}; };
+
+// empresa de cada proveedor: el mismo nomenclador del Reporte diario de ventas
+let GRUPO={}, NOMBRE_G={SOFTYS:'Softys',AYUDIN:'Ayudin',ILOLAY:'Ilolay',GEORGALOS:'Georgalos',RIOSMA:'Riosma',CEPAS:'Cepas',OTM:'OTM'};
+let FILAS=[], CART=null, CFGV={}, corte='', abiertos=new Set(), opsAb=new Set(), sortK='c', sortD=1;
+
+function parseCSV(t){
+  const rows=[]; let row=[], f='', q=false;
+  for(let i=0;i<t.length;i++){ const ch=t[i];
+    if(q){ if(ch==='"'){ if(t[i+1]==='"'){f+='"';i++;} else q=false; } else f+=ch; }
+    else if(ch==='"') q=true; else if(ch===';'){ row.push(f); f=''; }
+    else if(ch==='\n'){ row.push(f.replace(/\r$/,'')); rows.push(row); row=[]; f=''; } else f+=ch; }
+  if(f!==''||row.length){ row.push(f.replace(/\r$/,'')); rows.push(row); }
+  return rows;
+}
+function cargar(txt){
+  const R=parseCSV(txt).filter(r=>r.length>5); const H=R.shift().map(h=>h.trim()); const ix=n=>H.indexOf(n);
+  const I={cli:ix('Cliente'),nro:ix('NroComprobante'),tipo:ix('TipoDeVenta'),cod:ix('Codigo'),cant:ix('CantBase'),imp:ix('ImporteItem'),rs:ix('RazonSocial'),cv:ix('CodVendedor'),vn:ix('Vendedor'),art:ix('Articulo'),prov:ix('Proveedor'),car:ix('FechaCarga'),mot:ix('MotivoDevolucion')};
+  FILAS=R.map(r=>{ const nro=(r[I.nro]||'').trim(), tc=nro.slice(0,3).toUpperCase();
+    return {cli:String(r[I.cli]).trim(), nro, op: tc==='NCR'? 'DEV' : tc==='NDB'? 'NDB' : 'VEN', tipo:(r[I.tipo]||'').trim(), cod:(r[I.cod]||'').trim(),
+      cant:num(r[I.cant]), imp:num(r[I.imp]), rs:(r[I.rs]||'').trim(), v:parseInt(r[I.cv],10), vn:titulo(r[I.vn]), art:(r[I.art]||'').trim(),
+      g:GRUPO[(r[I.prov]||'').trim().toUpperCase()]||'OTM', car:(r[I.car]||'').trim(), mot:(r[I.mot]||'').trim()}; })
+    .filter(f=>!isNaN(f.v) && /^\d{2}-\d{2}-\d{4}$/.test(f.car));
+}
+
+function dibujar(){
+  const dia=$('dia').value; if(!dia){ $('filas').innerHTML='<div class="vacio">Sin datos</div>'; return; }
+  const {f,txt}=fechaDia(dia), letra=LETRA[f.getDay()]||'';
+  const fv=$('fVend').value, fc=$('fCli').value.trim().toLowerCase(), fo=$('fOp').value, fe=$('fEmp').value;
+  const D=FILAS.filter(x=>x.car===dia && (!fv||String(x.v)===fv) && (!fo||x.op===fo) && (!fe||x.g===fe) && (!fc||x.cli===fc||x.rs.toLowerCase().includes(fc)));
+  // por vendedor y por comprobante
+  const V=new Map();
+  for(const x of D){
+    const v=V.get(x.v)||(V.set(x.v,{c:x.v,n:CFGV[x.v]||x.vn||('Vendedor '+x.v),tot:0,ops:new Map(),cli:new Set(),compra:new Set()}),V.get(x.v));
+    if(x.op==='VEN'||fo) v.tot+=x.imp; v.cli.add(x.cli); if(x.op==='VEN') v.compra.add(x.cli);
+    const o=v.ops.get(x.nro)||(v.ops.set(x.nro,{nro:x.nro,op:x.op,tipo:x.tipo,cli:x.cli,rs:x.rs,mot:x.mot,tot:0,it:[]}),v.ops.get(x.nro));
+    o.tot+=x.imp; o.it.push(x);
+  }
+  // ruta del dia: clientes de la cartera con visita este dia que no compraron
+  for(const v of V.values()){ const c=CART&&CART.v&&CART.v[String(v.c)];
+    v.ruta= c&&letra? c.filter(k=>k[5]===letra) : null;
+    v.nc= v.ruta? v.ruta.filter(k=>!v.compra.has(String(k[0]))) : null; }
+  if(fv && !V.has(+fv) && CART && CART.v && CART.v[fv] && !fo && !fe && !fc){   // vendedor sin operaciones en el dia
+    const ruta=CART.v[fv].filter(k=>k[5]===letra); V.set(+fv,{c:+fv,n:CFGV[fv]||('Vendedor '+fv),tot:0,ops:new Map(),cli:new Set(),compra:new Set(),ruta,nc:ruta}); }
+  // indicadores
+  const venta=D.filter(x=>x.op==='VEN').reduce((a,x)=>a+x.imp,0), dev=-D.filter(x=>x.op==='DEV').reduce((a,x)=>a+x.imp,0), ndb=D.filter(x=>x.op==='NDB').reduce((a,x)=>a+x.imp,0);
+  const ops=[...V.values()].flatMap(v=>[...v.ops.values()]);
+  const nPed=ops.filter(o=>o.op==='VEN').length, nDev=ops.filter(o=>o.op==='DEV').length, nNdb=ops.filter(o=>o.op==='NDB').length;
+  const comp=new Set(D.filter(x=>x.op==='VEN').map(x=>x.cli));
+  const noComp=[...V.values()].reduce((a,v)=>a+(v.nc? v.nc.length : 0),0);
+  const arts=new Set(D.filter(x=>x.op==='VEN').map(x=>x.cod));
+  const mixC={}; D.filter(x=>x.op==='VEN').forEach(x=>(mixC[x.cli]||(mixC[x.cli]=new Set())).add(x.cod));
+  const mix=comp.size? Object.values(mixC).reduce((a,s)=>a+s.size,0)/comp.size : 0;
+  const porCli={}, rsCli={}; D.filter(x=>x.op==='VEN').forEach(x=>{ porCli[x.cli]=(porCli[x.cli]||0)+x.imp; rsCli[x.cli]=x.rs; });
+  const top=Object.entries(porCli).sort((a,b)=>b[1]-a[1]).slice(0,5), topP=venta? top.reduce((a,t)=>a+t[1],0)/venta : 0;
+  $('kpis').innerHTML=`
+    <div class="kpi"><div class="l">$ Total preventa</div><div class="v">${fmt0(venta)}</div><div class="n"><span>Devoluciones <b>${fmt0(dev)}</b></span>${ndb? `<span>Notas de débito <b>${fmt0(ndb)}</b></span>` : ''}</div></div>
+    <div class="kpi"><div class="l">Operaciones</div><div class="v">${fmtN(ops.length)}</div><div class="n"><span><i class="dot" style="background:var(--azul)"></i><b>${nPed}</b> pedidos</span><span><i class="dot" style="background:var(--violeta)"></i><b>${nDev}</b> devoluciones</span>${nNdb? `<span><i class="dot" style="background:var(--naranja)"></i><b>${nNdb}</b> notas de débito</span>` : ''}</div></div>
+    <div class="kpi"><div class="l">Compradores</div><div class="v">${fmtN(comp.size)} ${CART? `<span class="rojo" style="font-size:.6em">${fmtN(noComp)}</span> <span style="font-size:.5em;color:var(--ink2)">no compradores</span>` : ''}</div><div class="n">${CART? `De la ruta del ${DIAS[f.getDay()]} en la cartera` : ''}</div></div>
+    <div class="kpi"><div class="l">Artículos</div><div class="v">${fmtN(arts.size)} <span style="font-size:.5em;color:var(--ink2)">distintos</span></div><div class="n">Mix <b>${mix.toLocaleString('es-AR',{maximumFractionDigits:1})}</b> por cliente</div></div>
+    <div class="kpi"><div class="l"><span>★ Top 5 clientes</span><span>${Math.round(topP*100)}% del total</span></div>
+      <ul class="top">${top.map((t,i)=>`<li><span class="pos">${i+1}</span><span class="nom">${esc(t[0])} ${esc(rsCli[t[0]])}</span><span class="imp">${fmt0(t[1])}</span></li>`).join('')||'<li class="mut">Sin ventas</li>'}</ul></div>`;
+  $('meta').textContent=`${txt} · ${fmtN(ops.length)} operaciones · datos al ${corte}`;
+  // lista por vendedor
+  const val={c:v=>v.c, n:v=>v.n, cli:v=>v.cli.size, ops:v=>v.ops.size, nc:v=>v.nc? v.nc.length : -1, tot:v=>v.tot};
+  const L=[...V.values()].sort((a,b)=>{ const A=val[sortK](a), B=val[sortK](b); return (A>B?1:A<B?-1:0)*sortD; });
+  document.querySelectorAll('.th span[data-k]').forEach(s=>{ s.textContent=s.textContent.replace(/ [▲▼]$/,'')+(s.dataset.k===sortK? (sortD>0?' ▲':' ▼') : ''); });
+  let h='';
+  for(const v of L){ const ab=abiertos.has(v.c);
+    h+=`<div class="vrow${ab?' ab':''}" data-v="${v.c}" role="button" tabindex="0" aria-expanded="${ab}"><span class="chev">›</span><span class="av">${esc(iniciales(v.n))}</span>
+      <span class="vn">${esc(v.n)}<small>#${v.c}</small></span>
+      <span class="r mut cl"><b>${v.cli.size}</b> ${v.cli.size===1?'cliente':'clientes'}</span>
+      <span class="r mut op2"><b>${v.ops.size}</b> ${v.ops.size===1?'operación':'operaciones'}</span>
+      <span class="r mut nc">${v.nc? `<b class="rojo">${v.nc.length}</b> de ${v.ruta.length}` : '—'}</span>
+      <span class="r tot">${fmt$(v.tot)}</span>
+      <span class="mut resm">${v.cli.size} clientes · ${v.ops.size} operaciones${v.nc? ` · ${v.nc.length} no compra` : ''}</span></div>`;
+    if(ab) h+=detalle(v);
+  }
+  $('filas').innerHTML=h||'<div class="vacio">No hay operaciones cargadas para este día con estos filtros.</div>';
+}
+
+function detalle(v){
+  const ops=[...v.ops.values()].sort((a,b)=>b.tot-a.tot);
+  let t=`<div class="det"><table><thead><tr><th></th><th>Comprobante</th><th>Cliente</th><th>Operación</th><th class="r">Artículos</th><th class="r">Importe</th></tr></thead><tbody>`;
+  for(const o of ops){ const k=v.c+'|'+o.nro, ab=opsAb.has(k);
+    t+=`<tr class="op" data-op="${esc(k)}"><td>${ab?'−':'+'}</td><td>${esc(o.nro)}</td><td>${esc(o.cli)} · ${esc(titulo(o.rs))}</td><td><span class="tag t-${o.op}">${o.op==='VEN'?'Pedido':o.op==='DEV'?'Devolución':'Nota de débito'}</span>${o.mot? ` <span class="mut">${esc(o.mot)}</span>` : ''}</td><td class="r">${o.it.length}</td><td class="r"><b>${fmt$(o.tot)}</b></td></tr>`;
+    if(ab) for(const i of o.it) t+=`<tr class="it"><td></td><td>${esc(i.cod)}</td><td colspan="2">${esc(i.art)} <span class="mut">· ${NOMBRE_G[i.g]||i.g}</span></td><td class="r">${i.cant.toLocaleString('es-AR')}</td><td class="r">${fmt$(i.imp)}</td></tr>`;
+  }
+  if(!ops.length) t+='<tr><td colspan="6" class="mut">Sin operaciones en el día.</td></tr>';
+  t+='</tbody></table>';
+  if(v.nc && v.nc.length) t+=`<div class="nocomp"><b>${v.nc.length} no compradores</b> de la ruta del día: ${v.nc.map(k=>esc(k[0])+' '+esc(titulo(k[1]))).join(' · ')}</div>`;
+  return t+'</div>';
+}
+
+document.addEventListener('click',e=>{
+  const op=e.target.closest('tr.op'); if(op){ const k=op.dataset.op; opsAb.has(k)? opsAb.delete(k) : opsAb.add(k); dibujar(); return; }
+  const vr=e.target.closest('.vrow'); if(vr){ const c=+vr.dataset.v; abiertos.has(c)? abiertos.delete(c) : abiertos.add(c); dibujar(); return; }
+  const th=e.target.closest('.th span[data-k]'); if(th){ const k=th.dataset.k; if(sortK===k) sortD=-sortD; else { sortK=k; sortD=(k==='c'||k==='n')? 1 : -1; } dibujar(); }
+});
+document.addEventListener('keydown',e=>{ const vr=e.target.closest&&e.target.closest('.vrow'); if(vr && (e.key==='Enter'||e.key===' ')){ e.preventDefault(); vr.click(); } });
+['dia','fVend','fOp','fEmp'].forEach(id=>$(id).addEventListener('change',dibujar));
+$('fCli').addEventListener('input',dibujar);
+$('limpiar').addEventListener('click',()=>{ $('fVend').value=''; $('fCli').value=''; $('fOp').value=''; $('fEmp').value=''; dibujar(); });
+
+(async function(){
+  try{
+    const html=await (await fetch('index.html?t='+Date.now(),{cache:'no-store'})).text();
+    const m=html.match(/^const CFG = (.*);\s*$/m);
+    if(m){ const CFG=JSON.parse(m[1]); Object.entries(CFG.nomenclador).forEach(([g,ps])=>ps.forEach(p=>GRUPO[p.trim().toUpperCase()]=g)); CFG.vendedores.forEach(v=>CFGV[v.c]=v.n); }
+    try{ const r=await fetch('carteras.json?t='+Date.now(),{cache:'no-store'}); if(r.ok) CART=await r.json(); }catch(e){}
+    const arch=((await (await fetch('archivos.json?t='+Date.now(),{cache:'no-store'})).json()).archivos||[]).filter(p=>/ventas-\d{4}-\d{2}-/.test(p)).sort();
+    const ult=arch[arch.length-1]; if(!ult) throw new Error('no hay archivos de ventas');
+    const st=ult.match(/-(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})\d{2}/); corte= st? `${st[3]}/${st[2]}/${st[1]} ${st[4]}:${st[5]}` : '';
+    const r=await fetch(REPO_RAW+ult.split('/').map(encodeURIComponent).join('/'),{cache:'no-store'});
+    cargar(new TextDecoder('windows-1252').decode(await r.arrayBuffer()));
+    const ymd=d=>d.slice(6)+d.slice(3,5)+d.slice(0,2);
+    const dias=[...new Set(FILAS.map(x=>x.car))].sort((a,b)=>ymd(b).localeCompare(ymd(a)));
+    $('dia').innerHTML=dias.map(d=>`<option value="${d}">${fechaDia(d).txt}</option>`).join('');
+    const vs=new Map(); FILAS.forEach(x=>{ if(!vs.has(x.v)) vs.set(x.v, CFGV[x.v]||x.vn); });
+    $('fVend').innerHTML+= [...vs].sort((a,b)=>a[0]-b[0]).map(([c,n])=>`<option value="${c}">${c} · ${esc(n)}</option>`).join('');
+    $('fEmp').innerHTML+= Object.entries(NOMBRE_G).map(([g,n])=>`<option value="${g}">${n}</option>`).join('');
+    dibujar();
+  }catch(e){ $('meta').textContent='No se pudieron leer los datos: '+e.message; }
+})();
+</script>
+</body>
+</html>

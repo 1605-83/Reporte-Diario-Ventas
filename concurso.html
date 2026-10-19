@@ -286,7 +286,7 @@ $('mes').addEventListener('change',dibujar);
     const necesarios=new Set([mesAnt(MESES_CONCURSO[0],2),mesAnt(MESES_CONCURSO[0],1),...MESES_CONCURSO]);
     const ult={}; for(const p of arch){ const mm=p.match(/ventas-(\d{4}-\d{2})-/); if(mm && necesarios.has(mm[1]) && (!ult[mm[1]]||p>ult[mm[1]])) ult[mm[1]]=p; }
     $('sub').textContent='Bajando ventas…';
-    await Promise.all(Object.entries(ult).map(async([ym,p])=>{ const r=await fetch(REPO_RAW+p.split('/').map(encodeURIComponent).join('/'),{cache:'no-store'}); if(r.ok) agregar(await r.text(),ym,p); }));
+    await Promise.all(Object.entries(ult).map(async([ym,p])=>{ const r=await fetch(REPO_RAW+p.split('/').map(encodeURIComponent).join('/'),{cache:'no-store'}); if(r.ok) agregar(new TextDecoder('windows-1252').decode(await r.arrayBuffer()),ym,p); }));
     for(const ym of MESES_CONCURSO){ const V=calcular(ym); if(V) for(const x of V) ACUM[x.c]=Math.min(45,(ACUM[x.c]||0)+x.total); }
     const hay=MESES_CONCURSO.filter(ym=>AGG[ym]);
     $('mes').innerHTML=MESES_CONCURSO.map(ym=>`<option value="${ym}">${nomMes(ym)[0].toUpperCase()+nomMes(ym).slice(1)}</option>`).join('');
