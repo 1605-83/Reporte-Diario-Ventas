@@ -150,6 +150,15 @@ tr.det td:first-child{padding-left:34px}
       <div class="tbl"><table><thead id="mHead"></thead><tbody id="mBody"></tbody><tfoot id="mFoot"></tfoot></table></div>
     </div>
   </details>
+  <!-- tablero Clientes sin Softys (repo Clientes-sin-Softys-LP-ELEBES): se carga recien al abrir la seccion -->
+  <details class="desp" id="dSinSoftys">
+    <summary>Clientes sin Softys · cobertura Softys del equipo</summary>
+    <div class="in">
+      <p class="nota" style="margin:0 0 10px">Clientes de cada vendedor sin compra de Softys en 60 o 90 días, los que compraron el mes pasado, combos y cobertura del equipo. <a href="https://1605-83.github.io/Clientes-sin-Softys-LP-ELEBES/" target="_blank" rel="noopener">Abrir en pantalla completa</a></p>
+      <iframe id="fSinSoftys" title="Clientes sin Softys" data-src="https://1605-83.github.io/Clientes-sin-Softys-LP-ELEBES/" style="width:100%;height:1100px;border:1px solid #ccc;border-radius:8px;background:#F2F3F5"></iframe>
+    </div>
+  </details>
+  <script>document.getElementById('dSinSoftys').addEventListener('toggle',e=>{ const f=document.getElementById('fSinSoftys'); if(e.target.open && !f.src) f.src=f.dataset.src; });</script>
 </div>
 </div>
 
