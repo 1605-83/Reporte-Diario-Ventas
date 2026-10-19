@@ -43,7 +43,12 @@ $BASE = 'https://datos-gescom.panelempresas.workers.dev'
 function Pedir([string]$metodo, [string]$ruta, $cuerpo) {
   $p = @{ Uri = "$BASE$ruta"; Method = $metodo; UseBasicParsing = $true; Headers = @{ Authorization = "Bearer $clave" } }
   if ($cuerpo) { $p.ContentType = 'application/json'; $p.Body = [Text.Encoding]::UTF8.GetBytes(($cuerpo | ConvertTo-Json -Compress)) }
-  $r = Invoke-WebRequest @p
+  # hasta 4 intentos: a veces la base corta la conexion (19/10/2026 13:30 fallo asi)
+  for ($n = 1; ; $n++) {
+    try { $r = Invoke-WebRequest @p; break }
+    catch { if ($n -ge 4 -or ($_.Exception.Response -and [int]$_.Exception.Response.StatusCode -lt 500)) { throw }
+      Write-Warning "La base no respondio (intento $n): $($_.Exception.Message). Reintento en $(15 * $n) s"; Start-Sleep -Seconds (15 * $n) }
+  }
   $txt = [Text.Encoding]::UTF8.GetString($r.RawContentStream.ToArray())
   $j = $txt | ConvertFrom-Json
   if ($j.error) { throw "La base respondio error: $($j.error)" }
