@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Concurso Tres Pasos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#000;--panel:#fff;--marca:#FF7A1A;--ok:#1E8E5A;--mid:#E0A100;--low:#D62839;--gris:#C9D4D2}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#000; } }
+:root[data-theme="dark"]{ --bg:#000; }
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:#fff;font-family:"Roboto",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;font-variant-numeric:tabular-nums;line-height:1.4}
+.wrap{max-width:1320px;margin:0 auto;padding:28px 16px 48px}
+h1{margin:0 0 6px;padding:10px 18px;border:2px solid var(--marca);box-shadow:0 0 0 1px var(--marca),0 0 14px -2px var(--marca);border-radius:10px;font-size:clamp(1.05rem,2.4vw,1.45rem);font-weight:900;text-transform:uppercase}
+h1 small{font-weight:500;text-transform:none;font-size:.7em;color:#FFD9BF}
+.sub{margin:6px 0 0;font-size:.9rem;color:#D7E7E4}
+.controls{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end;margin-top:14px;font-size:.85rem}
+.controls label{display:flex;flex-direction:column;gap:3px}
+select,input{font:inherit;color:#000;background:#fff;border:1px solid #A9D3CB;border-radius:6px;padding:6px 8px}
+details.reglas{margin-top:14px;border:1px solid rgba(255,255,255,.4);border-radius:10px;padding:8px 14px;background:#111}
+details.reglas summary{cursor:pointer;font-weight:700}
+details.reglas li{margin:3px 0;font-size:.9rem}
+.aviso{color:#FFD23F}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:16px}
+@media (max-width:900px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{--kc:#fff;padding:8px 12px;border:2px solid var(--kc);border-radius:10px;box-shadow:0 0 0 1px var(--kc),0 0 14px -2px var(--kc);min-width:0}
+.kpi .l{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--kc)}
+.kpi .v{font-size:clamp(1.05rem,2vw,1.35rem);font-weight:800;margin:2px 0 1px;overflow-wrap:anywhere}
+.kpi .n{font-size:.72rem;color:var(--gris)}
+.c1{--kc:#3DDBB4}.c2{--kc:#FFD23F}.c3{--kc:#5AA9FF}.c4{--kc:#FF7A1A}
+.tbl{overflow-x:auto;margin-top:14px;border:1px solid #fff;border-radius:8px;background:var(--panel);color:#000}
+table{width:100%;border-collapse:collapse;font-size:.95rem}
+#main{min-width:1150px}
+th,td{padding:7px 9px;text-align:right;border-bottom:1px solid #C8D0CE;white-space:nowrap}
+th{background:#1B1B1B;color:#fff;font-size:.78rem;text-transform:uppercase;letter-spacing:.02em;position:sticky;top:0;cursor:pointer;user-select:none}
+th.grp{background:#333;cursor:default;text-align:center}
+td{font-weight:600}
+.l{text-align:left}
+.cup{display:inline-block;min-width:1.9em;padding:1px 6px;margin-left:6px;border-radius:999px;background:#EEE;color:#555;font-weight:800;text-align:center;font-size:.85em}
+.cup.si{background:var(--ok);color:#fff}.cup.neg{background:var(--low);color:#fff}
+.tot{font-size:1.05rem;font-weight:900}
+.bar{display:inline-block;width:70px;height:8px;border-radius:4px;background:#E2E2E2;vertical-align:middle;margin-right:6px;overflow:hidden}
+.bar i{display:block;height:100%}
+.hab{font-weight:800}.hab.si{color:var(--ok)}.hab.no{color:var(--low)}
+tr.fila:hover td{background:#FFF4EA}
+button.tg{font:inherit;font-weight:900;width:26px;height:26px;border-radius:6px;border:1px solid #999;background:#fff;cursor:pointer;margin-right:6px}
+tr.det>td{background:#F6F6F6;white-space:normal;text-align:left;padding:12px}
+.detgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+.detgrid table{background:#fff;border:1px solid #CCC;font-size:.88rem}
+.detgrid th{position:static;cursor:default}
+.detgrid h4{margin:0 0 6px;font-size:.95rem}
+.falta{font-size:.85rem;margin:0 0 4px}
+.ok{color:var(--ok)}.mal{color:var(--low)}
+#estado{margin-top:14px;color:#FFD23F}
+footer{margin-top:24px;font-size:.78rem;color:var(--gris)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Concurso Tres pasos a la moto <small>· LP · ELB · seguimiento por vendedor</small></h1>
+  <p class="sub" id="sub">Cargando datos…</p>
+  <div class="controls">
+    <label>Mes<select id="mes"></select></label>
+    <label>Buscar vendedor<input id="buscar" type="search" placeholder="Nombre o código"></label>
+  </div>
+
+  <details class="reglas">
+    <summary>Cómo se suman los cupones</summary>
+    <ul>
+      <li><b>Llave:</b> desde el 90% del objetivo total del mes se empiezan a sumar cupones. Debajo del 90% el mes da 0.</li>
+      <li><b>Volumen (máx. 4):</b> venta total contra objetivo: 100% = 2, 110% = 3, 120% = 4.</li>
+      <li><b>Proveedores (máx. 5):</b> cada empresa en la que el vendedor llega al 100% da puntos. Cada 15 puntos, 1 cupón. <span class="aviso">Puntos usados: <span id="ptsTxt"></span>.</span></li>
+      <li><b>Todos al 100%:</b> +2 si llega al 100% en todas las empresas con objetivo.</li>
+      <li><b>Clientes clave (máx. 2):</b> de los <span id="nClave"></span> clientes de la cartera que más compraron en los 2 meses anteriores, cuántos ya compraron este mes: 90% = 1, 98% = 2.</li>
+      <li><b>Cobertura (máx. 2):</b> clientes de la cartera con compra: 70% = 1, 82% = 2.</li>
+      <li><b>Rechazos:</b> menos del 2% de la venta = +1. Más del 6% = −2.</li>
+      <li><b>Tope:</b> 15 cupones por mes. Octubre, noviembre y diciembre se acumulan (máx. 45). Sorteo a fin de diciembre.</li>
+      <li class="aviso">Ventas por fecha de comprobante, con IVA, igual que el Reporte diario de ventas.</li>
+    </ul>
+  </details>
+
+  <div class="kpis" id="kpis"></div>
+  <p id="estado"></p>
+  <div class="tbl"><table id="main"></table></div>
+  <footer>Datos de la base de Gescom · se actualiza con el Reporte diario de ventas (lunes a viernes 07:00 y 13:30)</footer>
+</div>
+<script>
+// ---- Reglas del concurso (editar aca si cambian) ----
+const MESES_CONCURSO = ['2026-10','2026-11','2026-12'];
+// puntos por empresa al llegar al 100% (cada 15 puntos = 1 cupon, maximo 5 cupones = 75 puntos)
+const PUNTOS = {SOFTYS:20, AYUDIN:15, ILOLAY:15, GEORGALOS:10, RIOSMA:5, CEPAS:5, OTM:5};
+const CLAVE_N = 20;   // cantidad de clientes clave por vendedor
+const LLAVE = 0.90;
+const volCup = p => p>=1.2? 4 : p>=1.1? 3 : p>=1? 2 : 0;
+const claveCup = p => p>=0.98? 2 : p>=0.90? 1 : 0;
+const cobCup = p => p>=0.82? 2 : p>=0.70? 1 : 0;
+const rechCup = p => p==null? 0 : p<0.02? 1 : p>0.06? -2 : 0;
+const MAX_MES = 15;
+
+const FERIADOS = new Set(['2026-10-12','2026-11-23','2026-12-08','2026-12-25']);
+const REPO_RAW ='https://raw.githubusercontent.com/1605-83/Reporte-Diario-Ventas/main/';
+const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const NOMBRE_G = {SOFTYS:'Softys',AYUDIN:'Ayudin',ILOLAY:'Ilolay',GEORGALOS:'Georgalos',RIOSMA:'Riosma',CEPAS:'Cepas',OTM:'OTM'};
+const $ = id => document.getElementById(id);
+const fmt$ = n => '$ ' + Math.round(n).toLocaleString('es-AR');
+const fmtN = n => Math.round(n).toLocaleString('es-AR');
+const fmtP = n => n==null? '—' : (n*100).toLocaleString('es-AR',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';
+const esc = s => String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const num = s => { s=String(s??'').trim(); return s ? (parseFloat(s.replace(/\./g,'').replace(',','.'))||0) : 0; };
+const nomMes = ym => { const [y,m]=ym.split('-').map(Number); return MESES[m-1]+' '+y; };
+const mesAnt = (ym,k) => { let [y,m]=ym.split('-').map(Number); m-=k; while(m<1){m+=12;y--;} return y+'-'+String(m).padStart(2,'0'); };
+const titulo = s => { s=(s||'').trim(); if(!(s===s.toUpperCase() && /[A-ZÁÉÍÓÚÑ]/.test(s))) return s; return s.toLowerCase().replace(/(^|[^a-záéíóúñü])([a-záéíóúñü])/g,(m,a,b)=>a+b.toUpperCase()); };
+$('ptsTxt').textContent = Object.entries(PUNTOS).map(([g,p])=>NOMBRE_G[g]+' '+p).join(' · ');
+$('nClave').textContent = CLAVE_N;
+
+function parseCSV(t){
+  const rows=[]; let row=[], f='', q=false;
+  for(let i=0;i<t.length;i++){ const ch=t[i];
+    if(q){ if(ch==='"'){ if(t[i+1]==='"'){f+='"';i++;} else q=false; } else f+=ch; }
+    else if(ch==='"') q=true; else if(ch===';'){ row.push(f); f=''; }
+    else if(ch==='\n'){ row.push(f.replace(/\r$/,'')); rows.push(row); row=[]; f=''; } else f+=ch; }
+  if(f!==''||row.length){ row.push(f.replace(/\r$/,'')); rows.push(row); }
+  return rows;
+}
+
+let CFG=null, CART=null, GRUPO={};
+const AGG={};   // por mes: {vta:{v|g}, rech:{v}, uni:{v|cli}, imp:{v|cli}, rs:{cli}, corte}
+
+// junta un CSV del mes: solo los renglones con fecha de comprobante en ese mes
+function agregar(txt, ym, nombre){
+  const R=parseCSV(txt).filter(r=>r.length>5); const H=R.shift().map(h=>h.trim());
+  const ix=n=>H.indexOf(n);
+  const I={cli:ix('Cliente'),fc:ix('FechaComprobante'),nro:ix('NroComprobante'),cant:ix('CantBase'),imp:ix('ImporteItem'),cv:ix('CodVendedor'),prov:ix('Proveedor'),rs:ix('RazonSocial')};
+  const A={vta:{},rech:{},uni:{},imp:{},rs:{},fechas:new Set()}; const add=(o,k,x)=>{o[k]=(o[k]||0)+x;};
+  for(const r of R){
+    const v=parseInt(r[I.cv],10); if(isNaN(v)) continue;
+    const fc=(r[I.fc]||'').trim(); if(fc.slice(0,7)!==ym) continue;
+    A.fechas.add(fc);
+    const g=GRUPO[(r[I.prov]||'').trim().toUpperCase()]||null;
+    const imp=num(r[I.imp]), ca=num(r[I.cant]), cli=String(r[I.cli]).trim();
+    if(g){ add(A.vta,v+'|'+g,imp); add(A.imp,v+'|'+cli,imp); }
+    add(A.uni,v+'|'+cli,ca);
+    if(!A.rs[cli] && I.rs>=0) A.rs[cli]=(r[I.rs]||'').trim();
+    const tc=(r[I.nro]||'').trim().slice(0,3).toUpperCase(); if(tc==='NCR'||tc==='NDB') add(A.rech,v,imp);
+  }
+  const st=(nombre||'').match(/-(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})\d{2}/);
+  A.corte= st? `${st[3]}/${st[2]}/${st[1]} ${st[4]}:${st[5]}` : '';
+  AGG[ym]=A;
+}
+
+// cupones de un mes para todos los vendedores
+function calcular(ym){
+  const A=AGG[ym]; if(!A) return null;
+  const OM=(CFG.objetivosPorMes||{})[ym]||null;
+  const OBJ= OM? OM.vend : (CFG.mes===ym? Object.fromEntries(CFG.vendedores.map(v=>[v.c,v.o])) : null);
+  if(!OBJ) return null;
+  const actual = ym===CFG.mes || !(OM&&OM.vendedores);
+  let LISTA=(OM&&OM.vendedores)||CFG.vendedores;
+  if(actual && CART && CART.v) LISTA=CFG.vendedores.map(v=>CART.v[String(v.c)]? {...v,b:CART.v[String(v.c)].length} : v);
+  const P1=AGG[mesAnt(ym,1)], P2=AGG[mesAnt(ym,2)];
+  // tendencia: venta por dia habil facturado proyectada a los dias habiles del mes (mes en curso)
+  const [y,mo]=ym.split('-').map(Number), nd=new Date(y,mo,0).getDate(); let dH=0;
+  for(let d=1;d<=nd;d++){ const wd=new Date(y,mo-1,d).getDay(); if(wd>0&&wd<6&&!FERIADOS.has(ym+'-'+String(d).padStart(2,'0'))) dH++; }
+  const hoy=new Date(Date.now()-3*3600e3).toISOString().slice(0,10);
+  const dT=[...A.fechas].filter(d=>d<=hoy && new Date(d+'T12:00').getDay()%6!==0).length||1;
+  const fT= ym<hoy.slice(0,7)? 1 : Math.max(1,dH/dT);
+  return LISTA.map(cv=>{
+    const o=OBJ[cv.c]||OBJ[String(cv.c)]||{};
+    // venta, puntos y volumen con un factor (1 = real, fT = tendencia)
+    const empresas=f=>{ const prov=[]; let tv=0, to=0, pts=0, conObj=0, al100=0;
+      for(const g of CFG.grupos){ const venta=(A.vta[cv.c+'|'+g]||0)*f, obj=o[g]||0; tv+=venta; to+=obj;
+        const p= obj>0? venta/obj : null, llega= p!=null && p>=1;
+        if(obj>0){ conObj++; if(llega){ al100++; pts+=PUNTOS[g]||0; } }
+        prov.push({g,venta,obj,p,llega,pts: llega? (PUNTOS[g]||0) : 0}); }
+      return {prov,tv,to,pts,conObj,al100,alc: to>0? tv/to : null}; };
+    const E=empresas(1), T=empresas(fT);
+    const {prov,tv,to,pts,conObj,al100,alc}=E;
+    // clientes clave: los que mas compraron en los 2 meses anteriores (de la cartera actual si la hay)
+    const enCart= CART&&CART.v&&CART.v[String(cv.c)]? new Set(CART.v[String(cv.c)].map(x=>String(x[0]))) : null;
+    const hist={};
+    for(const P of [P1,P2]) if(P) for(const k in P.imp){ const [v,cli]=k.split('|'); if(+v!==cv.c) continue; if(enCart && !enCart.has(cli)) continue; hist[cli]=(hist[cli]||0)+P.imp[k]; }
+    const clave=Object.entries(hist).filter(([,x])=>x>0).sort((a,b)=>b[1]-a[1]).slice(0,CLAVE_N)
+      .map(([cli,x])=>({cli, rs:(A.rs[cli]||(P1&&P1.rs[cli])||(P2&&P2.rs[cli])||''), hist:x, compro:(A.uni[cv.c+'|'+cli]||0)>=1}));
+    const claveP= clave.length? clave.filter(c=>c.compro).length/clave.length : null;
+    let ccc=0; for(const k in A.uni){ if(A.uni[k]>=1 && k.startsWith(cv.c+'|')) ccc++; }
+    const cobP= cv.b? ccc/cv.b : null;
+    const rech=Math.abs(A.rech[cv.c]||0), rechP= tv>0? rech/tv : null;
+    const resto={clave:claveCup(claveP||0), cob:cobCup(cobP||0), rech:rechCup(rechP)};
+    const cupones=X=>{ const c={vol:volCup(X.alc||0), prov:Math.min(5,Math.floor(X.pts/15)), todos:(X.conObj>0 && X.al100===X.conObj)? 2 : 0, ...resto};
+      const bruto=c.vol+c.prov+c.todos+c.clave+c.cob+c.rech, hab= X.alc!=null && X.alc>=LLAVE;
+      return {c,bruto,hab,total: hab? Math.max(0,Math.min(MAX_MES,bruto)) : 0}; };
+    const R=cupones(E), RT=cupones(T);
+    return {c:cv.c, n:cv.n, b:cv.b, tv, to, alc, hab:R.hab, prov, pts, conObj, al100, clave, claveP, ccc, cobP, rech, rechP, cup:R.c, bruto:R.bruto, total:R.total,
+      tend:{alc:T.alc, total:RT.total, hab:RT.hab, tv:T.tv}, enCurso: fT>1, dT, dH};
+  });
+}
+
+let VISTA=null, ACUM={}, abiertos=new Set(), sortK='total', sortD=-1;
+function dibujar(){
+  const ym=$('mes').value; const V=calcular(ym); VISTA=V;
+  if(!V){ $('estado').textContent='Todavía no hay ventas u objetivos cargados para '+nomMes(ym)+'.'; $('main').innerHTML=''; $('kpis').innerHTML=''; $('sub').textContent='Concurso octubre a diciembre 2026'; return; }
+  $('estado').textContent='';
+  $('sub').textContent=`${nomMes(ym)} · datos al ${AGG[ym].corte||'—'} · ${V.length} vendedores`;
+  const q=$('buscar').value.trim().toLowerCase();
+  const val={total:x=>x.total, tend:x=>x.enCurso? x.tend.total : x.total, acum:x=>ACUM[x.c]||0, alc:x=>x.alc??-1, c:x=>x.c, n:x=>x.n};
+  const L=V.filter(x=>!q || String(x.c)===q || (x.n||'').toLowerCase().includes(q))
+    .sort((a,b)=>{ const f=val[sortK]||val.total, A=f(a), B=f(b); return (A>B?1:A<B?-1:0)*sortD || (ACUM[b.c]||0)-(ACUM[a.c]||0); });
+  // indicadores
+  const hab=V.filter(x=>x.hab).length, tot=V.reduce((a,x)=>a+x.total,0);
+  let lider=[...V].sort((a,b)=>(ACUM[b.c]||0)-(ACUM[a.c]||0))[0]; if(lider && !(ACUM[lider.c]>0)) lider=null;
+  const meses=MESES_CONCURSO.filter(m=>AGG[m]).length, x0=V[0];
+  const habT=V.filter(x=>x.enCurso? x.tend.hab : x.hab).length;
+  $('sub').textContent+= x0&&x0.enCurso? ` · ${x0.dT} de ${x0.dH} días hábiles` : '';
+  $('kpis').innerHTML=[
+    ['c1','Habilitados (≥ 90%)',`${hab} de ${V.length}`, x0&&x0.enCurso? `Con la tendencia llegarían ${habT}` : 'Vendedores que suman cupones en el mes'],
+    ['c2','Cupones del mes',fmtN(tot), x0&&x0.enCurso? `Proyección a fin de mes: ${fmtN(V.reduce((a,x)=>a+x.tend.total,0))}` : 'Entre todos los vendedores'],
+    ['c3','Líder acumulado',lider? esc(lider.n) : '—',lider? `${ACUM[lider.c]||0} cupones (oct–dic)` : 'Nadie suma cupones todavía'],
+    ['c4','Meses del concurso',`${meses} de 3`,'Octubre, noviembre y diciembre · tope 45 cupones'],
+  ].map(k=>`<div class="kpi ${k[0]}"><div class="l">${k[1]}</div><div class="v">${k[2]}</div><div class="n">${k[3]}</div></div>`).join('');
+  const cup=(n,neg)=>`<span class="cup ${n>0?'si':n<0?'neg':''}">${n>0?'+':''}${n}</span>`;
+  const bar=(p,col)=>`<span class="bar"><i style="width:${Math.min(100,(p||0)*100)}%;background:${col}"></i></span>`;
+  const colA=p=>p==null? '#999' : p>=1? 'var(--ok)' : p>=LLAVE? 'var(--mid)' : 'var(--low)';
+  const th=(k,t,cls)=>`<th class="${cls||''}" data-k="${k||''}">${t}${sortK===k? (sortD>0?' ▲':' ▼') : ''}</th>`;
+  let h=`<thead><tr>${th('c','Cód','l')}${th('n','Vendedor','l')}${th('alc','% Objetivo')}<th>Llave 90%</th><th>Volumen</th><th>Proveedores</th><th>Todos al 100%</th><th>Clientes clave</th><th>Cobertura</th><th>Rechazos</th>${th('total','Cupones mes')}${th('tend','Proyección')}${th('acum','Acumulado')}</tr></thead><tbody>`;
+  for(const x of L){ const ab=abiertos.has(x.c);
+    h+=`<tr class="fila"><td class="l"><button class="tg" data-c="${x.c}" aria-expanded="${ab}" aria-label="Ver detalle de ${esc(x.n)}">${ab?'−':'+'}</button>${x.c}</td><td class="l">${esc(x.n)}</td>
+      <td>${bar(x.alc,colA(x.alc))}${fmtP(x.alc)}</td>
+      <td><span class="hab ${x.hab?'si':'no'}">${x.hab?'Sí':'No'}</span></td>
+      <td>${cup(x.cup.vol)}</td>
+      <td>${x.al100}/${x.conObj} · ${x.pts} pts${cup(x.cup.prov)}</td>
+      <td>${cup(x.cup.todos)}</td>
+      <td>${fmtP(x.claveP)}${cup(x.cup.clave)}</td>
+      <td>${fmtP(x.cobP)}${cup(x.cup.cob)}</td>
+      <td>${fmtP(x.rechP)}${cup(x.cup.rech)}</td>
+      <td class="tot">${x.total}${!x.hab && x.bruto>0? ` <span style="font-size:.75em;color:#888">(${Math.min(MAX_MES,x.bruto)} en juego)</span>` : ''}</td>
+      <td title="Si mantiene el ritmo de venta hasta fin de mes: ${fmtP(x.tend.alc)} del objetivo">${x.enCurso? `${x.tend.total} <span style="font-size:.75em;color:#666">(${fmtP(x.tend.alc)})</span>` : '—'}</td>
+      <td class="tot">${ACUM[x.c]||0}</td></tr>`;
+    if(ab) h+=`<tr class="det"><td colspan="13">${detalle(x)}</td></tr>`;
+  }
+  $('main').innerHTML=h+'</tbody>';
+}
+
+function detalle(x){
+  const s=[];
+  // que le falta para el proximo escalon de volumen
+  const pasos=[[LLAVE,'la llave del 90%'],[1,'el 100% (2 cupones)'],[1.1,'el 110% (3 cupones)'],[1.2,'el 120% (4 cupones)']];
+  const sig=pasos.find(([p])=>(x.alc||0)<p);
+  s.push(`<p class="falta">${sig? `Le faltan <b>${fmt$(sig[0]*x.to-x.tv)}</b> para ${sig[1]}.` : '<span class="ok">Ya llegó al 120% del objetivo.</span>'} Venta ${fmt$(x.tv)} de ${fmt$(x.to)}.</p>`);
+  if(x.enCurso) s.push(`<p class="falta">Si mantiene el ritmo (${x.dT} de ${x.dH} días hábiles): cierra en ${fmt$(x.tend.tv)} = <b>${fmtP(x.tend.alc)}</b> del objetivo y <b>${x.tend.total} cupones</b>.</p>`);
+  const sigP=Math.ceil((x.pts+1)/15)*15;
+  s.push(`<p class="falta">Proveedores: ${x.pts} puntos = ${x.cup.prov} cupones${x.cup.prov<5? ` · próximo cupón a los ${sigP} puntos` : ''}.</p>`);
+  let t=`<div class="detgrid"><div><h4>Empresas</h4><table><thead><tr><th class="l">Empresa</th><th>Objetivo</th><th>Venta</th><th>%</th><th>Falta</th><th>Puntos</th></tr></thead><tbody>`;
+  for(const p of x.prov) t+=`<tr><td class="l">${NOMBRE_G[p.g]}</td><td>${p.obj? fmt$(p.obj) : 'sin objetivo'}</td><td>${fmt$(p.venta)}</td><td class="${p.llega?'ok':p.obj?'mal':''}">${fmtP(p.p)}</td><td>${p.obj? (p.llega? '—' : fmt$(p.obj-p.venta)) : ''}</td><td>${p.pts? p.pts : p.obj? '0 / '+(PUNTOS[p.g]||0) : ''}</td></tr>`;
+  t+=`</tbody></table></div><div><h4>Clientes clave (${x.clave.filter(c=>c.compro).length} de ${x.clave.length} con compra)</h4><table><thead><tr><th class="l">Cliente</th><th>Compra 2 meses ant.</th><th>Este mes</th></tr></thead><tbody>`;
+  for(const c of x.clave) t+=`<tr><td class="l">${esc(c.cli)} · ${esc(titulo(c.rs))}</td><td>${fmt$(c.hist)}</td><td class="${c.compro?'ok':'mal'}">${c.compro?'Compró':'Falta'}</td></tr>`;
+  if(!x.clave.length) t+='<tr><td class="l" colspan="3">Sin historial de compras de los meses anteriores.</td></tr>';
+  t+=`</tbody></table></div><div><h4>Cobertura y rechazos</h4><table><tbody>
+    <tr><td class="l">Clientes con compra</td><td>${fmtN(x.ccc)} de ${fmtN(x.b||0)}</td></tr>
+    <tr><td class="l">% Cobertura</td><td>${fmtP(x.cobP)}</td></tr>
+    <tr><td class="l">Para 70% / 82%</td><td>${Math.max(0,Math.ceil(.7*(x.b||0))-x.ccc)} / ${Math.max(0,Math.ceil(.82*(x.b||0))-x.ccc)} clientes más</td></tr>
+    <tr><td class="l">Rechazos</td><td>${fmt$(x.rech)} (${fmtP(x.rechP)})</td></tr>
+    <tr><td class="l">Tope sin perder / para sumar</td><td>6% = ${fmt$(.06*x.tv)} · 2% = ${fmt$(.02*x.tv)}</td></tr>
+  </tbody></table></div></div>`;
+  return s.join('')+t;
+}
+
+document.addEventListener('click',e=>{
+  const b=e.target.closest('button.tg'); if(b){ const c=+b.dataset.c; abiertos.has(c)? abiertos.delete(c) : abiertos.add(c); dibujar(); return; }
+  const th=e.target.closest('#main th[data-k]'); if(th && th.dataset.k){ const k=th.dataset.k; if(sortK===k) sortD=-sortD; else { sortK=k; sortD=(k==='c'||k==='n')? 1 : -1; } dibujar(); }
+});
+$('buscar').addEventListener('input',dibujar);
+$('mes').addEventListener('change',dibujar);
+
+(async function(){
+  try{
+    // objetivos y vendedores: los mismos del Reporte diario de ventas (se leen de su pagina)
+    const html=await (await fetch('index.html?t='+Date.now(),{cache:'no-store'})).text();
+    const m=html.match(/^const CFG = (.*);\s*$/m); if(!m) throw new Error('No se encontraron los objetivos');
+    CFG=JSON.parse(m[1]);
+    Object.entries(CFG.nomenclador).forEach(([g,ps])=>ps.forEach(p=>GRUPO[p.trim().toUpperCase()]=g));
+    try{ const r=await fetch('carteras.json?t='+Date.now(),{cache:'no-store'}); if(r.ok) CART=await r.json(); }catch(e){}
+    const arch=(await (await fetch('archivos.json?t='+Date.now(),{cache:'no-store'})).json()).archivos||[];
+    // ultimo archivo de cada mes (los dos meses anteriores al concurso tambien, para los clientes clave)
+    const necesarios=new Set([mesAnt(MESES_CONCURSO[0],2),mesAnt(MESES_CONCURSO[0],1),...MESES_CONCURSO]);
+    const ult={}; for(const p of arch){ const mm=p.match(/ventas-(\d{4}-\d{2})-/); if(mm && necesarios.has(mm[1]) && (!ult[mm[1]]||p>ult[mm[1]])) ult[mm[1]]=p; }
+    $('sub').textContent='Bajando ventas…';
+    await Promise.all(Object.entries(ult).map(async([ym,p])=>{ const r=await fetch(REPO_RAW+p.split('/').map(encodeURIComponent).join('/'),{cache:'no-store'}); if(r.ok) agregar(await r.text(),ym,p); }));
+    for(const ym of MESES_CONCURSO){ const V=calcular(ym); if(V) for(const x of V) ACUM[x.c]=Math.min(45,(ACUM[x.c]||0)+x.total); }
+    const hay=MESES_CONCURSO.filter(ym=>AGG[ym]);
+    $('mes').innerHTML=MESES_CONCURSO.map(ym=>`<option value="${ym}">${nomMes(ym)[0].toUpperCase()+nomMes(ym).slice(1)}</option>`).join('');
+    $('mes').value= hay[hay.length-1]||MESES_CONCURSO[0];
+    dibujar();
+  }catch(e){ $('sub').textContent='No se pudieron leer los datos: '+e.message; }
+})();
+</script>
+</body>
+</html>
