@@ -1,0 +1,36 @@
+name: Combos del mes por vendedor
+
+on:
+  schedule:
+    - cron: '7,22,37,52 10-20 * * 1-6'   # cada 15 minutos de 07:07 a 17:52 hora argentina, lunes a sabado
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: combos
+  cancel-in-progress: false
+
+jobs:
+  combos:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Contar los combos del mes en la base de Gescom
+        shell: powershell
+        env:
+          GESCOM_LPE_CLAVE: ${{ secrets.GESCOM_LPE_CLAVE }}
+        run: .\robot\combos.ps1 -Combos 1137 -Salida .
+
+      - name: Subir combos.json
+        shell: bash
+        run: |
+          git config user.name "robot-gescom"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add vivo/combos.json
+          if git diff --cached --quiet; then echo "Sin cambios"; exit 0; fi
+          git commit -m "Combos del mes por vendedor ($(TZ=ART3 date '+%d/%m/%Y %H:%M'))"
+          for i in 1 2 3 4 5; do git pull --rebase -q && git push && exit 0; sleep 10; done
+          exit 1
