@@ -38,5 +38,6 @@ jobs:
             echo "Sin cambios: no se sube nada"
           else
             git commit -m "Ventas actualizadas desde Gescom ($(TZ=ART3 date '+%d/%m/%Y %H:%M'))"
-            git push
+            # el robot en vivo sube cada hora: si se adelanto, primero se trae lo suyo
+            for n in 1 2 3; do git pull --rebase -q && git push && break; sleep 10; done
           fi

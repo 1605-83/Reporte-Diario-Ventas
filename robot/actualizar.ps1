@@ -6,7 +6,9 @@
 # La clave se lee de la variable de entorno GESCOM_LPE_CLAVE (secreto de GitHub).
 param(
   [string]$Repo = $(if ($env:GITHUB_REPOSITORY) { $env:GITHUB_REPOSITORY.Split('/')[-1] } else { '' }),
-  [string]$Salida = '.'
+  [string]$Salida = '.',
+  # Venta del dia en vivo (pedido de Bruno, 20/10/2026): solo los pedidos con fecha de carga de hoy, en vivo/hoy.csv
+  [switch]$SoloHoy
 )
 $ErrorActionPreference = 'Stop'
 
@@ -68,6 +70,18 @@ try {
   if ($v.actualizado) { $corte = ([datetime]::Parse($v.actualizado, [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::AdjustToUniversal)).AddHours(-3) }
 } catch { Write-Warning "No se pudo leer /estado: $_" }
 
+# En vivo: si la base no cambio desde la ultima corrida, no hay nada que bajar (la base suma ventas una vez por hora)
+if ($SoloHoy) {
+  $dirVivo = Join-Path (Resolve-Path $Salida) 'vivo'
+  $estVivo = Join-Path $dirVivo 'estado.json'
+  if (Test-Path $estVivo) {
+    $prev = [IO.File]::ReadAllText($estVivo) | ConvertFrom-Json
+    if ($prev.dia -eq $hoy.ToString('dd-MM-yyyy') -and $prev.corte -eq $corte.ToString('dd/MM/yyyy HH:mm')) {
+      Write-Host "En vivo: la base sigue con datos al $($prev.corte); no se baja nada"; return
+    }
+  }
+}
+
 # Todos los tableros toman la venta por FECHA DE COMPROBANTE (pedido de Bruno, 9/10/2026): solo lo facturado, hasta hoy
 $hasta = $hoy
 if ($cfg.todasFechas -and $cfg.futuro) { $hasta = $hoy.AddDays($cfg.futuro) }   # entregas ya programadas
@@ -79,7 +93,9 @@ function Consultar([datetime]$d1, [datetime]$d2) {
   } else { $prov = ($cfg.proveedores | ForEach-Object { "'$_'" }) -join ',' }
   $a1 = $d1.ToString('yyyy-MM-dd'); $a2 = $d2.ToString('yyyy-MM-dd')
   $FCOMP = "(CASE WHEN v.tipo IN ('DEV-RE','DEB') THEN v.fecha ELSE COALESCE(NULLIF(v.entrega,''), v.fecha) END)"
-  if ($cfg.todasFechas) {
+  if ($SoloHoy) {
+    $filtroFecha = "substr(v.fecha, 1, 10) BETWEEN '$a1' AND '$a2'"   # fecha de carga
+  } elseif ($cfg.todasFechas) {
     $filtroFecha = "(($FCOMP BETWEEN '$a1' AND '$a2' AND NULLIF(v.comprobante,'') IS NOT NULL)
        OR COALESCE(NULLIF(v.entrega,''), v.fecha) BETWEEN '$a1' AND '$a2' OR v.fecha BETWEEN '$a1' AND '$a2')"
   } else {
@@ -149,7 +165,7 @@ function JsonTxt($s) {
   }
   [void]$sb.Append('"'); $sb.ToString()
 }
-try {
+if (-not $SoloHoy) { try {   # en vivo no se rehacen las carteras (salen en las corridas de las 7 y las 13:30)
   $cli = @((Pedir 'POST' '/consulta' @{ sql = "SELECT c.codigo, COALESCE(NULLIF(c.razon_social,''), c.nombre) AS n, c.localidad, COALESCE(NULLIF(sr.descripcion,''), NULLIF(c.ramo,'')) AS ramo, c.vendedor, c.rutas FROM clientes c LEFT JOIN subramos sr ON sr.codigo = c.subramo WHERE c.activo = 1 AND NULLIF(c.vendedor,'') IS NOT NULL ORDER BY c.vendedor, c.codigo" }).filas)
   $porV = [ordered]@{}
   foreach ($c in $cli) {
@@ -163,7 +179,7 @@ try {
   $json = '{"fecha":' + (JsonTxt $corte.ToString('yyyy-MM-dd HH:mm')) + ',"v":{' + (($porV.Keys | ForEach-Object { (JsonTxt $_) + ':[' + ($porV[$_] -join ',') + ']' }) -join ',') + '}}'
   [IO.File]::WriteAllText((Join-Path (Resolve-Path $Salida) 'carteras.json'), $json, (New-Object Text.UTF8Encoding $false))
   Write-Host "carteras.json: $($cli.Count) clientes activos en $($porV.Count) vendedores"
-} catch { Write-Warning "No se pudieron armar las carteras: $_" }
+} catch { Write-Warning "No se pudieron armar las carteras: $_" } }
 
 # ---- Armado del CSV, mismas 62 columnas que el reporte de Gescom ----
 $COLS = 'Cliente;Direccion;Localidad;FechaComprobante;FechaEntrega;FechaCarga;NroComprobante;TipoDeVenta;Empresa;Codigo;CantBase;ImporteNetoItem;ImporteItem;RazonSocial;MotivoDevolucion;Descuento;CodVendedor;Vendedor;RutaPreventa;Articulo;NetoItem;Reparto;ComentarioInterno;Ramo;Subramo;PrecioCosto;Chofer;valorDescuento;Mon_Simbolo;Mon_Decimales;Proveedor;PesoKg;ImpuestoInterno;CondicionPago;FechaLiquidacion;ComboCodigo;Marca;Linea;Sabor;Calibre;Familia;Rubro;Tags;Promociones;SegmentoRentabilidad;CodSupervisor;NomSupervisor;Origen;ComprobanteReferencia;Etiqueta;VentaDirecta;NumeroVenta;Pendiente;ListaPrecio;Taxonomia;OrdenPreparacion;FechaPreparacion;Bodeguistas;EtiquetaItem;UnidadFactor;PesoKgReal;NetoItemReal'.Split(';')
@@ -263,6 +279,18 @@ foreach ($f in $filas) {
   [void]$sb.Append((($COLS | ForEach-Object { Txt $r[$_] }) -join ';') + "`r`n")
 }
 $sb.ToString()
+}
+
+if ($SoloHoy) {
+  # ---- En vivo: vivo/hoy.csv con los pedidos, devoluciones y notas de debito cargados hoy, y vivo/estado.json con la hora de los datos.
+  # La pagina Venta del dia revisa estado.json cada pocos minutos y, si cambio, vuelve a leer hoy.csv ----
+  New-Item -ItemType Directory -Force $dirVivo | Out-Null
+  $filasHoy = @(Consultar $hoy $hoy)
+  [IO.File]::WriteAllText((Join-Path $dirVivo 'hoy.csv'), (ArmarCsv $filasHoy), [Text.Encoding]::GetEncoding(1252))
+  $estJson = '{"dia":"' + $hoy.ToString('dd-MM-yyyy') + '","corte":"' + $corte.ToString('dd/MM/yyyy HH:mm') + '","renglones":' + $filasHoy.Count + '}'
+  [IO.File]::WriteAllText($estVivo, $estJson, (New-Object Text.UTF8Encoding $false))
+  Write-Host "En vivo: $($filasHoy.Count) renglones cargados el $($hoy.ToString('dd/MM/yyyy')), datos al $($corte.ToString('dd/MM/yyyy HH:mm'))"
+  return
 }
 
 if ($cfg.porMes) {
