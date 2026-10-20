@@ -288,9 +288,10 @@ function detalle(x){
     +`<small>${fmt$(p.venta)}${p.obj? ' de '+fmt$(p.obj) : ' · sin objetivo'}${p.obj&&!p.llega? ' · faltan '+fmt$(p.obj-p.venta) : ''}</small>`
     +`<small>${p.pts? p.pts+' puntos' : p.obj? '0 de '+(PUNTOS[p.g]||0)+' puntos' : ''}</small></div>`).join('')+'</div></details>';
   // Clientes clave: primero los que faltan
-  const clave=[...x.clave].sort((a,b)=>(a.compro-b.compro)||(b.hist-a.hist)), nOk=x.clave.filter(c=>c.compro).length;
-  h+=`<details class="blq"><summary>Clientes clave · ${nOk} de ${x.clave.length} ya compraron</summary><div class="tw"><table><thead><tr><th class="l">Cliente</th><th>Compra 2 meses ant.</th><th>Este mes</th></tr></thead><tbody>`;
-  for(const c of clave) h+=`<tr><td class="l cli">${esc(c.cli)} · ${esc(titulo(c.rs))}</td><td>${fmt$(c.hist)}</td><td class="${c.compro?'ok':'mal'}">${c.compro?'Compró':'Falta'}</td></tr>`;
+  // se ordena tocando el encabezado (de menor a mayor y al reves; pedido de Bruno, 20/10/2026)
+  const clave=[...x.clave].sort(ordenClave), nOk=x.clave.filter(c=>c.compro).length;
+  h+=`<details class="blq"><summary>Clientes clave · ${nOk} de ${x.clave.length} ya compraron</summary><div class="tw"><table class="tclave"><thead><tr>${['cli','hist','compro'].map(k=>`<th data-oc="${k}"${k==='cli'?' class="l"':''} title="Tocá para ordenar">${{cli:'Cliente',hist:'Compra 2 meses ant.',compro:'Este mes'}[k]}<span class="fl">${flechaClave(k)}</span></th>`).join('')}</tr></thead><tbody>`;
+  for(const c of clave) h+=`<tr data-cli="${esc(titulo(c.rs)||c.cli)}" data-hist="${c.hist}" data-compro="${c.compro?1:0}"><td class="l cli">${esc(c.cli)} · ${esc(titulo(c.rs))}</td><td>${fmt$(c.hist)}</td><td class="${c.compro?'ok':'mal'}">${c.compro?'Compró':'Falta'}</td></tr>`;
   if(!x.clave.length) h+='<tr><td class="l" colspan="3">Sin historial de compras de los meses anteriores.</td></tr>';
   h+='</tbody></table></div></details>';
   // Rechazos
@@ -302,7 +303,21 @@ function detalle(x){
   return h+'</div></div>';
 }
 
+// orden de la tabla de Clientes clave: por defecto primero los que faltan y despues los que mas compraron
+let ordClave={k:'compro',d:1};
+const valClave=(c,k)=> k==='cli'? (c.nom ?? (titulo(c.rs||'')||c.cli)) : +c[k];
+function ordenClave(a,b){ const {k,d}=ordClave, A=valClave(a,k), B=valClave(b,k);
+  const r= k==='cli'? String(A).localeCompare(String(B),'es') : A-B; return r*d || (b.hist-a.hist); }
+const flechaClave=k=> ordClave.k===k? (ordClave.d>0? ' ▲' : ' ▼') : '';
 document.addEventListener('click',e=>{
+  const oc=e.target.closest('th[data-oc]');
+  if(oc){ const k=oc.dataset.oc; ordClave= ordClave.k===k? {k, d:-ordClave.d} : {k, d:1};
+    // se reordenan las filas en el lugar, sin redibujar, asi el bloque abierto queda abierto
+    document.querySelectorAll('table.tclave').forEach(t=>{ const tb=t.tBodies[0];
+      const filas=[...tb.rows].filter(r=>r.dataset.hist!=null).map(r=>({r, nom:r.dataset.cli, hist:+r.dataset.hist, compro:+r.dataset.compro}));
+      filas.sort(ordenClave).forEach(f=>tb.appendChild(f.r));
+      t.querySelectorAll('th[data-oc]').forEach(h=>h.querySelector('.fl').textContent=flechaClave(h.dataset.oc)); });
+    return; }
   const b=e.target.closest('button.tg'); if(b){ const c=+b.dataset.c; abiertos.has(c)? abiertos.delete(c) : abiertos.add(c); dibujar(); return; }
   const th=e.target.closest('#main th[data-k]'); if(th && th.dataset.k){ const k=th.dataset.k; if(sortK===k) sortD=-sortD; else { sortK=k; sortD=(k==='c'||k==='n')? 1 : -1; } dibujar(); }
 });
