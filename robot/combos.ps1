@@ -27,7 +27,21 @@ GROUP BY 1
 "@
   $v = [ordered]@{}; $cl = [ordered]@{}
   foreach ($f in ($filas | Sort-Object { [int]$_.ven })) { if ($null -eq $f.ven) { continue }; $v["$($f.ven)"] = [double]$f.cant; $cl["$($f.ven)"] = [int]$f.clientes }
-  $out.combos[$cb] = [ordered]@{ v = $v; clientes = $cl }
+  # detalle por cliente: [codigo de cliente, cantidad neta, ultima fecha, 1 si ya esta facturado]
+  $det = Sql @"
+SELECT CAST(v.vendedor AS INTEGER) AS ven, v.cliente AS cli,
+       SUM(CASE WHEN v.tipo LIKE 'DEV%' THEN -ABS(c.cantidad) ELSE c.cantidad END) AS cant,
+       MAX(v.fecha) AS fecha, MAX(CASE WHEN NULLIF(v.comprobante,'') IS NOT NULL THEN 1 ELSE 0 END) AS fact
+FROM venta_combos c JOIN ventas v ON v.id = c.venta_id
+WHERE c.combo IN ($cods) AND v.tipo IN ('VEN','DEV-RE','DEV-CA')
+  AND substr(COALESCE(NULLIF(v.entrega,''), v.fecha), 1, 7) = '$mes'
+GROUP BY 1, 2
+"@
+  $dd = [ordered]@{}
+  foreach ($f in ($det | Sort-Object { [int]$_.ven }, fecha)) { if ($null -eq $f.ven) { continue }; $k = "$($f.ven)"
+    if (-not $dd.Contains($k)) { $dd[$k] = New-Object System.Collections.ArrayList }
+    [void]$dd[$k].Add(@("$($f.cli)".Trim(), [double]$f.cant, "$($f.fecha)", [int]$f.fact)) }
+  $out.combos[$cb] = [ordered]@{ v = $v; clientes = $cl ; detalle = $dd }
   "Combo $cb en $($mes): $(($v.Values | Measure-Object -Sum).Sum) en $($v.Count) vendedores"
 }
 $dir = Join-Path (Resolve-Path $Salida) 'vivo'; if (-not (Test-Path $dir)) { New-Item -ItemType Directory $dir | Out-Null }
