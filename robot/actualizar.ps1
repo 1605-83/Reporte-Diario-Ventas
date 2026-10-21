@@ -26,9 +26,8 @@ $CONFIG = @{
     nombres = @('SOFTYS ARGENTINA S.A','GRUPO AYUDIN ARGENTINA S.A','ILOLAY','GEORGALOS','GENERAL CEREALS S.A','RIOSMA','CEPAS ARGENTINAS S.A',
                 'AJINOMOTO','BETTER FOOD SAS','BIC ARGENTINA S.A','BODEGAS SAN HUBERTO S.A','BRURIN','CASTELL S.A','DREAMCO S.A','FECOVITA',
                 'LABORATORIOS ECOVITA S.A','LCB','LEDESMA','MENOYO S.A.','MOLINO CHACABUCO S.A','MORIXE','NECHO S.A','POLDITOS S.A.S',
-                'PORTA HNOS S.A','PRIMEROS PRODUCTOS PEHUENIA','PRO DE MAN S.A','INDUSTRIAS QUIMICAS Y MINERAS TIMBO S.A','LINEA DORADA S.A')
-    # proveedores que se buscan por parecido porque no se sabe el nombre exacto en Gescom
-    parecidos = @('%TRES NI%')   # LAS TRES NINAS, va en OTM (pedido de Bruno, 21/10/2026)
+                'PORTA HNOS S.A','PRIMEROS PRODUCTOS PEHUENIA','PRO DE MAN S.A','INDUSTRIAS QUIMICAS Y MINERAS TIMBO S.A','LINEA DORADA S.A',
+                'L3N S.A.')   # L3N S.A. = LAS TRES NINAS, va en OTM (pedido de Bruno, 21/10/2026)
     desde = '2026-08-01'; porMes = $true; futuro = 7; todasFechas = $true   # la base tiene ventas desde el 1/8/2026
     columnas = @('Cliente','FechaComprobante','FechaEntrega','NroComprobante','TipoDeVenta','Empresa','Codigo','CantBase','ImporteNetoItem',
                  'ImporteItem','RazonSocial','CodVendedor','Vendedor','Articulo','PrecioCosto','Proveedor','Categoria','FechaCarga','MotivoDevolucion')
