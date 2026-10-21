@@ -73,6 +73,9 @@ tr.cat tr.prodrech td{background:#FFFCFB;font-weight:500;font-size:.86rem;font-s
 tr.cat tr.prodrech td:first-child{padding-left:96px}
 tr.prov td{font-size:.93rem;font-weight:600;font-style:italic}
 tr.prov td:first-child{padding-left:58px}
+/* referencias de una categoria (se despliegan con el + de la categoria) */
+tr.artr td{font-size:.84rem;color:#5B6475;background:#FAFBFD}
+tr.artr td:first-child{padding-left:40px}
 tr.cat>td{background:#F7FBFF;padding:10px 14px 14px 44px;text-align:left;white-space:normal}
 tr.cat table{min-width:0;width:auto;font-size:.95rem;border:1px solid var(--line);border-radius:6px;background:#fff}
 tr.cat th{position:static;background:#BFE0F7;color:#000;font-size:.9rem}
@@ -219,7 +222,7 @@ function procesar(txt, nombre, ymPedido, dia){
   const VEND=new Map(LISTA.map(v=>[v.c,v]));
   const vta={}, uni={}, net={}, cos={}, rech={}, nomCSV={}, fechas=new Set();
   const pv={}, pn={}, pc={}, pu={}, pr={};   // lo mismo por vendedor y proveedor
-  const kv={}, kn={}, kc={}, ku={}, kr={}, catsDe={};   // y por vendedor, proveedor y categoria
+  const kv={}, kn={}, kc={}, ku={}, kr={}, catsDe={}, artsDe={};   // y por vendedor, proveedor y categoria (y sus articulos)
   const icat=H.indexOf('Categoria'), icar=H.indexOf('FechaCarga'), ient=H.indexOf('FechaEntrega'), cargas=new Set();
   const imot=H.indexOf('MotivoDevolucion'), irs=H.indexOf('RazonSocial'), icod=H.indexOf('Codigo'), iart=H.indexOf('Articulo'), motivos={};   // rechazos por vendedor y motivo: {v:{motivo:{imp, comp:Set, cli:{cod:{imp,comp:Set,rs}}}}}
   const add=(o,k,x)=>{o[k]=(o[k]||0)+x;};
@@ -253,7 +256,10 @@ function procesar(txt, nombre, ymPedido, dia){
     if(g){ const kp=v+'|'+(r[I.prov]||'').trim().toUpperCase(); add(pv,kp,imp); add(pn,kp,ne); add(pc,kp,co); add(pu,kp+'|'+cli,ca); if(tc==='NCR'||tc==='NDB') add(pr,kp,imp);
       const cat=(icat>=0? (r[icat]||'') : '').trim()||'Sin categoría', kk=kp+'|'+cat;
       (catsDe[kp]||(catsDe[kp]=new Set())).add(cat);
-      add(kv,kk,imp); add(kn,kk,ne); add(kc,kk,co); add(ku,kk+'|'+cli,ca); if(tc==='NCR'||tc==='NDB') add(kr,kk,imp); }
+      add(kv,kk,imp); add(kn,kk,ne); add(kc,kk,co); add(ku,kk+'|'+cli,ca); if(tc==='NCR'||tc==='NDB') add(kr,kk,imp);
+      // cada referencia de la categoria, para desplegarla en la tabla de categorias (pedido de Bruno, 21/10/2026)
+      const cod=String(r[icod]||'').trim(), A=artsDe[kk]||(artsDe[kk]={}), xa=A[cod]||(A[cod]={art:(iart>=0? (r[iart]||'').trim() : ''),venta:0,cant:0,cli:{}});
+      xa.venta+=imp; xa.cant+=ca; xa.cli[cli]=(xa.cli[cli]||0)+ca; }
   }
   const pccc={}; for(const k in pu){ if(pu[k]>=1){ const p=k.split('|'); add(pccc,p[0]+'|'+p[1],1); } }
   const kccc={}; for(const k in ku){ if(ku[k]>=1){ const p=k.split('|'); add(kccc,p[0]+'|'+p[1]+'|'+p[2],1); } }
@@ -277,7 +283,7 @@ function procesar(txt, nombre, ymPedido, dia){
     filas.TOTAL={venta:tv,obj:to,base:cv.b,ccc:ccc[cv.c+'|*']||0,margen:marg(cv.c+'|*'),rech:rv,rechP:tv? rv/tv : null};
     const prov={};
     for(const g of G) for(const nom of CFG.nomenclador[g]){ const P=nom.trim().toUpperCase(), k=cv.c+'|'+P;
-      const cats={}; for(const c of (catsDe[k]||[])){ const kk=k+'|'+c; cats[c]={venta:kv[kk]||0,net:kn[kk]||0,cos:kc[kk]||0,ccc:kccc[kk]||0,rech:Math.abs(kr[kk]||0)}; }
+      const cats={}; for(const c of (catsDe[k]||[])){ const kk=k+'|'+c; cats[c]={venta:kv[kk]||0,net:kn[kk]||0,cos:kc[kk]||0,ccc:kccc[kk]||0,rech:Math.abs(kr[kk]||0),arts:artsDe[kk]||{}}; }
       prov[P]={g,venta:pv[k]||0,net:pn[k]||0,cos:pc[k]||0,ccc:pccc[k]||0,rech:Math.abs(pr[k]||0),cats}; }
     return {c:cv.c,n:cv.n||nomCSV[cv.c]||('Vendedor '+cv.c),filas,prov};
   });
@@ -422,7 +428,10 @@ function provFilas(vs,g,base){
 function filasCat(vs,g,ncols,titulo,cccTotal){
   const cs={};
   for(const n of CFG.nomenclador[g]){ const P=n.trim().toUpperCase();
-    for(const v of vs){ const p=v.prov[P]; for(const c in p.cats){ const a=cs[c]||(cs[c]={venta:0,ccc:0}); a.venta+=p.cats[c].venta; a.ccc+=p.cats[c].ccc; } } }
+    for(const v of vs){ const p=v.prov[P]; for(const c in p.cats){ const a=cs[c]||(cs[c]={venta:0,ccc:0,arts:{}}); a.venta+=p.cats[c].venta; a.ccc+=p.cats[c].ccc;
+      for(const cod in (p.cats[c].arts||{})){ const s=p.cats[c].arts[cod], y=a.arts[cod]||(a.arts[cod]={art:s.art,venta:0,cant:0,cli:{}}); y.venta+=s.venta; y.cant+=s.cant;
+        for(const k in s.cli) y.cli[k]=(y.cli[k]||0)+s.cli[k]; } } } }
+  const kb='A|'+(vs.length===1? vs[0].c : 'E')+'|'+g+'|';   // clave de lo desplegado (equipo o vendedor)
   const OC=D.objCat, obj={};
   if(OC) for(const v of vs){ const o=(OC[v.c]||{})[g]||{}; for(const c in o) obj[c]=(obj[c]||0)+o[c]*D.fObj; }
   const orden=(CFG.ordenCat||{})[g]||[];
@@ -433,7 +442,12 @@ function filasCat(vs,g,ncols,titulo,cccTotal){
   const {dT,dH}=dias(), ideal=dT/dH;
   const nada='<span class="muted">—</span>';
   const fil=(n,f,o,ccc)=>`<td class="l">${n}</td><td>${o? fmt$(o) : nada}</td><td>${fmt$(f)}<span class="cbar"><i style="width:${Math.max(f,0)/max*100}%"></i></span></td><td>${o? chipA(f/o,ideal) : nada}</td><td>${o? fmt$(Math.max(o-f,0)) : nada}</td><td>${tot>0.5? fmtP(f/tot) : nada}</td><td>${fmtN(ccc)}</td>`;
-  const body=nombres.map(c=>{ const f=cs[c]?cs[c].venta:0; return `<tr${f||obj[c]?'':' class="cero"'}>${fil(esc(c),f,obj[c]||0,cs[c]?cs[c].ccc:0)}</tr>`; }).join('');
+  // cada categoria (en OTM, cada empresa) se despliega con el + en sus referencias: codigo, descripcion, unidades y clientes
+  const body=nombres.map(c=>{ const f=cs[c]?cs[c].venta:0, k=kb+c, ab=abiertosP.has(k);
+    const arts= cs[c]? Object.entries(cs[c].arts).map(([cod,y])=>({cod,...y,ncli:Object.values(y.cli).filter(q=>q>=1).length})).filter(o=>Math.abs(o.venta)>0.5||o.cant).sort((a,b)=>b.venta-a.venta) : [];
+    const btn= arts.length? `<button class="tg" type="button" data-pg="${esc(k)}" aria-expanded="${ab}" aria-label="Ver referencias de ${esc(c)}">${ab?'−':'+'}</button>` : '';
+    return `<tr${f||obj[c]?'':' class="cero"'}>${fil(btn+esc(c),f,obj[c]||0,cs[c]?cs[c].ccc:0)}</tr>`
+      + (ab? arts.map(o=>`<tr class="artr"><td class="l">${esc(o.cod)} · ${esc(o.art||'Artículo '+o.cod)} <span class="muted">· ${fmtN(Math.round(o.cant))} u.</span></td><td>${nada}</td><td>${fmt$(o.venta)}</td><td>${nada}</td><td>${nada}</td><td>${f>0.5? fmtP(o.venta/f)+' de la categoría' : nada}</td><td>${fmtN(o.ncli)}</td></tr>`).join('') : ''); }).join('');
   return `<tr class="cat"><td colspan="${ncols}"><table><thead><tr><th class="l">Categoría</th><th>Objetivo $</th><th>Facturación</th><th>Alcance %</th><th>Falta $</th><th>% de la empresa</th><th>Clientes con compra</th></tr></thead>`
     + `<tbody>${body}</tbody><tfoot><tr>${fil('Total '+titulo,tot,totObj,cccTotal)}</tr></tfoot></table></td></tr>`;
 }
