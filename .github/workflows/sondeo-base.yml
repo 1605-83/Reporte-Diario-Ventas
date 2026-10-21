@@ -1,0 +1,18 @@
+name: Sondeo de base de clientes (solo lectura, solo conteos)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sondeo:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Contar clientes de la cartera por vendedor y por cada dato de la ficha
+        shell: powershell
+        env:
+          GESCOM_LPE_CLAVE: ${{ secrets.GESCOM_LPE_CLAVE }}
+        run: .\robot\sondeo-base.ps1
