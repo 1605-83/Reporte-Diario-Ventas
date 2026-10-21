@@ -91,7 +91,6 @@ function Consultar([datetime]$d1, [datetime]$d2) {
   if ($cfg.nombres) {
     $lista = ($cfg.nombres | ForEach-Object { "'" + $_.Replace("'", "''") + "'" }) -join ','
     $prov = "SELECT codigo FROM proveedores WHERE nombre IN ($lista)"
-    foreach ($p in @($cfg.parecidos)) { if ($p) { $prov += " OR UPPER(nombre) LIKE '" + $p.Replace("'", "''") + "'" } }
   } else { $prov = ($cfg.proveedores | ForEach-Object { "'$_'" }) -join ',' }
   $a1 = $d1.ToString('yyyy-MM-dd'); $a2 = $d2.ToString('yyyy-MM-dd')
   $FCOMP = "(CASE WHEN v.tipo IN ('DEV-RE','DEB') THEN v.fecha ELSE COALESCE(NULLIF(v.entrega,''), v.fecha) END)"
