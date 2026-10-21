@@ -1,4 +1,4 @@
-# Sondeo (solo lectura): cartera del vendedor 054 en la ficha de clientes de Gescom, para ver por que da 145 y no 147
+# Sondeo (solo lectura): nombre exacto del proveedor LAS TRES NINAS en Gescom (pedido de Bruno, 21/10/2026: sumarlo a OTM)
 $ErrorActionPreference = 'Stop'
 $clave = $env:GESCOM_LPE_CLAVE
 if (-not $clave) { throw 'Falta la variable de entorno GESCOM_LPE_CLAVE' }
@@ -13,12 +13,7 @@ function Sql([string]$sql) {
   $j.filas
 }
 function Ver($titulo, $sql) { "===== $titulo"; try { Sql $sql | ConvertTo-Json -Depth 5 -Compress } catch { "FALLO: $_" } }
-$R = "EXISTS (SELECT 1 FROM json_each(c.rutas) r WHERE json_extract(r.value,'$.vendedor') IN ('054','54'))"
-Ver 'ficha actualizada' "SELECT MAX(actualizado) AS actualizado FROM clientes"
-Ver 'con 054 en alguna ruta, por activo' "SELECT activo, COUNT(*) AS n FROM clientes c WHERE $R GROUP BY activo"
-Ver 'vendedor 054 en la ficha, por activo' "SELECT activo, COUNT(*) AS n FROM clientes c WHERE c.vendedor IN ('054','54') GROUP BY activo"
-Ver 'rutas del 054' "SELECT json_extract(r.value,'$.ruta') AS ruta, json_extract(r.value,'$.dias') AS dias, c.activo, COUNT(*) AS n FROM clientes c, json_each(c.rutas) r WHERE json_extract(r.value,'$.vendedor') IN ('054','54') GROUP BY ruta, dias, c.activo"
-Ver 'del 054 pero inactivos (bajas)' "SELECT c.codigo, COALESCE(NULLIF(c.razon_social,''), c.nombre) AS n, c.baja, c.alta FROM clientes c WHERE ($R OR c.vendedor IN ('054','54')) AND c.activo = 0"
-Ver 'ruta del 054 pero otro vendedor en la ficha' "SELECT c.codigo, c.vendedor, c.rutas FROM clientes c WHERE $R AND COALESCE(c.vendedor,'') NOT IN ('054','54')"
-Ver 'altas recientes del 054' "SELECT c.codigo, COALESCE(NULLIF(c.razon_social,''), c.nombre) AS n, c.alta FROM clientes c WHERE c.vendedor IN ('054','54') AND c.alta IS NOT NULL ORDER BY c.alta DESC LIMIT 10"
-Ver 'clientes con venta del 054 en octubre que no estan en su cartera activa' "SELECT v.cliente, COALESCE(NULLIF(c.razon_social,''), c.nombre) AS n, c.vendedor, c.activo, COUNT(*) AS comprobantes FROM ventas v LEFT JOIN clientes c ON c.codigo = v.cliente WHERE v.vendedor IN ('054','54') AND v.fecha >= '2026-10-01' AND NOT (c.activo = 1 AND c.vendedor IN ('054','54')) GROUP BY v.cliente"
+$P = "(UPPER(p.nombre) LIKE '%NI%AS%' OR UPPER(p.nombre) LIKE '%TRES%' OR p.nombre LIKE '%3%' OR UPPER(p.nombre) LIKE '%NENAS%')"
+Ver 'proveedores parecidos' "SELECT p.codigo, p.nombre FROM proveedores p WHERE $P ORDER BY p.nombre"
+Ver 'articulos con TRES NI o 3 NI en la descripcion' "SELECT a.codigo, a.descripcion, a.proveedor, p.nombre AS prov FROM articulos a LEFT JOIN proveedores p ON p.codigo = a.proveedor WHERE UPPER(a.descripcion) LIKE '%TRES NI%' OR UPPER(a.descripcion) LIKE '%3 NI%' LIMIT 40"
+Ver 'venta de octubre de esos proveedores' "SELECT p.codigo, p.nombre, COUNT(*) AS renglones, ROUND(SUM(i.total),2) AS total FROM ventas v JOIN venta_items i ON i.venta_id = v.id JOIN articulos a ON a.codigo = i.articulo JOIN proveedores p ON p.codigo = a.proveedor WHERE $P AND v.fecha >= '2026-10-01' GROUP BY p.codigo, p.nombre"
