@@ -33,3 +33,9 @@ Ver 'por vendedor y primera visita' "SELECT CAST(c.vendedor AS INTEGER) AS ven, 
 Ver 'claves del JSON de rutas (un ejemplo sin datos)' "SELECT json_group_array(DISTINCT j.key) AS claves FROM clientes c, json_each(json_extract(c.rutas,'$[0]')) j WHERE c.activo = 1 AND json_valid(c.rutas)"
 Ver 'por vendedor y ramo' "SELECT CAST(c.vendedor AS INTEGER) AS ven, c.ramo, COUNT(*) AS n $C GROUP BY 1,2 ORDER BY 1,3 DESC"
 Ver 'por vendedor, con baja cargada' "SELECT CAST(c.vendedor AS INTEGER) AS ven, SUM(CASE WHEN NULLIF(c.baja,'') IS NOT NULL THEN 1 ELSE 0 END) AS con_baja, SUM(CASE WHEN c.latitud IS NULL OR c.latitud = 0 THEN 1 ELSE 0 END) AS sin_ubicacion $C GROUP BY 1 ORDER BY 1"
+
+# Los 22 clientes que estan en la cartera pero no en la exportacion de clientes de Gescom que paso Bruno (21/10/2026 16:30)
+$X = "('101466','103062','106218','106559','108768','197','3186','3229','326','329372','3557','4153','5799','711','104111','106161','106162','106273','107503','107885','3039','388')"
+Ver 'los 22: estado en la base (sin datos personales)' "SELECT c.codigo, c.activo, c.alta, c.baja, c.actualizado, CAST(c.vendedor AS INTEGER) AS ven, json_extract(c.rutas,'$[0].ruta') AS ruta, json_extract(c.rutas,'$[0].dias') AS dias, c.ramo, c.lista_precio FROM clientes c WHERE c.codigo IN $X OR ltrim(c.codigo,'0') IN $X ORDER BY 6, 1"
+Ver 'ultima venta de cada uno' "SELECT v.cliente, MAX(v.fecha) AS ultima, COUNT(*) AS ventas FROM ventas v WHERE v.cliente IN $X OR ltrim(v.cliente,'0') IN $X GROUP BY v.cliente"
+Ver 'cuando se actualizaron los clientes por ultima vez' "SELECT MAX(c.actualizado) AS max_act, MIN(c.actualizado) AS min_act FROM clientes c"
