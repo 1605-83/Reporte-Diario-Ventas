@@ -265,6 +265,7 @@ foreach ($f in $filas) {
       }
     }
   }
+  if (-not $cat -and $provNom -eq 'L3N S.A.') { $cat = 'Las Tres Ni' + [char]0x00F1 + 'as' }   # se ve con el nombre de la marca (pedido de Bruno, 21/10/2026)
   if (-not $cat -and $provNom) { $cat = $TI.ToTitleCase($provNom.ToLower()) }   # ultimo recurso: el proveedor
   $r.Categoria = if ($cat) { $cat } else { $SIN_CAT }
   $r.CodSupervisor = $f.cod_supervisor
