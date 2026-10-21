@@ -181,6 +181,10 @@ const esc = s => String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>'
 const titulo = s => { s=(s||'').trim(); if(!(s===s.toUpperCase() && /[A-ZÁÉÍÓÚÑ]/.test(s))) return s; return s.toLowerCase().replace(/(^|[^a-záéíóúñü])([a-záéíóúñü])/g,(m,a,b)=>a+b.toUpperCase()); };
 const num = s => { s=String(s??'').trim(); return s ? (parseFloat(s.replace(/\./g,'').replace(',','.'))||0) : 0; };
 const GRUPO = {}; Object.entries(CFG.nomenclador).forEach(([g,ps])=>ps.forEach(p=>GRUPO[p.trim().toUpperCase()]=g));
+// LAS TRES NIÑAS va en OTM (pedido de Bruno, 21/10/2026); se reconoce por parecido porque el nombre exacto en Gescom puede variar
+// el nombre que venga se suma al nomenclador de OTM para que tambien salga en el detalle por proveedor
+const grupoDe=p=>{ p=(p||'').trim().toUpperCase(); if(GRUPO[p]) return GRUPO[p]; if(!/TRES NI/.test(p)) return null;
+  GRUPO[p]='OTM'; CFG.nomenclador.OTM.push(p); return 'OTM'; };
 
 function parseCSV(t){
   const rows=[]; let row=[], f='', q=false;
@@ -230,7 +234,7 @@ function procesar(txt, nombre, ymPedido, dia){
       if(!/^\d{4}-\d{2}-\d{2}$/.test(fx)) continue;
       if(ymPedido && fx.slice(0,7)!==ymPedido) continue;
       fechas.add(fx); }
-    const g=GRUPO[(r[I.prov]||'').trim().toUpperCase()]||null;
+    const g=grupoDe(r[I.prov]);
     const imp=num(r[I.imp]), ne=num(r[I.neto]), co=num(r[I.costo]), ca=num(r[I.cant]), cli=String(r[I.cli]).trim();
     if(!nomCSV[v] && r[I.vn]) nomCSV[v]=titulo(r[I.vn]);
     // el margen del equipo, como en el Excel, sale solo de los vendedores del reporte (no deposito ni mostrador)
