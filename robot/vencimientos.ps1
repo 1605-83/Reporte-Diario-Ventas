@@ -32,48 +32,48 @@ $lotes = Sql "SELECT v.tipo, v.articulo, v.descripcion, v.vencimiento, v.dias, S
 $an = Sql "SELECT articulo, vendido_30, stock_disponible, dia FROM digip_analitico WHERE dia = (SELECT MAX(dia) FROM digip_analitico)"
 $cods = @($lotes | ForEach-Object { "'" + ([string]$_.articulo).Replace("'", "''") + "'" } | Sort-Object -Unique) -join ','
 if (-not $cods) { throw 'La base no devolvio lotes por vencer' }
-$art = Sql "SELECT a.codigo, a.descripcion, a.unidades_bulto, a.costo_bulto, COALESCE(p.nombre, a.proveedor) AS proveedor
+$artFilas = Sql "SELECT a.codigo, a.descripcion, a.unidades_bulto, a.costo_bulto, COALESCE(p.nombre, a.proveedor) AS proveedor
   FROM articulos a LEFT JOIN proveedores p ON p.codigo = a.proveedor WHERE a.codigo IN ($cods)"
 $gramos = Sql "SELECT i.articulo, SUM(i.cantidad * COALESCE(NULLIF(i.factor,0),1)) AS g FROM venta_items i JOIN ventas v ON v.id = i.venta_id
   WHERE v.fecha >= date('now','-30 day') AND i.articulo IN (SELECT codigo FROM articulos WHERE codigo IN ($cods) AND unidades_bulto >= 500) GROUP BY i.articulo"
 
-$A = @{}; foreach ($x in $art) { $A[[string]$x.codigo] = $x }
-$V = @{}; foreach ($x in $an) { $V[[string]$x.articulo] = $x }
-$G = @{}; foreach ($x in $gramos) { $G[[string]$x.articulo] = [double]$x.g }
+$ART = @{}; foreach ($x in $artFilas) { $ART[[string]$x.codigo] = $x }
+$VEN = @{}; foreach ($x in $an) { $VEN[[string]$x.articulo] = $x }
+$GRM = @{}; foreach ($x in $gramos) { $GRM[[string]$x.articulo] = [double]$x.g }
 $diaAn = ($an | Select-Object -First 1).dia
 $actStock = ($lotes | Measure-Object -Property act -Maximum).Maximum
 
 function CostoU([string]$c) {
   # costo de una unidad del deposito; $null si no se puede saber
-  $a = $A[$c]; if (-not $a -or -not $a.costo_bulto -or -not $a.unidades_bulto) { return @{ c = $null; peso = $null } }
-  if ([double]$a.unidades_bulto -ge 500) {   # pesable: costo por kilo (bulto de 1000 g)
-    $v30 = if ($V[$c]) { [double]$V[$c].vendido_30 } else { 0 }
-    if ($G[$c] -gt 0 -and $v30 -gt 0) { $g = $G[$c] / $v30; return @{ c = [double]$a.costo_bulto / [double]$a.unidades_bulto * $g; peso = [math]::Round($g / 1000, 2) } }
+  $ar = $ART[$c]; if (-not $ar -or -not $ar.costo_bulto -or -not $ar.unidades_bulto) { return @{ c = $null; peso = $null } }
+  if ([double]$ar.unidades_bulto -ge 500) {   # pesable: costo por kilo (bulto de 1000 g)
+    $v30 = if ($VEN[$c]) { [double]$VEN[$c].vendido_30 } else { 0 }
+    if ($GRM[$c] -gt 0 -and $v30 -gt 0) { $g = $GRM[$c] / $v30; return @{ c = [double]$ar.costo_bulto / [double]$ar.unidades_bulto * $g; peso = [math]::Round($g / 1000, 2) } }
     return @{ c = $null; peso = $null }
   }
-  @{ c = [double]$a.costo_bulto / [double]$a.unidades_bulto; peso = $null }
+  @{ c = [double]$ar.costo_bulto / [double]$ar.unidades_bulto; peso = $null }
 }
 
 $filas = @(); $vencidos = @()
 foreach ($grp in ($lotes | Where-Object { $_.tipo -eq 'proximo' } | Group-Object { [string]$_.articulo })) {
   $c = $grp.Name; $ls = @($grp.Group | Sort-Object vencimiento)
-  $v30 = if ($V[$c] -and $V[$c].vendido_30) { [double]$V[$c].vendido_30 } else { 0 }
+  $v30 = if ($VEN[$c] -and $VEN[$c].vendido_30) { [double]$VEN[$c].vendido_30 } else { 0 }
   $ritmo = $v30 / 30; $usado = 0; $sin = 0; $stock = 0
   foreach ($l in $ls) {
     $u = [double]$l.unidades; $stock += $u
     $cubre = [math]::Max(0, $ritmo * [math]::Max([double]$l.dias, 0) - $usado)   # venta que le queda a este lote antes de vencer
     $vende = [math]::Min($u, $cubre); $usado += $vende; $sin += $u - $vende
   }
-  $k = CostoU $c; $a = $A[$c]
-  $filas += [ordered]@{ art = $c; desc = ([string]$ls[0].descripcion).Trim(); prov = $(if ($a) { ([string]$a.proveedor).Trim() } else { '' })
+  $k = CostoU $c; $ar = $ART[$c]
+  $filas += [ordered]@{ art = $c; desc = ([string]$ls[0].descripcion).Trim(); prov = $(if ($ar) { ([string]$ar.proveedor).Trim() } else { '' })
     vence = $ls[0].vencimiento; dias = [int]$ls[0].dias; lotes = $ls.Count; stock = $stock; venta30 = $v30
     sin = [math]::Round($sin); costo = $(if ($k.c -ne $null) { [math]::Round($k.c, 2) } else { $null }); peso = $k.peso
     riesgo = $(if ($k.c -ne $null) { [math]::Round([math]::Round($sin) * $k.c) } else { $null }) }
 }
 foreach ($grp in ($lotes | Where-Object { $_.tipo -eq 'vencido' } | Group-Object { [string]$_.articulo })) {
   $c = $grp.Name; $ls = @($grp.Group | Sort-Object vencimiento); $u = ($ls | Measure-Object -Property unidades -Sum).Sum
-  $k = CostoU $c; $a = $A[$c]
-  $vencidos += [ordered]@{ art = $c; desc = ([string]$ls[0].descripcion).Trim(); prov = $(if ($a) { ([string]$a.proveedor).Trim() } else { '' })
+  $k = CostoU $c; $ar = $ART[$c]
+  $vencidos += [ordered]@{ art = $c; desc = ([string]$ls[0].descripcion).Trim(); prov = $(if ($ar) { ([string]$ar.proveedor).Trim() } else { '' })
     vence = $ls[0].vencimiento; dias = [int]$ls[0].dias; unidades = $u; costo = $(if ($k.c -ne $null) { [math]::Round($k.c, 2) } else { $null }); peso = $k.peso
     importe = $(if ($k.c -ne $null) { [math]::Round($u * $k.c) } else { $null }) }
 }
