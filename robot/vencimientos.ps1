@@ -41,7 +41,7 @@ $ART = @{}; foreach ($x in $artFilas) { $ART[[string]$x.codigo] = $x }
 $VEN = @{}; foreach ($x in $an) { $VEN[[string]$x.articulo] = $x }
 $GRM = @{}; foreach ($x in $gramos) { $GRM[[string]$x.articulo] = [double]$x.g }
 $diaAn = ($an | Select-Object -First 1).dia
-$actStock = ($lotes | Measure-Object -Property act -Maximum).Maximum
+$actStock = @($lotes | ForEach-Object { [string]$_.act } | Sort-Object)[-1]
 
 function CostoU([string]$c) {
   # costo de una unidad del deposito; $null si no se puede saber
@@ -65,7 +65,7 @@ foreach ($grp in ($lotes | Where-Object { $_.tipo -eq 'proximo' } | Group-Object
     $vende = [math]::Min($u, $cubre); $usado += $vende; $sin += $u - $vende
   }
   $k = CostoU $c; $ar = $ART[$c]
-  $filas += [ordered]@{ art = $c; desc = ([string]$ls[0].descripcion).Trim(); prov = $(if ($ar) { ([string]$ar.proveedor).Trim() } else { '' })
+  $filas += [pscustomobject][ordered]@{ art = $c; desc = ([string]$ls[0].descripcion).Trim(); prov = $(if ($ar) { ([string]$ar.proveedor).Trim() } else { '' })
     vence = $ls[0].vencimiento; dias = [int]$ls[0].dias; lotes = $ls.Count; stock = $stock; venta30 = $v30
     sin = [math]::Round($sin); costo = $(if ($k.c -ne $null) { [math]::Round($k.c, 2) } else { $null }); peso = $k.peso
     riesgo = $(if ($k.c -ne $null) { [math]::Round([math]::Round($sin) * $k.c) } else { $null }) }
@@ -73,7 +73,7 @@ foreach ($grp in ($lotes | Where-Object { $_.tipo -eq 'proximo' } | Group-Object
 foreach ($grp in ($lotes | Where-Object { $_.tipo -eq 'vencido' } | Group-Object { [string]$_.articulo })) {
   $c = $grp.Name; $ls = @($grp.Group | Sort-Object vencimiento); $u = ($ls | Measure-Object -Property unidades -Sum).Sum
   $k = CostoU $c; $ar = $ART[$c]
-  $vencidos += [ordered]@{ art = $c; desc = ([string]$ls[0].descripcion).Trim(); prov = $(if ($ar) { ([string]$ar.proveedor).Trim() } else { '' })
+  $vencidos += [pscustomobject][ordered]@{ art = $c; desc = ([string]$ls[0].descripcion).Trim(); prov = $(if ($ar) { ([string]$ar.proveedor).Trim() } else { '' })
     vence = $ls[0].vencimiento; dias = [int]$ls[0].dias; unidades = $u; costo = $(if ($k.c -ne $null) { [math]::Round($k.c, 2) } else { $null }); peso = $k.peso
     importe = $(if ($k.c -ne $null) { [math]::Round($u * $k.c) } else { $null }) }
 }
