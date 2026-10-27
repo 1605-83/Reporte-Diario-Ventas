@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ventas Aperitivos Cepas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F2F3F5;--card:#fff;--ink:#1F2328;--ink2:#6B7280;--line:#E5E7EB;--negro:#111318;--azul:#2F6FDE;--rojo:#C0392B;--verde:#2E8B4E}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#F2F3F5; } }
+:root[data-theme="dark"]{ --bg:#F2F3F5; }
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Roboto,system-ui,-apple-system,"Segoe UI",Arial,sans-serif;font-variant-numeric:tabular-nums;line-height:1.35}
+.wrap{max-width:1300px;margin:0 auto;padding:20px 16px 40px}
+.card{background:var(--card);border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.head{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:16px 22px;border:3px solid var(--negro)}
+.head h1{margin:0;font-size:1.4rem;font-weight:900;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.meta{font-size:.88rem;color:var(--ink2);margin-top:3px}
+.vivo{display:inline-flex;align-items:center;gap:7px;font-size:.76rem;font-weight:500;color:#1E7B34;background:#E8F6EC;border-radius:999px;padding:4px 11px 4px 9px}
+.vivo i{width:9px;height:9px;border-radius:50%;background:#2DB34A;animation:latido 2s infinite}
+.vivo.off{color:var(--ink2);background:#EEF0F3}.vivo.off i{background:#9AA1AB;animation:none}
+@keyframes latido{0%{box-shadow:0 0 0 0 rgba(45,179,74,.55)}70%{box-shadow:0 0 0 8px rgba(45,179,74,0)}100%{box-shadow:0 0 0 0 rgba(45,179,74,0)}}
+@media (prefers-reduced-motion:reduce){.vivo i{animation:none}}
+.ctrl{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+select,input{font:inherit;font-size:.88rem;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:10px;padding:7px 10px}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:14px;background:var(--negro);color:#fff}
+@media (max-width:900px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{padding:14px 22px;border-right:1px solid #2E3138;min-width:0}.kpi:last-child{border-right:0}
+.kpi .l{font-size:.85rem;color:#D7D9DE}.kpi .v{font-size:1.6rem;font-weight:500;margin:6px 0 2px}.kpi .n{font-size:.82rem;color:#B9BCC4}
+.lista{margin-top:14px;overflow:hidden;border:3px solid var(--negro)}
+.th,.vrow{display:grid;grid-template-columns:30px minmax(160px,1fr) repeat(4,88px) 88px 130px 80px;gap:10px;align-items:center;padding:11px 18px}
+.th{font-size:.82rem;font-weight:700;background:var(--negro);color:#fff}
+.th span{cursor:pointer;user-select:none}.r{text-align:right}
+.vrow{border-bottom:1px solid var(--line);cursor:pointer}.vrow:hover{background:#F6F9FF}
+.chev{transition:transform .15s;color:#555;text-align:center}.vrow.ab .chev{transform:rotate(90deg)}
+.cod{display:inline-block;min-width:2.3em;margin-right:8px;padding:1px 7px;border-radius:6px;background:#E6F0FF;color:var(--azul);font-size:.85em;font-weight:700;text-align:center}
+.cero{color:#B5BAC2}
+.det{background:#FAFBFC;border-bottom:1px solid var(--line);padding:6px 18px 14px 48px;overflow-x:auto}
+.det table{width:100%;border-collapse:collapse;font-size:.88rem;min-width:620px}
+.det th,.det td{padding:6px 8px;border-bottom:1px solid #EDEDED;text-align:left;white-space:nowrap}
+.det th{font-size:.75rem;color:var(--ink2);text-transform:uppercase}.det td.r,.det th.r{text-align:right}
+.tot{font-weight:900;background:#FAFAFA}
+.vacio{padding:30px;text-align:center;color:var(--ink2)}
+@media (max-width:760px){.th{display:none}.vrow{grid-template-columns:22px 1fr auto}.vrow .m{display:none}.det{padding-left:10px}}
+footer{margin-top:16px;font-size:.78rem;color:var(--ink2);text-align:center;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card head">
+    <div><h1>Ventas Aperitivos Cepas <span class="vivo off" id="vivo" hidden><i aria-hidden="true"></i><span id="vivoTxt"></span></span></h1><div class="meta" id="meta">Cargando…</div></div>
+    <div class="ctrl">
+      <label>Desde <input type="date" id="fDesde" value="2026-10-22"></label>
+      <select id="fVend" aria-label="Vendedor"><option value="">Todos los vendedores</option></select>
+    </div>
+  </div>
+  <div class="card kpis" id="kpis"></div>
+  <div class="card lista">
+    <div class="th" id="th"><span></span><span data-k="n">Vendedor</span><span class="r" data-k="p0">Gancia</span><span class="r" data-k="p1">Fernet 1882</span><span class="r" data-k="p2">Martini</span><span class="r" data-k="p3">Amargo Obrero</span><span class="r" data-k="u">Unidades</span><span class="r" data-k="imp">Importe</span><span class="r" data-k="cli">Clientes</span></div>
+    <div id="filas"></div>
+  </div>
+  <footer>Unidades vendidas por fecha de carga del pedido, netas de devoluciones, importes con IVA · Gancia 39013791, Fernet 1882 39012732, Martini Rosso 39014996, Amargo Obrero 39010027 · Datos de la base de Gescom; lo cargado hoy se actualiza solo, sin recargar</footer>
+</div>
+<script>
+// Ventas de los aperitivos de los combos con gaseosa (pedido de Bruno, 27/10/2026)
+const RAW='https://raw.githubusercontent.com/1605-83/Reporte-Diario-Ventas/main/';
+const PROD=[['39013791','Gancia'],['39012732','Fernet 1882'],['39014996','Martini'],['39010027','Amargo Obrero']];
+const IDX=Object.fromEntries(PROD.map((p,i)=>[p[0],i]));
+const EQUIPO=new Set([2,4,5,6,7,24,26,27,28,29,30,51,52,53,54,56,61,62,63,64,73,74,75]);
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const num=s=>{ s=String(s??'').trim(); return s? (parseFloat(s.replace(/\./g,'').replace(',','.'))||0) : 0; };
+const fmtN=n=>Math.round(n).toLocaleString('es-AR'), fmt$=n=>'$ '+Math.round(n).toLocaleString('es-AR');
+const iso=d=>{ const m=String(d||'').trim().match(/^(\d{2})-(\d{2})-(\d{4})/); return m? m[3]+'-'+m[2]+'-'+m[1] : ''; };
+const dmy=s=>s? s.slice(8)+'/'+s.slice(5,7)+'/'+s.slice(0,4) : '';
+const titulo=s=>{ s=(s||'').trim(); if(!(s===s.toUpperCase() && /[A-ZÁÉÍÓÚÑ]/.test(s))) return s; return s.toLowerCase().replace(/(^|[^a-záéíóúñü])([a-záéíóúñü])/g,(m,a,b)=>a+b.toUpperCase()); };
+let MES=[], VIVO=[], NOMV={}, HOY='', vivoCorte='', corteMes='', abiertos=new Set(), sortK='u', sortD=-1;
+
+function parseCSV(t){ const rows=[]; let row=[], f='', q=false;
+  for(let i=0;i<t.length;i++){ const ch=t[i];
+    if(q){ if(ch==='"'){ if(t[i+1]==='"'){f+='"';i++;} else q=false; } else f+=ch; }
+    else if(ch==='"') q=true; else if(ch===';'){ row.push(f); f=''; }
+    else if(ch==='\n'){ row.push(f.replace(/\r$/,'')); rows.push(row); row=[]; f=''; } else f+=ch; }
+  if(f!==''||row.length){ row.push(f.replace(/\r$/,'')); rows.push(row); } return rows; }
+function leer(txt){
+  const R=parseCSV(txt).filter(r=>r.length>5); if(!R.length) return []; const H=R.shift().map(h=>h.trim()); const ix=n=>H.indexOf(n);
+  const I={cli:ix('Cliente'),cod:ix('Codigo'),cant:ix('CantBase'),imp:ix('ImporteItem'),rs:ix('RazonSocial'),cv:ix('CodVendedor'),vn:ix('Vendedor'),car:ix('FechaCarga'),nro:ix('NroComprobante')};
+  const out=[];
+  for(const r of R){ const cod=(r[I.cod]||'').trim(); if(!(cod in IDX)) continue; const v=parseInt(r[I.cv],10);
+    if(!isNaN(v) && r[I.vn] && !NOMV[v]) NOMV[v]=titulo(r[I.vn]);
+    out.push({p:IDX[cod], v, cli:String(r[I.cli]).trim(), rs:(r[I.rs]||'').trim(), car:iso(r[I.car]), cant:num(r[I.cant]), imp:num(r[I.imp]), nro:(r[I.nro]||'').trim()}); }
+  return out; }
+
+function dibujar(){
+  const desde=$('fDesde').value||'2026-10-22', fv=$('fVend').value;
+  const F=[...MES.filter(x=>!(VIVO.length && x.car===HOY)), ...VIVO].filter(x=>x.car>=desde && (!fv||String(x.v)===fv));
+  const V=new Map();
+  for(const x of F){ const v=V.get(x.v)||(V.set(x.v,{c:x.v,n:NOMV[x.v]||('Vendedor '+x.v),p:[0,0,0,0],u:0,imp:0,cli:new Map()}),V.get(x.v));
+    v.p[x.p]+=x.cant; v.u+=x.cant; v.imp+=x.imp;
+    const c=v.cli.get(x.cli)||(v.cli.set(x.cli,{cli:x.cli,rs:x.rs,p:[0,0,0,0],imp:0,ult:''}),v.cli.get(x.cli)); c.p[x.p]+=x.cant; c.imp+=x.imp; if(x.car>c.ult) c.ult=x.car; }
+  const L=[...V.values()].map(v=>({...v, ncli:[...v.cli.values()].filter(c=>c.p.some(u=>u>0)).length}));
+  const tot=[0,1,2,3].map(i=>L.reduce((a,v)=>a+v.p[i],0)), tu=tot.reduce((a,b)=>a+b,0), ti=L.reduce((a,v)=>a+v.imp,0), tc=L.reduce((a,v)=>a+v.ncli,0);
+  $('meta').textContent=`Pedidos cargados desde el ${dmy(desde)} · ventas al ${vivoCorte||corteMes}`;
+  $('kpis').innerHTML=`<div class="kpi"><div class="l">Unidades vendidas</div><div class="v">${fmtN(tu)}</div><div class="n">netas de devoluciones</div></div>
+    <div class="kpi"><div class="l">Importe</div><div class="v">${fmt$(ti)}</div><div class="n">con IVA</div></div>
+    <div class="kpi"><div class="l">Clientes</div><div class="v">${fmtN(tc)}</div><div class="n">con compra de estos productos</div></div>
+    <div class="kpi"><div class="l">Por producto</div><div class="v" style="font-size:1rem;line-height:1.5">${PROD.map((p,i)=>`${p[1]}: <b>${fmtN(tot[i])}</b>`).join('<br>')}</div></div>`;
+  const val={n:v=>v.n,u:v=>v.u,imp:v=>v.imp,cli:v=>v.ncli,p0:v=>v.p[0],p1:v=>v.p[1],p2:v=>v.p[2],p3:v=>v.p[3]};
+  L.sort((a,b)=>{ const A=val[sortK](a), B=val[sortK](b); return (A>B?1:A<B?-1:0)*sortD || a.c-b.c; });
+  document.querySelectorAll('.th span[data-k]').forEach(s=>{ s.textContent=s.textContent.replace(/ [▲▼]$/,'')+(s.dataset.k===sortK? (sortD>0?' ▲':' ▼') : ''); });
+  const cel=n=>n? `<b>${fmtN(n)}</b>` : '<span class="cero">0</span>';
+  let h='';
+  for(const v of L){ const ab=abiertos.has(v.c);
+    h+=`<div class="vrow${ab?' ab':''}" data-v="${v.c}" role="button" tabindex="0" aria-expanded="${ab}"><span class="chev">›</span><span><span class="cod">${v.c}</span>${esc(v.n)}</span>${v.p.map(u=>`<span class="r m">${cel(u)}</span>`).join('')}<span class="r"><b>${fmtN(v.u)}</b></span><span class="r m">${fmt$(v.imp)}</span><span class="r m">${fmtN(v.ncli)}</span></div>`;
+    if(ab){ const C=[...v.cli.values()].sort((a,b)=>b.p.reduce((s,u)=>s+u,0)-a.p.reduce((s,u)=>s+u,0));
+      h+=`<div class="det"><table><thead><tr><th>Código</th><th>Razón social</th>${PROD.map(p=>`<th class="r">${p[1]}</th>`).join('')}<th class="r">Importe</th><th>Último pedido</th></tr></thead><tbody>${C.map(c=>`<tr><td><b>${esc(c.cli)}</b></td><td>${esc(titulo(c.rs))}</td>${c.p.map(u=>`<td class="r">${u? fmtN(u) : '—'}</td>`).join('')}<td class="r">${fmt$(c.imp)}</td><td>${dmy(c.ult)}</td></tr>`).join('')}</tbody></table></div>`; } }
+  if(L.length) h+=`<div class="vrow tot" style="cursor:default"><span></span><span>Total</span>${tot.map(u=>`<span class="r m">${fmtN(u)}</span>`).join('')}<span class="r">${fmtN(tu)}</span><span class="r m">${fmt$(ti)}</span><span class="r m">${fmtN(tc)}</span></div>`;
+  $('filas').innerHTML=h||`<div class="vacio">No hay ventas de Gancia, Fernet 1882, Martini ni Amargo Obrero cargadas desde el ${dmy(desde)}.</div>`;
+}
+document.addEventListener('click',e=>{
+  const vr=e.target.closest('.vrow[data-v]'); if(vr){ const c=+vr.dataset.v; abiertos.has(c)? abiertos.delete(c) : abiertos.add(c); dibujar(); return; }
+  const th=e.target.closest('.th span[data-k]'); if(th){ const k=th.dataset.k; if(sortK===k) sortD=-sortD; else { sortK=k; sortD=k==='n'? 1 : -1; } dibujar(); }
+});
+document.addEventListener('keydown',e=>{ const vr=e.target.closest&&e.target.closest('.vrow[data-v]'); if(vr&&(e.key==='Enter'||e.key===' ')){ e.preventDefault(); vr.click(); } });
+$('fDesde').addEventListener('change',dibujar); $('fVend').addEventListener('change',dibujar);
+
+(async function(){
+  try{
+    HOY=new Date(Date.now()-3*3600e3).toISOString().slice(0,10);
+    try{ const html=await (await fetch('index.html?t='+Date.now(),{cache:'no-store'})).text(); const m=html.match(/^const CFG = (.*);\s*$/m); if(m) JSON.parse(m[1]).vendedores.forEach(v=>NOMV[v.c]=v.n); }catch(e){}
+    const arch=((await (await fetch('archivos.json?t='+Date.now(),{cache:'no-store'})).json()).archivos||[]);
+    const ult={}; for(const p of arch){ const mm=p.match(/ventas-(\d{4}-\d{2})-/); if(mm && (!ult[mm[1]]||p>ult[mm[1]])) ult[mm[1]]=p; }
+    const meses=Object.keys(ult).filter(ym=>ym>='2026-10').sort();
+    $('meta').textContent='Bajando ventas…';
+    const txts=await Promise.all(meses.map(async ym=>{ const r=await fetch(RAW+ult[ym].split('/').map(encodeURIComponent).join('/'),{cache:'no-store'}); return r.ok? new TextDecoder('windows-1252').decode(await r.arrayBuffer()) : ''; }));
+    MES=txts.flatMap(leer);
+    const u=ult[meses[meses.length-1]]||'', st=u.match(/-(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})\d{2}/); corteMes= st? `${st[3]}/${st[2]}/${st[1]} ${st[4]}:${st[5]}` : dmy(HOY);
+    const vs=[...EQUIPO].sort((a,b)=>a-b);
+    $('fVend').innerHTML+=vs.map(c=>`<option value="${c}">${c} · ${esc(NOMV[c]||'Vendedor '+c)}</option>`).join('');
+    dibujar(); await enVivo(); setInterval(enVivo,2*60e3);
+    document.addEventListener('visibilitychange',()=>{ if(!document.hidden) enVivo(); });
+  }catch(e){ $('meta').textContent='No se pudieron leer los datos: '+e.message; }
+})();
+// en vivo: lo cargado hoy sale de vivo/hoy.csv (robot en vivo, cada vez que la base de Gescom suma ventas)
+async function enVivo(){
+  try{ const est=await (await fetch(RAW+'vivo/estado.json?t='+Date.now(),{cache:'no-store'})).json();
+    const dia=HOY.slice(8)+'-'+HOY.slice(5,7)+'-'+HOY.slice(0,4);
+    if(est.dia===dia && est.corte!==vivoCorte){ const r=await fetch(RAW+'vivo/hoy.csv?t='+Date.now(),{cache:'no-store'}); if(!r.ok) throw new Error();
+      VIVO=leer(new TextDecoder('windows-1252').decode(await r.arrayBuffer())).filter(x=>x.car===HOY); vivoCorte=est.corte; dibujar(); } }catch(e){}
+  const b=$('vivo'), h=new Date(), hh=String(h.getHours()).padStart(2,'0')+':'+String(h.getMinutes()).padStart(2,'0');
+  b.hidden=false; b.classList.toggle('off',!vivoCorte); $('vivoTxt').textContent= vivoCorte? `En vivo · pedidos de hoy al ${vivoCorte.slice(11)} · revisado ${hh}` : `Esperando los pedidos de hoy · revisado ${hh}`;
+}
+</script>
+</body>
+</html>
