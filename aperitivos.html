@@ -36,6 +36,7 @@ select,input{font:inherit;font-size:.88rem;color:var(--ink);background:#fff;bord
 .chev{transition:transform .15s;color:#555;text-align:center}.vrow.ab .chev{transform:rotate(90deg)}
 .cod{display:inline-block;min-width:2.3em;margin-right:8px;padding:1px 7px;border-radius:6px;background:#E6F0FF;color:var(--azul);font-size:.85em;font-weight:700;text-align:center}
 .cero{color:#B5BAC2}
+.bol{display:block;font-size:.74rem;font-weight:500;color:var(--ink2);white-space:nowrap}.bol.cero{color:#B5BAC2}
 .cls{font-size:.8rem;color:var(--ink2);line-height:1.35;min-width:0}.cls b{color:var(--ink)}
 .cls .cl{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .det{background:#FAFBFC;border-bottom:1px solid var(--line);padding:6px 18px 14px 48px;overflow-x:auto}
@@ -114,12 +115,13 @@ function dibujar(){
   L.sort((a,b)=>{ const A=val[sortK](a), B=val[sortK](b); return (A>B?1:A<B?-1:0)*sortD || a.c-b.c; });
   document.querySelectorAll('.th span[data-k]').forEach(s=>{ s.textContent=s.textContent.replace(/ [▲▼]$/,'')+(s.dataset.k===sortK? (sortD>0?' ▲':' ▼') : ''); });
   const cel=n=>n? `<b>${fmtN(n)}</b>` : '<span class="cero">0</span>';
+  const bolC=n=>`<span class="bol${n?'':' cero'}">${fmtN(n)} bolsas</span>`;   // bolsas del codigo, debajo de las unidades
   let h='';
   for(const v of L){ const ab=abiertos.has(v.c);
-    h+=`<div class="vrow${ab?' ab':''}" data-v="${v.c}" role="button" tabindex="0" aria-expanded="${ab}"><span class="chev">›</span><span><span class="cod">${v.c}</span>${esc(v.n)}</span>${v.p.map(u=>`<span class="r m">${cel(u)}</span>`).join('')}<span class="r"><b>${fmtN(v.u)}</b></span><span class="r m" title="${PROD.map((p,i)=>p[1]+": "+fmtN(v.bol[i])).join(" · ")}">${cel(v.bt)}</span><span class="r m">${fmt$(v.imp)}</span><span class="cls">${[...v.cli.values()].filter(c=>c.p.some(u=>u>0)||c.bol.some(u=>u>0)).sort((a,b)=>b.imp-a.imp).map(c=>`<span class="cl" title="${esc(c.cli+' '+titulo(c.rs))} · último pedido ${dmy(c.ult)}"><b>${esc(c.cli)}</b> ${esc(titulo(c.rs))} · ${[...c.p.map((u,i)=>u>0? fmtN(u)+' '+PROD[i][1] : ''), ...c.bol.map((u,i)=>u>0? fmtN(u)+' bolsas '+PROD[i][1] : '')].filter(Boolean).join(', ')}</span>`).join('')||'—'}</span></div>`;
+    h+=`<div class="vrow${ab?' ab':''}" data-v="${v.c}" role="button" tabindex="0" aria-expanded="${ab}"><span class="chev">›</span><span><span class="cod">${v.c}</span>${esc(v.n)}</span>${v.p.map((u,i)=>`<span class="r m">${cel(u)}${bolC(v.bol[i])}</span>`).join('')}<span class="r"><b>${fmtN(v.u)}</b></span><span class="r m" title="${PROD.map((p,i)=>p[1]+": "+fmtN(v.bol[i])).join(" · ")}">${cel(v.bt)}</span><span class="r m">${fmt$(v.imp)}</span><span class="cls">${[...v.cli.values()].filter(c=>c.p.some(u=>u>0)||c.bol.some(u=>u>0)).sort((a,b)=>b.imp-a.imp).map(c=>`<span class="cl" title="${esc(c.cli+' '+titulo(c.rs))} · último pedido ${dmy(c.ult)}"><b>${esc(c.cli)}</b> ${esc(titulo(c.rs))} · ${[...c.p.map((u,i)=>u>0? fmtN(u)+' '+PROD[i][1] : ''), ...c.bol.map((u,i)=>u>0? fmtN(u)+' bolsas '+PROD[i][1] : '')].filter(Boolean).join(', ')}</span>`).join('')||'—'}</span></div>`;
     if(ab){ const C=[...v.cli.values()].sort((a,b)=>b.p.reduce((s,u)=>s+u,0)-a.p.reduce((s,u)=>s+u,0));
       h+=`<div class="det"><table><thead><tr><th>Código</th><th>Razón social</th>${PROD.map(p=>`<th class="r">${p[1]}</th>`).join('')}<th>Bolsas</th><th class="r">Importe</th><th>Último pedido</th></tr></thead><tbody>${C.map(c=>`<tr><td><b>${esc(c.cli)}</b></td><td>${esc(titulo(c.rs))}</td>${c.p.map(u=>`<td class="r">${u? fmtN(u) : '—'}</td>`).join('')}<td>${c.bol.map((u,i)=>u>0? fmtN(u)+' '+PROD[i][1] : '').filter(Boolean).join(', ')||'—'}</td><td class="r">${fmt$(c.imp)}</td><td>${dmy(c.ult)}</td></tr>`).join('')}</tbody></table></div>`; } }
-  if(L.length) h+=`<div class="vrow tot" style="cursor:default"><span></span><span>Total</span>${tot.map(u=>`<span class="r m">${fmtN(u)}</span>`).join('')}<span class="r">${fmtN(tu)}</span><span class="r m">${fmtN(tb)}</span><span class="r m">${fmt$(ti)}</span><span class="m">${fmtN(tc)} clientes</span></div>`;
+  if(L.length) h+=`<div class="vrow tot" style="cursor:default"><span></span><span>Total</span>${tot.map((u,i)=>`<span class="r m">${fmtN(u)}${bolC(tbol[i])}</span>`).join('')}<span class="r">${fmtN(tu)}</span><span class="r m">${fmtN(tb)}</span><span class="r m">${fmt$(ti)}</span><span class="m">${fmtN(tc)} clientes</span></div>`;
   $('filas').innerHTML=h||`<div class="vacio">No hay ventas de Gancia, Fernet 1882, Martini ni Amargo Obrero cargadas desde el ${dmy(desde)}.</div>`;
 }
 document.addEventListener('click',e=>{
