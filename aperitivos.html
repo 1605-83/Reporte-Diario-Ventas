@@ -29,13 +29,15 @@ select,input{font:inherit;font-size:.88rem;color:var(--ink);background:#fff;bord
 .kpi{padding:14px 22px;border-right:1px solid #2E3138;min-width:0}.kpi:last-child{border-right:0}
 .kpi .l{font-size:.85rem;color:#D7D9DE}.kpi .v{font-size:1.6rem;font-weight:500;margin:6px 0 2px}.kpi .n{font-size:.82rem;color:#B9BCC4}
 .lista{margin-top:14px;overflow:hidden;border:3px solid var(--negro)}
-.th,.vrow{display:grid;grid-template-columns:30px minmax(160px,1fr) repeat(4,88px) 88px 130px 80px;gap:10px;align-items:center;padding:11px 18px}
+.th,.vrow{display:grid;grid-template-columns:30px minmax(150px,.8fr) repeat(4,80px) 80px 120px minmax(230px,1.5fr);gap:10px;align-items:center;padding:11px 18px}
 .th{font-size:.82rem;font-weight:700;background:var(--negro);color:#fff}
 .th span{cursor:pointer;user-select:none}.r{text-align:right}
 .vrow{border-bottom:1px solid var(--line);cursor:pointer}.vrow:hover{background:#F6F9FF}
 .chev{transition:transform .15s;color:#555;text-align:center}.vrow.ab .chev{transform:rotate(90deg)}
 .cod{display:inline-block;min-width:2.3em;margin-right:8px;padding:1px 7px;border-radius:6px;background:#E6F0FF;color:var(--azul);font-size:.85em;font-weight:700;text-align:center}
 .cero{color:#B5BAC2}
+.cls{font-size:.8rem;color:var(--ink2);line-height:1.35;min-width:0}.cls b{color:var(--ink)}
+.cls .cl{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .det{background:#FAFBFC;border-bottom:1px solid var(--line);padding:6px 18px 14px 48px;overflow-x:auto}
 .det table{width:100%;border-collapse:collapse;font-size:.88rem;min-width:620px}
 .det th,.det td{padding:6px 8px;border-bottom:1px solid #EDEDED;text-align:left;white-space:nowrap}
@@ -57,7 +59,7 @@ footer{margin-top:16px;font-size:.78rem;color:var(--ink2);text-align:center;line
   </div>
   <div class="card kpis" id="kpis"></div>
   <div class="card lista">
-    <div class="th" id="th"><span></span><span data-k="n">Vendedor</span><span class="r" data-k="p0">Gancia</span><span class="r" data-k="p1">Fernet 1882</span><span class="r" data-k="p2">Martini</span><span class="r" data-k="p3">Amargo Obrero</span><span class="r" data-k="u">Unidades</span><span class="r" data-k="imp">Importe</span><span class="r" data-k="cli">Clientes</span></div>
+    <div class="th" id="th"><span></span><span data-k="n">Vendedor</span><span class="r" data-k="p0">Gancia</span><span class="r" data-k="p1">Fernet 1882</span><span class="r" data-k="p2">Martini</span><span class="r" data-k="p3">Amargo Obrero</span><span class="r" data-k="u">Unidades</span><span class="r" data-k="imp">Importe</span><span data-k="cli">Clientes a los que se vendió</span></div>
     <div id="filas"></div>
   </div>
   <footer>Unidades vendidas por fecha de carga del pedido, netas de devoluciones, importes con IVA · Gancia 39013791, Fernet 1882 39012732, Martini Rosso 39014996, Amargo Obrero 39010027 · Datos de la base de Gescom; lo cargado hoy se actualiza solo, sin recargar</footer>
@@ -112,10 +114,10 @@ function dibujar(){
   const cel=n=>n? `<b>${fmtN(n)}</b>` : '<span class="cero">0</span>';
   let h='';
   for(const v of L){ const ab=abiertos.has(v.c);
-    h+=`<div class="vrow${ab?' ab':''}" data-v="${v.c}" role="button" tabindex="0" aria-expanded="${ab}"><span class="chev">›</span><span><span class="cod">${v.c}</span>${esc(v.n)}</span>${v.p.map(u=>`<span class="r m">${cel(u)}</span>`).join('')}<span class="r"><b>${fmtN(v.u)}</b></span><span class="r m">${fmt$(v.imp)}</span><span class="r m">${fmtN(v.ncli)}</span></div>`;
+    h+=`<div class="vrow${ab?' ab':''}" data-v="${v.c}" role="button" tabindex="0" aria-expanded="${ab}"><span class="chev">›</span><span><span class="cod">${v.c}</span>${esc(v.n)}</span>${v.p.map(u=>`<span class="r m">${cel(u)}</span>`).join('')}<span class="r"><b>${fmtN(v.u)}</b></span><span class="r m">${fmt$(v.imp)}</span><span class="cls m">${[...v.cli.values()].filter(c=>c.p.some(u=>u>0)).sort((a,b)=>b.imp-a.imp).map(c=>`<span class="cl" title="${esc(c.cli+' '+titulo(c.rs))} · último pedido ${dmy(c.ult)}"><b>${esc(c.cli)}</b> ${esc(titulo(c.rs))} · ${c.p.map((u,i)=>u>0? fmtN(u)+' '+PROD[i][1] : '').filter(Boolean).join(', ')}</span>`).join('')||'—'}</span></div>`;
     if(ab){ const C=[...v.cli.values()].sort((a,b)=>b.p.reduce((s,u)=>s+u,0)-a.p.reduce((s,u)=>s+u,0));
       h+=`<div class="det"><table><thead><tr><th>Código</th><th>Razón social</th>${PROD.map(p=>`<th class="r">${p[1]}</th>`).join('')}<th class="r">Importe</th><th>Último pedido</th></tr></thead><tbody>${C.map(c=>`<tr><td><b>${esc(c.cli)}</b></td><td>${esc(titulo(c.rs))}</td>${c.p.map(u=>`<td class="r">${u? fmtN(u) : '—'}</td>`).join('')}<td class="r">${fmt$(c.imp)}</td><td>${dmy(c.ult)}</td></tr>`).join('')}</tbody></table></div>`; } }
-  if(L.length) h+=`<div class="vrow tot" style="cursor:default"><span></span><span>Total</span>${tot.map(u=>`<span class="r m">${fmtN(u)}</span>`).join('')}<span class="r">${fmtN(tu)}</span><span class="r m">${fmt$(ti)}</span><span class="r m">${fmtN(tc)}</span></div>`;
+  if(L.length) h+=`<div class="vrow tot" style="cursor:default"><span></span><span>Total</span>${tot.map(u=>`<span class="r m">${fmtN(u)}</span>`).join('')}<span class="r">${fmtN(tu)}</span><span class="r m">${fmt$(ti)}</span><span class="m">${fmtN(tc)} clientes</span></div>`;
   $('filas').innerHTML=h||`<div class="vacio">No hay ventas de Gancia, Fernet 1882, Martini ni Amargo Obrero cargadas desde el ${dmy(desde)}.</div>`;
 }
 document.addEventListener('click',e=>{
