@@ -29,7 +29,7 @@ select,input{font:inherit;font-size:.88rem;color:var(--ink);background:#fff;bord
 .kpi{padding:14px 22px;border-right:1px solid #2E3138;min-width:0}.kpi:last-child{border-right:0}
 .kpi .l{font-size:.85rem;color:#D7D9DE}.kpi .v{font-size:1.6rem;font-weight:500;margin:6px 0 2px}.kpi .n{font-size:.82rem;color:#B9BCC4}
 .lista{margin-top:14px;overflow:hidden;border:3px solid var(--negro)}
-.th,.vrow{display:grid;grid-template-columns:30px minmax(150px,.8fr) repeat(4,80px) 80px 120px minmax(230px,1.5fr);gap:10px;align-items:center;padding:11px 18px}
+.th,.vrow{display:grid;grid-template-columns:30px minmax(150px,.8fr) repeat(4,76px) 76px 70px 112px minmax(230px,1.5fr);gap:10px;align-items:center;padding:11px 18px}
 .th{font-size:.82rem;font-weight:700;background:var(--negro);color:#fff}
 .th span{cursor:pointer;user-select:none}.r{text-align:right}
 .vrow{border-bottom:1px solid var(--line);cursor:pointer}.vrow:hover{background:#F6F9FF}
@@ -59,16 +59,18 @@ footer{margin-top:16px;font-size:.78rem;color:var(--ink2);text-align:center;line
   </div>
   <div class="card kpis" id="kpis"></div>
   <div class="card lista">
-    <div class="th" id="th"><span></span><span data-k="n">Vendedor</span><span class="r" data-k="p0">Gancia</span><span class="r" data-k="p1">Fernet 1882</span><span class="r" data-k="p2">Martini</span><span class="r" data-k="p3">Amargo Obrero</span><span class="r" data-k="u">Unidades</span><span class="r" data-k="imp">Importe</span><span data-k="cli">Clientes a los que se vendió</span></div>
+    <div class="th" id="th"><span></span><span data-k="n">Vendedor</span><span class="r" data-k="p0">Gancia</span><span class="r" data-k="p1">Fernet 1882</span><span class="r" data-k="p2">Martini</span><span class="r" data-k="p3">Amargo Obrero</span><span class="r" data-k="u">Unidades</span><span class="r" data-k="bt" title="Bolsas de los combos entregadas: Gancia 112233, Fernet 112211, Martini 112222, Amargo Obrero 112244">Bolsas</span><span class="r" data-k="imp">Importe</span><span data-k="cli">Clientes a los que se vendió</span></div>
     <div id="filas"></div>
   </div>
-  <footer>Unidades vendidas por fecha de carga del pedido, netas de devoluciones, importes con IVA · Gancia Americano 39013179, Fernet 1882 39012732, Martini Rosso 39014996, Amargo Obrero 39010027 · Datos de la base de Gescom; lo cargado hoy se actualiza solo, sin recargar</footer>
+  <footer>Unidades vendidas por fecha de carga del pedido, netas de devoluciones, importes con IVA · Gancia Americano 39013179, Fernet 1882 39012732, Martini Rosso 39014996, Amargo Obrero 39010027 · Bolsas: Gancia 112233, Fernet 112211, Martini 112222, Amargo Obrero 112244 · Datos de la base de Gescom; lo cargado hoy se actualiza solo, sin recargar</footer>
 </div>
 <script>
 // Ventas de los aperitivos de los combos con gaseosa (pedido de Bruno, 27/10/2026)
 const RAW='https://raw.githubusercontent.com/1605-83/Reporte-Diario-Ventas/main/';
 const PROD=[['39013179','Gancia'],['39012732','Fernet 1882'],['39014996','Martini'],['39010027','Amargo Obrero']];
 const IDX=Object.fromEntries(PROD.map((p,i)=>[p[0],i]));
+// bolsas de cada combo (se entregan con el combo): misma marca, se cuentan aparte de las unidades
+const BOL={'112233':0,'112211':1,'112222':2,'112244':3};
 const EQUIPO=new Set([2,4,5,6,7,24,26,27,28,29,30,51,52,53,54,56,61,62,63,64,73,74,75]);
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -89,35 +91,35 @@ function leer(txt){
   const R=parseCSV(txt).filter(r=>r.length>5); if(!R.length) return []; const H=R.shift().map(h=>h.trim()); const ix=n=>H.indexOf(n);
   const I={cli:ix('Cliente'),cod:ix('Codigo'),cant:ix('CantBase'),imp:ix('ImporteItem'),rs:ix('RazonSocial'),cv:ix('CodVendedor'),vn:ix('Vendedor'),car:ix('FechaCarga'),nro:ix('NroComprobante')};
   const out=[];
-  for(const r of R){ const cod=(r[I.cod]||'').trim(); if(!(cod in IDX)) continue; const v=parseInt(r[I.cv],10);
+  for(const r of R){ const cod=(r[I.cod]||'').trim(); if(!(cod in IDX) && !(cod in BOL)) continue; const v=parseInt(r[I.cv],10);
     if(!isNaN(v) && r[I.vn] && !NOMV[v]) NOMV[v]=titulo(r[I.vn]);
-    out.push({p:IDX[cod], v, cli:String(r[I.cli]).trim(), rs:(r[I.rs]||'').trim(), car:iso(r[I.car]), cant:num(r[I.cant]), imp:num(r[I.imp]), nro:(r[I.nro]||'').trim()}); }
+    out.push({p: cod in IDX? IDX[cod] : BOL[cod], b: cod in BOL, v, cli:String(r[I.cli]).trim(), rs:(r[I.rs]||'').trim(), car:iso(r[I.car]), cant:num(r[I.cant]), imp:num(r[I.imp]), nro:(r[I.nro]||'').trim()}); }
   return out; }
 
 function dibujar(){
   const desde=$('fDesde').value||'2026-10-22', fv=$('fVend').value;
   const F=[...MES.filter(x=>!(VIVO.length && x.car===HOY)), ...VIVO].filter(x=>x.car>=desde && (!fv||String(x.v)===fv));
   const V=new Map();
-  for(const x of F){ const v=V.get(x.v)||(V.set(x.v,{c:x.v,n:NOMV[x.v]||('Vendedor '+x.v),p:[0,0,0,0],u:0,imp:0,cli:new Map()}),V.get(x.v));
-    v.p[x.p]+=x.cant; v.u+=x.cant; v.imp+=x.imp;
-    const c=v.cli.get(x.cli)||(v.cli.set(x.cli,{cli:x.cli,rs:x.rs,p:[0,0,0,0],imp:0,ult:''}),v.cli.get(x.cli)); c.p[x.p]+=x.cant; c.imp+=x.imp; if(x.car>c.ult) c.ult=x.car; }
-  const L=[...V.values()].map(v=>({...v, ncli:[...v.cli.values()].filter(c=>c.p.some(u=>u>0)).length}));
-  const tot=[0,1,2,3].map(i=>L.reduce((a,v)=>a+v.p[i],0)), tu=tot.reduce((a,b)=>a+b,0), ti=L.reduce((a,v)=>a+v.imp,0), tc=L.reduce((a,v)=>a+v.ncli,0);
+  for(const x of F){ const v=V.get(x.v)||(V.set(x.v,{c:x.v,n:NOMV[x.v]||('Vendedor '+x.v),p:[0,0,0,0],bol:[0,0,0,0],u:0,bt:0,imp:0,cli:new Map()}),V.get(x.v));
+    if(x.b){ v.bol[x.p]+=x.cant; v.bt+=x.cant; } else { v.p[x.p]+=x.cant; v.u+=x.cant; } v.imp+=x.imp;
+    const c=v.cli.get(x.cli)||(v.cli.set(x.cli,{cli:x.cli,rs:x.rs,p:[0,0,0,0],bol:[0,0,0,0],imp:0,ult:''}),v.cli.get(x.cli)); (x.b? c.bol : c.p)[x.p]+=x.cant; c.imp+=x.imp; if(x.car>c.ult) c.ult=x.car; }
+  const L=[...V.values()].map(v=>({...v, ncli:[...v.cli.values()].filter(c=>c.p.some(u=>u>0)||c.bol.some(u=>u>0)).length}));
+  const tot=[0,1,2,3].map(i=>L.reduce((a,v)=>a+v.p[i],0)), tu=tot.reduce((a,b)=>a+b,0), ti=L.reduce((a,v)=>a+v.imp,0), tc=L.reduce((a,v)=>a+v.ncli,0), tbol=[0,1,2,3].map(i=>L.reduce((a,v)=>a+v.bol[i],0)), tb=tbol.reduce((a,b)=>a+b,0);
   $('meta').textContent=`Pedidos cargados desde el ${dmy(desde)} · ventas al ${vivoCorte||corteMes}`;
   $('kpis').innerHTML=`<div class="kpi"><div class="l">Unidades vendidas</div><div class="v">${fmtN(tu)}</div><div class="n">netas de devoluciones</div></div>
     <div class="kpi"><div class="l">Importe</div><div class="v">${fmt$(ti)}</div><div class="n">con IVA</div></div>
     <div class="kpi"><div class="l">Clientes</div><div class="v">${fmtN(tc)}</div><div class="n">con compra de estos productos</div></div>
-    <div class="kpi"><div class="l">Por producto</div><div class="v" style="font-size:1rem;line-height:1.5">${PROD.map((p,i)=>`${p[1]}: <b>${fmtN(tot[i])}</b>`).join('<br>')}</div></div>`;
-  const val={n:v=>v.n,u:v=>v.u,imp:v=>v.imp,cli:v=>v.ncli,p0:v=>v.p[0],p1:v=>v.p[1],p2:v=>v.p[2],p3:v=>v.p[3]};
+    <div class="kpi"><div class="l">Por producto · unidades y bolsas</div><div class="v" style="font-size:1rem;line-height:1.5">${PROD.map((p,i)=>`${p[1]}: <b>${fmtN(tot[i])}</b> u · <b>${fmtN(tbol[i])}</b> bolsas`).join("<br>")}</div></div>`;
+  const val={n:v=>v.n,u:v=>v.u,bt:v=>v.bt,imp:v=>v.imp,cli:v=>v.ncli,p0:v=>v.p[0],p1:v=>v.p[1],p2:v=>v.p[2],p3:v=>v.p[3]};
   L.sort((a,b)=>{ const A=val[sortK](a), B=val[sortK](b); return (A>B?1:A<B?-1:0)*sortD || a.c-b.c; });
   document.querySelectorAll('.th span[data-k]').forEach(s=>{ s.textContent=s.textContent.replace(/ [▲▼]$/,'')+(s.dataset.k===sortK? (sortD>0?' ▲':' ▼') : ''); });
   const cel=n=>n? `<b>${fmtN(n)}</b>` : '<span class="cero">0</span>';
   let h='';
   for(const v of L){ const ab=abiertos.has(v.c);
-    h+=`<div class="vrow${ab?' ab':''}" data-v="${v.c}" role="button" tabindex="0" aria-expanded="${ab}"><span class="chev">›</span><span><span class="cod">${v.c}</span>${esc(v.n)}</span>${v.p.map(u=>`<span class="r m">${cel(u)}</span>`).join('')}<span class="r"><b>${fmtN(v.u)}</b></span><span class="r m">${fmt$(v.imp)}</span><span class="cls">${[...v.cli.values()].filter(c=>c.p.some(u=>u>0)).sort((a,b)=>b.imp-a.imp).map(c=>`<span class="cl" title="${esc(c.cli+' '+titulo(c.rs))} · último pedido ${dmy(c.ult)}"><b>${esc(c.cli)}</b> ${esc(titulo(c.rs))} · ${c.p.map((u,i)=>u>0? fmtN(u)+' '+PROD[i][1] : '').filter(Boolean).join(', ')}</span>`).join('')||'—'}</span></div>`;
+    h+=`<div class="vrow${ab?' ab':''}" data-v="${v.c}" role="button" tabindex="0" aria-expanded="${ab}"><span class="chev">›</span><span><span class="cod">${v.c}</span>${esc(v.n)}</span>${v.p.map(u=>`<span class="r m">${cel(u)}</span>`).join('')}<span class="r"><b>${fmtN(v.u)}</b></span><span class="r m" title="${PROD.map((p,i)=>p[1]+": "+fmtN(v.bol[i])).join(" · ")}">${cel(v.bt)}</span><span class="r m">${fmt$(v.imp)}</span><span class="cls">${[...v.cli.values()].filter(c=>c.p.some(u=>u>0)||c.bol.some(u=>u>0)).sort((a,b)=>b.imp-a.imp).map(c=>`<span class="cl" title="${esc(c.cli+' '+titulo(c.rs))} · último pedido ${dmy(c.ult)}"><b>${esc(c.cli)}</b> ${esc(titulo(c.rs))} · ${[...c.p.map((u,i)=>u>0? fmtN(u)+' '+PROD[i][1] : ''), ...c.bol.map((u,i)=>u>0? fmtN(u)+' bolsas '+PROD[i][1] : '')].filter(Boolean).join(', ')}</span>`).join('')||'—'}</span></div>`;
     if(ab){ const C=[...v.cli.values()].sort((a,b)=>b.p.reduce((s,u)=>s+u,0)-a.p.reduce((s,u)=>s+u,0));
-      h+=`<div class="det"><table><thead><tr><th>Código</th><th>Razón social</th>${PROD.map(p=>`<th class="r">${p[1]}</th>`).join('')}<th class="r">Importe</th><th>Último pedido</th></tr></thead><tbody>${C.map(c=>`<tr><td><b>${esc(c.cli)}</b></td><td>${esc(titulo(c.rs))}</td>${c.p.map(u=>`<td class="r">${u? fmtN(u) : '—'}</td>`).join('')}<td class="r">${fmt$(c.imp)}</td><td>${dmy(c.ult)}</td></tr>`).join('')}</tbody></table></div>`; } }
-  if(L.length) h+=`<div class="vrow tot" style="cursor:default"><span></span><span>Total</span>${tot.map(u=>`<span class="r m">${fmtN(u)}</span>`).join('')}<span class="r">${fmtN(tu)}</span><span class="r m">${fmt$(ti)}</span><span class="m">${fmtN(tc)} clientes</span></div>`;
+      h+=`<div class="det"><table><thead><tr><th>Código</th><th>Razón social</th>${PROD.map(p=>`<th class="r">${p[1]}</th>`).join('')}<th>Bolsas</th><th class="r">Importe</th><th>Último pedido</th></tr></thead><tbody>${C.map(c=>`<tr><td><b>${esc(c.cli)}</b></td><td>${esc(titulo(c.rs))}</td>${c.p.map(u=>`<td class="r">${u? fmtN(u) : '—'}</td>`).join('')}<td>${c.bol.map((u,i)=>u>0? fmtN(u)+' '+PROD[i][1] : '').filter(Boolean).join(', ')||'—'}</td><td class="r">${fmt$(c.imp)}</td><td>${dmy(c.ult)}</td></tr>`).join('')}</tbody></table></div>`; } }
+  if(L.length) h+=`<div class="vrow tot" style="cursor:default"><span></span><span>Total</span>${tot.map(u=>`<span class="r m">${fmtN(u)}</span>`).join('')}<span class="r">${fmtN(tu)}</span><span class="r m">${fmtN(tb)}</span><span class="r m">${fmt$(ti)}</span><span class="m">${fmtN(tc)} clientes</span></div>`;
   $('filas').innerHTML=h||`<div class="vacio">No hay ventas de Gancia, Fernet 1882, Martini ni Amargo Obrero cargadas desde el ${dmy(desde)}.</div>`;
 }
 document.addEventListener('click',e=>{
