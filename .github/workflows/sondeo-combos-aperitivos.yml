@@ -1,0 +1,15 @@
+name: Sondeo combos aperitivos (solo lectura)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  sondeo:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Consultar la base
+        shell: powershell
+        env:
+          GESCOM_LPE_CLAVE: ${{ secrets.GESCOM_LPE_CLAVE }}
+        run: .\robot\sondeo-combos-aperitivos.ps1
