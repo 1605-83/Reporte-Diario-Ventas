@@ -9,8 +9,8 @@ function Sql([string]$sql) {
   $r = Invoke-WebRequest @p; $j = [Text.Encoding]::UTF8.GetString($r.RawContentStream.ToArray()) | ConvertFrom-Json
   if ($j.error) { "ERROR: $($j.error)"; return }; $j.filas }
 function Ver($t, $s) { "===== $t"; try { Sql $s | ConvertTo-Json -Depth 5 -Compress } catch { "FALLO: $_" } }
-$C = "('3791','2732','4996','0027','27')"
-Ver 'como articulos' "SELECT a.codigo, a.descripcion, a.proveedor, p.nombre AS prov FROM articulos a LEFT JOIN proveedores p ON p.codigo = a.proveedor WHERE a.codigo IN $C OR ltrim(a.codigo,'0') IN $C"
-Ver 'como combos: renglones y unidades desde el 22/10' "SELECT c.combo, COUNT(*) AS renglones, SUM(c.cantidad) AS cant, MIN(v.fecha) AS desde, MAX(v.fecha) AS hasta FROM venta_combos c JOIN ventas v ON v.id = c.venta_id WHERE (c.combo IN $C OR ltrim(c.combo,'0') IN $C) AND v.fecha >= '2026-10-22' GROUP BY c.combo"
-Ver 'todos los combos vendidos desde el 22/10' "SELECT c.combo, COUNT(*) AS renglones, SUM(c.cantidad) AS cant FROM venta_combos c JOIN ventas v ON v.id = c.venta_id WHERE v.fecha >= '2026-10-22' GROUP BY c.combo ORDER BY 2 DESC"
-Ver 'tablas con combo en el nombre' "SELECT name FROM sqlite_master WHERE type IN ('table','view') AND name LIKE '%combo%'"
+Ver 'estructura combos' "SELECT name, sql FROM sqlite_master WHERE name IN ('combos','combo_componentes')"
+Ver 'combos 1137 a 1145' "SELECT * FROM combos WHERE CAST(codigo AS INTEGER) BETWEEN 1137 AND 1145"
+Ver 'componentes de 1138 a 1145' "SELECT * FROM combo_componentes WHERE CAST(combo AS INTEGER) BETWEEN 1138 AND 1145"
+Ver 'articulos con 3791 2732 4996 o 0027 dentro del codigo' "SELECT a.codigo, a.descripcion, p.nombre AS prov FROM articulos a LEFT JOIN proveedores p ON p.codigo = a.proveedor WHERE a.codigo LIKE '%3791%' OR a.codigo LIKE '%2732%' OR a.codigo LIKE '%4996%' OR a.codigo LIKE '%0027' LIMIT 40"
+Ver 'articulos gancia fernet 1882 martini amargo obrero' "SELECT a.codigo, a.descripcion, p.nombre AS prov FROM articulos a LEFT JOIN proveedores p ON p.codigo = a.proveedor WHERE UPPER(a.descripcion) LIKE '%GANCIA%' OR UPPER(a.descripcion) LIKE '%1882%' OR UPPER(a.descripcion) LIKE '%MARTINI%' OR UPPER(a.descripcion) LIKE '%OBRERO%' OR UPPER(a.descripcion) LIKE '%BOLSA%' LIMIT 60"
