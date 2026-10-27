@@ -44,7 +44,7 @@ select,input{font:inherit;font-size:.88rem;color:var(--ink);background:#fff;bord
 .det th{font-size:.75rem;color:var(--ink2);text-transform:uppercase}.det td.r,.det th.r{text-align:right}
 .tot{font-weight:900;background:#FAFAFA}
 .vacio{padding:30px;text-align:center;color:var(--ink2)}
-@media (max-width:760px){.th{display:none}.vrow{grid-template-columns:22px 1fr auto}.vrow .m{display:none}.det{padding-left:10px}}
+@media (max-width:760px){.th{display:none}.vrow{grid-template-columns:22px 1fr auto}.vrow .cls{grid-column:2/-1}.vrow .m{display:none}.det{padding-left:10px}}
 footer{margin-top:16px;font-size:.78rem;color:var(--ink2);text-align:center;line-height:1.5}
 </style>
 </head>
@@ -114,7 +114,7 @@ function dibujar(){
   const cel=n=>n? `<b>${fmtN(n)}</b>` : '<span class="cero">0</span>';
   let h='';
   for(const v of L){ const ab=abiertos.has(v.c);
-    h+=`<div class="vrow${ab?' ab':''}" data-v="${v.c}" role="button" tabindex="0" aria-expanded="${ab}"><span class="chev">›</span><span><span class="cod">${v.c}</span>${esc(v.n)}</span>${v.p.map(u=>`<span class="r m">${cel(u)}</span>`).join('')}<span class="r"><b>${fmtN(v.u)}</b></span><span class="r m">${fmt$(v.imp)}</span><span class="cls m">${[...v.cli.values()].filter(c=>c.p.some(u=>u>0)).sort((a,b)=>b.imp-a.imp).map(c=>`<span class="cl" title="${esc(c.cli+' '+titulo(c.rs))} · último pedido ${dmy(c.ult)}"><b>${esc(c.cli)}</b> ${esc(titulo(c.rs))} · ${c.p.map((u,i)=>u>0? fmtN(u)+' '+PROD[i][1] : '').filter(Boolean).join(', ')}</span>`).join('')||'—'}</span></div>`;
+    h+=`<div class="vrow${ab?' ab':''}" data-v="${v.c}" role="button" tabindex="0" aria-expanded="${ab}"><span class="chev">›</span><span><span class="cod">${v.c}</span>${esc(v.n)}</span>${v.p.map(u=>`<span class="r m">${cel(u)}</span>`).join('')}<span class="r"><b>${fmtN(v.u)}</b></span><span class="r m">${fmt$(v.imp)}</span><span class="cls">${[...v.cli.values()].filter(c=>c.p.some(u=>u>0)).sort((a,b)=>b.imp-a.imp).map(c=>`<span class="cl" title="${esc(c.cli+' '+titulo(c.rs))} · último pedido ${dmy(c.ult)}"><b>${esc(c.cli)}</b> ${esc(titulo(c.rs))} · ${c.p.map((u,i)=>u>0? fmtN(u)+' '+PROD[i][1] : '').filter(Boolean).join(', ')}</span>`).join('')||'—'}</span></div>`;
     if(ab){ const C=[...v.cli.values()].sort((a,b)=>b.p.reduce((s,u)=>s+u,0)-a.p.reduce((s,u)=>s+u,0));
       h+=`<div class="det"><table><thead><tr><th>Código</th><th>Razón social</th>${PROD.map(p=>`<th class="r">${p[1]}</th>`).join('')}<th class="r">Importe</th><th>Último pedido</th></tr></thead><tbody>${C.map(c=>`<tr><td><b>${esc(c.cli)}</b></td><td>${esc(titulo(c.rs))}</td>${c.p.map(u=>`<td class="r">${u? fmtN(u) : '—'}</td>`).join('')}<td class="r">${fmt$(c.imp)}</td><td>${dmy(c.ult)}</td></tr>`).join('')}</tbody></table></div>`; } }
   if(L.length) h+=`<div class="vrow tot" style="cursor:default"><span></span><span>Total</span>${tot.map(u=>`<span class="r m">${fmtN(u)}</span>`).join('')}<span class="r">${fmtN(tu)}</span><span class="r m">${fmt$(ti)}</span><span class="m">${fmtN(tc)} clientes</span></div>`;
