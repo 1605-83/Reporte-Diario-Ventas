@@ -62,12 +62,12 @@ footer{margin-top:16px;font-size:.78rem;color:var(--ink2);text-align:center;line
     <div class="th" id="th"><span></span><span data-k="n">Vendedor</span><span class="r" data-k="p0">Gancia</span><span class="r" data-k="p1">Fernet 1882</span><span class="r" data-k="p2">Martini</span><span class="r" data-k="p3">Amargo Obrero</span><span class="r" data-k="u">Unidades</span><span class="r" data-k="imp">Importe</span><span data-k="cli">Clientes a los que se vendió</span></div>
     <div id="filas"></div>
   </div>
-  <footer>Unidades vendidas por fecha de carga del pedido, netas de devoluciones, importes con IVA · Gancia 39013791, Fernet 1882 39012732, Martini Rosso 39014996, Amargo Obrero 39010027 · Datos de la base de Gescom; lo cargado hoy se actualiza solo, sin recargar</footer>
+  <footer>Unidades vendidas por fecha de carga del pedido, netas de devoluciones, importes con IVA · Gancia Americano 39013179, Fernet 1882 39012732, Martini Rosso 39014996, Amargo Obrero 39010027 · Datos de la base de Gescom; lo cargado hoy se actualiza solo, sin recargar</footer>
 </div>
 <script>
 // Ventas de los aperitivos de los combos con gaseosa (pedido de Bruno, 27/10/2026)
 const RAW='https://raw.githubusercontent.com/1605-83/Reporte-Diario-Ventas/main/';
-const PROD=[['39013791','Gancia'],['39012732','Fernet 1882'],['39014996','Martini'],['39010027','Amargo Obrero']];
+const PROD=[['39013179','Gancia'],['39012732','Fernet 1882'],['39014996','Martini'],['39010027','Amargo Obrero']];
 const IDX=Object.fromEntries(PROD.map((p,i)=>[p[0],i]));
 const EQUIPO=new Set([2,4,5,6,7,24,26,27,28,29,30,51,52,53,54,56,61,62,63,64,73,74,75]);
 const $=id=>document.getElementById(id);
