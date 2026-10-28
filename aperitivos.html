@@ -57,6 +57,7 @@ footer{margin-top:16px;font-size:.78rem;color:var(--ink2);text-align:center;line
       <label>Desde <input type="date" id="fDesde" value="2026-10-22"></label>
       <select id="fDia" aria-label="Día de la semana"><option value="">Todos los días</option><option value="1">Lunes</option><option value="2">Martes</option><option value="3">Miércoles</option><option value="4">Jueves</option><option value="5">Viernes</option></select>
       <select id="fVend" aria-label="Vendedor"><option value="">Todos los vendedores</option></select>
+      <select id="fCli" aria-label="Cliente" style="max-width:260px"><option value="">Todos los clientes</option></select>
     </div>
   </div>
   <div class="card kpis" id="kpis"></div>
@@ -101,7 +102,13 @@ function leer(txt){
 function dibujar(){
   const desde=$('fDesde').value||'2026-10-22', fv=$('fVend').value, fd=$('fDia').value;
   const diaSem=s=>String(new Date(s+'T12:00:00Z').getUTCDay());   // 1 = lunes ... 5 = viernes, por fecha de carga
-  const F=[...MES.filter(x=>!(VIVO.length && x.car===HOY)), ...VIVO].filter(x=>x.car>=desde && (!fv||String(x.v)===fv) && (!fd||diaSem(x.car)===fd));
+  const F0=[...MES.filter(x=>!(VIVO.length && x.car===HOY)), ...VIVO].filter(x=>x.car>=desde && (!fv||String(x.v)===fv) && (!fd||diaSem(x.car)===fd));
+  // desplegable de clientes: los que tienen movimiento con los otros filtros; se mantiene el elegido
+  const sc=$('fCli'), cs=new Map(); for(const x of F0) if(!cs.has(x.cli)) cs.set(x.cli,x.rs);
+  let fc=sc.value; if(fc && !cs.has(fc)) cs.set(fc,sc.selectedOptions[0]?.dataset.rs||'');
+  sc.innerHTML=`<option value="">Todos los clientes</option>`+[...cs].sort((a,b)=>(+a[0]||0)-(+b[0]||0)).map(([c,rs])=>`<option value="${esc(c)}" data-rs="${esc(rs)}">${esc(c)} · ${esc(titulo(rs))}</option>`).join('');
+  sc.value=fc;
+  const F=F0.filter(x=>!fc||x.cli===fc);
   const V=new Map();
   for(const x of F){ const v=V.get(x.v)||(V.set(x.v,{c:x.v,n:NOMV[x.v]||('Vendedor '+x.v),p:[0,0,0,0],bol:[0,0,0,0],u:0,bt:0,imp:0,cli:new Map()}),V.get(x.v));
     if(x.b){ v.bol[x.p]+=x.cant; v.bt+=x.cant; } else { v.p[x.p]+=x.cant; v.u+=x.cant; } v.imp+=x.imp;
@@ -131,7 +138,7 @@ document.addEventListener('click',e=>{
   const th=e.target.closest('.th span[data-k]'); if(th){ const k=th.dataset.k; if(sortK===k) sortD=-sortD; else { sortK=k; sortD=k==='n'? 1 : -1; } dibujar(); }
 });
 document.addEventListener('keydown',e=>{ const vr=e.target.closest&&e.target.closest('.vrow[data-v]'); if(vr&&(e.key==='Enter'||e.key===' ')){ e.preventDefault(); vr.click(); } });
-$('fDesde').addEventListener('change',dibujar); $('fVend').addEventListener('change',dibujar); $('fDia').addEventListener('change',dibujar);
+$('fDesde').addEventListener('change',dibujar); $('fVend').addEventListener('change',dibujar); $('fDia').addEventListener('change',dibujar); $('fCli').addEventListener('change',dibujar);
 
 (async function(){
   try{
