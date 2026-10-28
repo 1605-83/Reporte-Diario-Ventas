@@ -23,6 +23,12 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:Roboto,system-ui
 @keyframes latido{0%{box-shadow:0 0 0 0 rgba(45,179,74,.55)}70%{box-shadow:0 0 0 8px rgba(45,179,74,0)}100%{box-shadow:0 0 0 0 rgba(45,179,74,0)}}
 @media (prefers-reduced-motion:reduce){.vivo i{animation:none}}
 .ctrl{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.multi{position:relative}
+.multi summary{list-style:none;cursor:pointer;font-size:.88rem;background:#fff;border:1px solid var(--line);border-radius:10px;padding:7px 30px 7px 10px;max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative}
+.multi summary::-webkit-details-marker{display:none}.multi summary:after{content:"▾";position:absolute;right:10px;top:7px}
+.multi .pop{position:absolute;right:0;top:calc(100% + 4px);z-index:20;width:320px;max-width:90vw;background:#fff;border:2px solid var(--negro);border-radius:12px;padding:10px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.multi .pop input[type=search]{width:calc(100% - 70px)}.multi .pop button{margin-left:6px;font:inherit;font-size:.82rem;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer}
+#fCli{max-height:300px;overflow:auto;margin-top:8px}#fCli label{display:block;padding:5px 4px;font-size:.85rem;cursor:pointer;border-radius:6px}#fCli label:hover{background:#F6F9FF}
 select,input{font:inherit;font-size:.88rem;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:10px;padding:7px 10px}
 .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:14px;background:var(--negro);color:#fff}
 @media (max-width:900px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -57,7 +63,8 @@ footer{margin-top:16px;font-size:.78rem;color:var(--ink2);text-align:center;line
       <label>Desde <input type="date" id="fDesde" value="2026-10-22"></label>
       <select id="fDia" aria-label="Día de la semana"><option value="">Todos los días</option><option value="1">Lunes</option><option value="2">Martes</option><option value="3">Miércoles</option><option value="4">Jueves</option><option value="5">Viernes</option></select>
       <select id="fVend" aria-label="Vendedor"><option value="">Todos los vendedores</option></select>
-      <select id="fCli" aria-label="Cliente" style="max-width:260px"><option value="">Todos los clientes</option></select>
+      <details class="multi" id="fCliBox"><summary id="fCliTxt">Todos los clientes</summary>
+        <div class="pop"><input type="search" id="fCliQ" placeholder="Buscar código o nombre" aria-label="Buscar cliente" autocomplete="off"><button type="button" id="fCliLimpiar">Todos</button><div id="fCli" role="group" aria-label="Clientes"></div></div></details>
     </div>
   </div>
   <div class="card kpis" id="kpis"></div>
@@ -104,11 +111,12 @@ function dibujar(){
   const diaSem=s=>String(new Date(s+'T12:00:00Z').getUTCDay());   // 1 = lunes ... 5 = viernes, por fecha de carga
   const F0=[...MES.filter(x=>!(VIVO.length && x.car===HOY)), ...VIVO].filter(x=>x.car>=desde && (!fv||String(x.v)===fv) && (!fd||diaSem(x.car)===fd));
   // desplegable de clientes: los que tienen movimiento con los otros filtros; se mantiene el elegido
-  const sc=$('fCli'), cs=new Map(); for(const x of F0) if(!cs.has(x.cli)) cs.set(x.cli,x.rs);
-  let fc=sc.value; if(fc && !cs.has(fc)) cs.set(fc,sc.selectedOptions[0]?.dataset.rs||'');
-  sc.innerHTML=`<option value="">Todos los clientes</option>`+[...cs].sort((a,b)=>(+a[0]||0)-(+b[0]||0)).map(([c,rs])=>`<option value="${esc(c)}" data-rs="${esc(rs)}">${esc(c)} · ${esc(titulo(rs))}</option>`).join('');
-  sc.value=fc;
-  const F=F0.filter(x=>!fc||x.cli===fc);
+  const cs=new Map(); for(const x of F0) if(!cs.has(x.cli)) cs.set(x.cli,x.rs);
+  for(const c of selCli) if(!cs.has(c)) cs.set(c,rsCli[c]||'');
+  $('fCli').innerHTML=[...cs].sort((a,b)=>(+a[0]||0)-(+b[0]||0)).map(([c,rs])=>{ rsCli[c]=rs; return `<label data-b="${esc(norm(c+' '+rs))}"><input type="checkbox" value="${esc(c)}"${selCli.has(c)?' checked':''}> <b>${esc(c)}</b> ${esc(titulo(rs))}</label>`; }).join('')||'<p class="vacio">Sin clientes</p>';
+  filtrarCli();
+  $('fCliTxt').textContent= !selCli.size? 'Todos los clientes' : selCli.size===1? [...selCli][0]+' · '+titulo(rsCli[[...selCli][0]]||'') : selCli.size+' clientes tildados';
+  const F=F0.filter(x=>!selCli.size||selCli.has(x.cli));
   const V=new Map();
   for(const x of F){ const v=V.get(x.v)||(V.set(x.v,{c:x.v,n:NOMV[x.v]||('Vendedor '+x.v),p:[0,0,0,0],bol:[0,0,0,0],u:0,bt:0,imp:0,cli:new Map()}),V.get(x.v));
     if(x.b){ v.bol[x.p]+=x.cant; v.bt+=x.cant; } else { v.p[x.p]+=x.cant; v.u+=x.cant; } v.imp+=x.imp;
@@ -138,7 +146,15 @@ document.addEventListener('click',e=>{
   const th=e.target.closest('.th span[data-k]'); if(th){ const k=th.dataset.k; if(sortK===k) sortD=-sortD; else { sortK=k; sortD=k==='n'? 1 : -1; } dibujar(); }
 });
 document.addEventListener('keydown',e=>{ const vr=e.target.closest&&e.target.closest('.vrow[data-v]'); if(vr&&(e.key==='Enter'||e.key===' ')){ e.preventDefault(); vr.click(); } });
-$('fDesde').addEventListener('change',dibujar); $('fVend').addEventListener('change',dibujar); $('fDia').addEventListener('change',dibujar); $('fCli').addEventListener('change',dibujar);
+$('fDesde').addEventListener('change',dibujar); $('fVend').addEventListener('change',dibujar); $('fDia').addEventListener('change',dibujar);
+// clientes tildados (ninguno = todos)
+const selCli=new Set(), rsCli={};
+const norm=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+function filtrarCli(){ const q=norm($('fCliQ').value.trim()); $('fCli').querySelectorAll('label').forEach(l=>{ l.hidden=!!q && !l.dataset.b.includes(q); }); }
+$('fCli').addEventListener('change',e=>{ const c=e.target.value; e.target.checked? selCli.add(c) : selCli.delete(c); dibujar(); });
+$('fCliQ').addEventListener('input',filtrarCli);
+$('fCliLimpiar').addEventListener('click',()=>{ selCli.clear(); $('fCliQ').value=''; dibujar(); });
+document.addEventListener('click',e=>{ const b=$('fCliBox'); if(b.open && !b.contains(e.target)) b.open=false; });
 
 (async function(){
   try{
