@@ -1,1 +1,3 @@
 Cliente;FechaComprobante;FechaEntrega;NroComprobante;TipoDeVenta;Empresa;Codigo;CantBase;ImporteNetoItem;ImporteItem;RazonSocial;CodVendedor;Vendedor;Articulo;PrecioCosto;Proveedor;Categoria;FechaCarga;MotivoDevolucion
+3086;2026-10-28;27-10-2026;NCR-A-143521;Devolución por Rechazo;ELEBES S.A.;1801;-1,00;-21750,02;-26317,52;EVELIN GISEL GAUNA;056;Ezequiel Ferreira;DISPLAY 20 QUESO RALLADO X 40G. ILOLAY;-16992,20;ILOLAY;Queso Rallado;28-10-2026;NO QUIERE EL CLIENTE
+176;2026-10-28;27-10-2026;NCR-B-143522;Devolución por Rechazo;ELEBES S.A.;1801;-1,00;-21750,02;-26317,52;ALMARAZ ALICIA;056;Ezequiel Ferreira;DISPLAY 20 QUESO RALLADO X 40G. ILOLAY;-16992,20;ILOLAY;Queso Rallado;28-10-2026;NO QUIERE EL CLIENTE
