@@ -333,7 +333,7 @@ function objetivos(B,R){
     filas.push(fila(g,o,v,ritmo)); }
   filas.push(fila('TOTAL',to,tv,td));
   function fila(k,o,v,ritmo){ const proy=v+ritmo*rest, nec=rest? Math.max(0,o-v)/rest : 0, x=ritmo? nec/ritmo : 0, pp=o? proy/o*100 : 0;
-    return {k, obj:o, v, p:o? v/o*100 : 0, proy, pp, nec, x, cl: pp>=100? 'En camino' : pp>=90? 'Alcanzable' : x<=1.5? 'Difícil' : 'Fuera de alcance'}; }
+    return {k, obj:o, v, p:o? v/o*100 : 0, proy, pp, nec, x, cl: pp>=100? 'En camino' : pp>=90? 'Cerca: proyecta 90% o más' : x<=1.5? 'Difícil' : 'Fuera de alcance'}; }
   return {rest, filas}; }
 
 // ---------- plan de accion ----------
