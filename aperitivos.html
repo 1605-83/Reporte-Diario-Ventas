@@ -101,7 +101,7 @@ function leer(txt){
   const R=parseCSV(txt).filter(r=>r.length>5); if(!R.length) return []; const H=R.shift().map(h=>h.trim()); const ix=n=>H.indexOf(n);
   const I={cli:ix('Cliente'),cod:ix('Codigo'),cant:ix('CantBase'),imp:ix('ImporteItem'),rs:ix('RazonSocial'),cv:ix('CodVendedor'),vn:ix('Vendedor'),car:ix('FechaCarga'),nro:ix('NroComprobante')};
   const out=[];
-  for(const r of R){ const cod=(r[I.cod]||'').trim(); if(!(cod in IDX) && !(cod in BOL)) continue; const v=parseInt(r[I.cv],10);
+  for(const r of R){ const cod=(r[I.cod]||'').trim(); if(!(cod in IDX) && !(cod in BOL)) continue; const v=parseInt(r[I.cv],10); if(!EQUIPO.has(v)) continue;   // solo los vendedores del equipo (saca, p. ej., el pedido de la 38 al cliente 962, pedido de Bruno 28/10)
     if(!isNaN(v) && r[I.vn] && !NOMV[v]) NOMV[v]=titulo(r[I.vn]);
     out.push({p: cod in IDX? IDX[cod] : BOL[cod], b: cod in BOL, v, cli:String(r[I.cli]).trim(), rs:(r[I.rs]||'').trim(), car:iso(r[I.car]), cant:num(r[I.cant]), imp:num(r[I.imp]), nro:(r[I.nro]||'').trim()}); }
   return out; }
