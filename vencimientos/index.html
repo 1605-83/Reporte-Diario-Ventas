@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vencimientos en riesgo LP · ELB</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+--bg:#000; --panel:#fff; --line:#E3E8EE; --ink:#1B2430; --ink2:#5B6878; --marca:#3B9AE1; --celeste:#2EC5F0;
+--rojo:#FF4D5E; --amarillo:#FFD60A; --naranja:#FFA94D; --verde:#4CD38A; --violeta:#C29BFF;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:#fff;font-family:"Roboto",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;font-variant-numeric:tabular-nums;line-height:1.4}
+.wrap{max-width:1320px;margin:0 auto;padding:28px max(16px,env(safe-area-inset-right,0px)) 48px max(16px,env(safe-area-inset-left,0px))}
+.titulo{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 0;margin:0 0 14px;padding:10px 18px;background:#000;color:#fff;border:2px solid var(--marca);box-shadow:0 0 0 1px var(--marca),0 0 14px -2px var(--marca);border-radius:10px;font-size:clamp(1.05rem,1.9vw,1.45rem);font-weight:700}
+.titulo .t-marca{font-weight:900;text-transform:uppercase}
+.titulo .t-marca::before{content:"·";margin:0 .6em;color:rgba(255,255,255,.55);font-weight:400}
+.titulo .t-act{margin-left:auto;padding-left:12px;font-size:.55em;font-weight:500;white-space:nowrap;align-self:center}
+@media (max-width:700px){.titulo .t-act{margin-left:0;padding-left:0;flex-basis:100%;white-space:normal}}
+.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+@media (max-width:1100px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:640px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{--kc:#fff;padding:8px 12px;border:2px solid var(--kc);border-radius:10px;box-shadow:0 0 0 1px var(--kc),0 0 14px -2px var(--kc);background:#000;min-width:0}
+.kpi .l{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--kc)}
+.kpi .v{font-size:clamp(1.15rem,1.9vw,1.55rem);font-weight:800;margin:2px 0 1px;overflow-wrap:anywhere}
+.kpi .n{font-size:.74rem;color:#C9D4D2}
+.filtros{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin:18px 0 12px;font-size:.85rem}
+.filtros label{display:flex;align-items:center;gap:6px}
+select,input{font:inherit;color:var(--ink);background:#fff;border:1px solid #A9D3CB;border-radius:6px;padding:6px 8px}
+input[type=search]{min-width:220px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{font:inherit;cursor:pointer;background:#000;color:#fff;border:1px solid #5B6878;border-radius:999px;padding:4px 12px}
+.chips button[aria-pressed="true"]{border-color:var(--celeste);color:var(--celeste);font-weight:700}
+.chk{display:flex;align-items:center;gap:6px;cursor:pointer}
+.card{background:var(--panel);color:var(--ink);border-radius:12px;margin-top:14px;overflow:hidden}
+.card h2{margin:0;padding:14px 18px 10px;font-size:.92rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#3A4553}
+.card .nota{margin:-4px 18px 10px;font-size:.8rem;color:var(--ink2)}
+.tbl{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.92rem;min-width:860px}
+th,td{padding:9px 14px;border-top:1px solid var(--line);text-align:right;white-space:nowrap}
+th{font-size:.74rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#6B7684;cursor:pointer;user-select:none;background:#fff;position:sticky;top:0}
+th:focus-visible{outline:2px solid var(--marca);outline-offset:-2px}
+th.l,td.l{text-align:left;white-space:normal}
+td.art{font-weight:500;min-width:260px}
+td.art small{display:block;color:var(--ink2);font-weight:400;font-size:.76rem}
+.sinv{background:#EAF8FD;font-weight:700;color:#0B5F86}
+th.sinv{color:#0B5F86}
+.dias{display:inline-block;min-width:34px;padding:1px 8px;border-radius:999px;font-weight:700;text-align:center}
+.d1{background:#FFE3E6;color:#B3122A}.d2{background:#FFF1D6;color:#8A5A00}.d3{background:#FFF8C7;color:#6F6200}.d4{background:#EEF2F6;color:#3A4553}.dv{background:#3A0A12;color:#FFC6CD}
+.riesgo{display:flex;align-items:center;justify-content:flex-end;gap:8px}
+.bar{width:90px;height:8px;border-radius:4px;background:#EEF2F6;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--rojo);border-radius:4px}
+tr.cero td{color:#9AA4B0}
+.vacio{padding:18px;color:var(--ink2);font-size:.9rem}
+.est{font-size:.72rem;color:var(--ink2);font-weight:400}
+footer{margin-top:18px;font-size:.78rem;color:#9AA9B3;max-width:110ch}
+footer b{color:#fff}
+#err{margin:16px 0;color:var(--rojo);font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 class="titulo"><span>Vencimientos en riesgo</span><span class="t-marca">Lago Puelo · Elebes</span><span class="t-act" id="act">Cargando…</span></h1>
+  <div id="err" hidden></div>
+  <section class="kpis" id="kpis" aria-label="Resumen"></section>
+
+  <div class="filtros">
+    <label>Proveedor <select id="fProv"><option value="">Todos</option></select></label>
+    <div class="chips" role="group" aria-label="Vence en">
+      <button type="button" data-p="" aria-pressed="true">Todos</button>
+      <button type="button" data-p="7" aria-pressed="false">7 días o menos</button>
+      <button type="button" data-p="15" aria-pressed="false">8 a 15</button>
+      <button type="button" data-p="30" aria-pressed="false">16 a 30</button>
+      <button type="button" data-p="99" aria-pressed="false">Más de 30</button>
+    </div>
+    <label><input type="search" id="fBus" placeholder="Buscar artículo o código" aria-label="Buscar artículo o código"></label>
+    <label class="chk"><input type="checkbox" id="fTodos"> Ver también los que se venden a tiempo</label>
+  </div>
+
+  <section class="card" id="riesgo">
+    <h2>Lo que más plata pone en riesgo</h2>
+    <p class="nota">Sin vender: lo que no llega a venderse antes de vencer al ritmo de los últimos 30 días. Tocá un título para ordenar.</p>
+    <div class="tbl"><table>
+      <thead><tr>
+        <th class="l" data-k="desc" tabindex="0">Artículo</th>
+        <th class="l" data-k="prov" tabindex="0">Proveedor</th>
+        <th data-k="vence" tabindex="0">Vence</th>
+        <th data-k="dias" tabindex="0">Días</th>
+        <th data-k="stock" tabindex="0">Stock</th>
+        <th data-k="venta30" tabindex="0">Venta 30 d</th>
+        <th class="sinv" data-k="sin" tabindex="0">Sin vender</th>
+        <th data-k="riesgo" tabindex="0">En riesgo</th>
+      </tr></thead>
+      <tbody id="tb"></tbody>
+    </table></div>
+  </section>
+
+  <section class="card" id="vencido">
+    <h2>Ya vencido en el depósito</h2>
+    <p class="nota">Lotes con fecha de vencimiento pasada que siguen en stock, valorizados al costo.</p>
+    <div class="tbl"><table>
+      <thead><tr><th class="l">Artículo</th><th class="l">Proveedor</th><th>Venció</th><th>Hace</th><th>Unidades</th><th>Al costo</th></tr></thead>
+      <tbody id="tbv"></tbody>
+    </table></div>
+  </section>
+
+  <footer>
+    <b>Cómo se calcula.</b> Stock y lotes del depósito (Digip) y venta de los últimos 30 días del analítico del depósito, leídos de la base de Gescom.
+    Los lotes de cada artículo se venden en orden de vencimiento: la venta esperada hasta que vence un lote es la venta de 30 días ÷ 30 × los días que faltan, y lo que no alcanza a cubrir queda <b>sin vender</b>.
+    <b>En riesgo</b> = sin vender × costo de una unidad (costo del bulto ÷ unidades del bulto). En los quesos y fiambres el costo es por kilo: el peso de cada pieza se estima con los kilos vendidos en Gescom en 30 días ÷ las piezas vendidas (marcado con ≈).
+    Se actualiza solo todos los días a las 8, de lunes a sábado.
+  </footer>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const fmt$=n=>'$ '+Math.round(n).toLocaleString('es-AR');
+const corto=n=>{ const a=Math.abs(n); return a>=1e6? '$'+(n/1e6).toLocaleString('es-AR',{maximumFractionDigits:1})+'M' : a>=1e3? '$'+Math.round(n/1e3).toLocaleString('es-AR')+'K' : '$'+Math.round(n).toLocaleString('es-AR'); };
+const fN=n=>n==null? '—' : Math.round(n).toLocaleString('es-AR');
+const fF=s=>s? s.slice(8,10)+'/'+s.slice(5,7)+'/'+s.slice(0,4) : '—';
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const clsD=d=>d<=7?'d1':d<=15?'d2':d<=30?'d3':'d4';
+let D=null, plazo='', sortK='riesgo', sortD=-1;
+
+function enPlazo(d){ if(!plazo) return true; if(plazo==='7') return d<=7; if(plazo==='15') return d>7&&d<=15; if(plazo==='30') return d>15&&d<=30; return d>30; }
+function dibujar(){
+  if(!D) return;
+  const fp=$('fProv').value, q=$('fBus').value.trim().toLowerCase(), todos=$('fTodos').checked;
+  const pasa=r=>(!fp||r.prov===fp) && (!q||r.desc.toLowerCase().includes(q)||String(r.art).includes(q));
+  const base=D.filas.filter(pasa), R=base.filter(r=>enPlazo(r.dias));
+  // indicadores (con el proveedor y la busqueda elegidos; el plazo no corre aca, salvo en el total del plazo)
+  const enR=base.filter(r=>r.sin>0), tot=enR.reduce((a,r)=>a+(r.riesgo||0),0), sinU=enR.reduce((a,r)=>a+r.sin,0);
+  const sem=enR.filter(r=>r.dias<=7), semT=sem.reduce((a,r)=>a+(r.riesgo||0),0);
+  const V=D.vencidos.filter(pasa), venT=V.reduce((a,r)=>a+(r.importe||0),0);
+  const sinCosto=enR.filter(r=>r.riesgo==null).length;
+  $('kpis').innerHTML=[
+    ['var(--rojo)','Plata en riesgo',fmt$(tot),`${enR.length} artículos que no se venden a tiempo`+(sinCosto? ` · ${sinCosto} sin costo cargado` : '')],
+    ['var(--naranja)','Vence en 7 días o menos',fmt$(semT),`${sem.length} artículos`],
+    ['var(--celeste)','Unidades sin vender',fN(sinU),'Antes de su vencimiento'],
+    ['var(--violeta)','Ya vencido',fmt$(venT),`${V.length} artículos con lotes vencidos`],
+    ['var(--verde)','Por vencer en el depósito',fN(base.length),`Artículos con lotes hasta ${Math.max(0,...base.map(r=>r.dias))} días`]
+  ].map(k=>`<div class="kpi" style="--kc:${k[0]}"><div class="l">${k[1]}</div><div class="v">${k[2]}</div><div class="n">${esc(k[3])}</div></div>`).join('');
+  // tabla principal
+  const L=R.filter(r=>todos||r.sin>0).sort((a,b)=>{ const x=a[sortK], y=b[sortK]; if(x==null&&y==null) return 0; if(x==null) return 1; if(y==null) return -1; return (typeof x==='string'? x.localeCompare(y) : x-y)*sortD; });
+  const max=Math.max(1,...L.map(r=>r.riesgo||0));
+  document.querySelectorAll('#riesgo th[data-k]').forEach(th=>{ th.setAttribute('aria-sort', th.dataset.k===sortK? (sortD>0?'ascending':'descending') : 'none'); th.textContent=th.textContent.replace(/ [▲▼]$/,'')+(th.dataset.k===sortK? (sortD>0?' ▲':' ▼') : ''); });
+  $('tb').innerHTML= L.length? L.map(r=>`<tr${r.sin>0?'':' class="cero"'}>
+      <td class="l art">${esc(r.desc)}<small>Código ${esc(r.art)}${r.lotes>1? ` · ${r.lotes} lotes` : ''}${r.peso? ` · ≈${r.peso.toLocaleString('es-AR')} kg por pieza` : ''}</small></td>
+      <td class="l">${esc(r.prov)}</td><td>${fF(r.vence)}</td><td><span class="dias ${clsD(r.dias)}">${r.dias}</span></td>
+      <td>${fN(r.stock)}</td><td>${fN(r.venta30)}</td><td class="sinv">${fN(r.sin)}</td>
+      <td>${r.riesgo==null? '<span class="est">sin costo</span>' : `<div class="riesgo"><span title="${fmt$(r.riesgo)}">${r.peso? '≈' : ''}${corto(r.riesgo)}</span><span class="bar"><i style="width:${(r.riesgo||0)/max*100}%"></i></span></div>`}</td></tr>`).join('')
+    : '<tr><td colspan="8" class="vacio l">Ningún artículo con estos filtros.</td></tr>';
+  // vencidos
+  $('tbv').innerHTML= V.length? V.map(r=>`<tr><td class="l art">${esc(r.desc)}<small>Código ${esc(r.art)}${r.peso? ` · ≈${r.peso.toLocaleString('es-AR')} kg por pieza` : ''}</small></td><td class="l">${esc(r.prov)}</td><td>${fF(r.vence)}</td><td><span class="dias dv">${Math.abs(r.dias)} d</span></td><td>${fN(r.unidades)}</td><td>${r.importe==null? '<span class="est">sin costo</span>' : (r.peso? '≈' : '')+fmt$(r.importe)}</td></tr>`).join('')
+    : '<tr><td colspan="6" class="vacio l">No hay lotes vencidos con estos filtros.</td></tr>';
+}
+document.querySelectorAll('.chips button').forEach(b=>b.addEventListener('click',()=>{ plazo=b.dataset.p; document.querySelectorAll('.chips button').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); dibujar(); }));
+document.querySelectorAll('#riesgo th[data-k]').forEach(th=>{ const f=()=>{ const k=th.dataset.k; if(sortK===k) sortD=-sortD; else { sortK=k; sortD=(k==='desc'||k==='prov'||k==='vence'||k==='dias')? 1 : -1; } dibujar(); };
+  th.addEventListener('click',f); th.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); f(); } }); });
+['fProv','fTodos'].forEach(id=>$(id).addEventListener('change',dibujar));
+$('fBus').addEventListener('input',dibujar);
+(async()=>{
+  try{
+    const r=await fetch('datos.json?t='+Date.now(),{cache:'no-store'}); if(!r.ok) throw new Error('no se encontró datos.json ('+r.status+')');
+    D=await r.json();
+    const st=new Date(D.stock_al), stAR=isNaN(st)? '' : new Date(st.getTime()-3*3600e3).toISOString();
+    $('act').textContent=`Stock del depósito al ${stAR? fF(stAR.slice(0,10))+' '+stAR.slice(11,16)+' hs' : '—'} · venta 30 días al ${fF(D.venta_al)}`;
+    const provs=[...new Set([...D.filas,...D.vencidos].map(x=>x.prov).filter(Boolean))].sort();
+    $('fProv').innerHTML='<option value="">Todos</option>'+provs.map(p=>`<option value="${esc(p)}">${esc(p)}</option>`).join('');
+    dibujar();
+  }catch(e){ $('err').hidden=false; $('err').textContent='No se pudieron leer los datos: '+e.message; $('act').textContent=''; }
+})();
+</script>
+</body>
+</html>
