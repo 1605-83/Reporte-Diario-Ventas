@@ -46,20 +46,6 @@ button{font:inherit;cursor:pointer;background:var(--ink);color:#fff;border:0;bor
 #tip{position:fixed;z-index:60;display:none;pointer-events:none;max-width:280px;padding:6px 9px;border-radius:6px;background:#fff;color:#000;border:1px solid #000;font-size:.8rem;font-weight:600;line-height:1.3;box-shadow:0 2px 10px rgba(0,0,0,.6)}
 .kpi.c1{--kc:#3DDBB4}.kpi.c2{--kc:#FFD23F}.kpi.c3{--kc:#5AA9FF}.kpi.c4{--kc:#FF7A66}
 h2{font-size:1.15rem;margin:30px 0 0;font-weight:800}
-/* destacados del dia (pedido de Bruno, 29/10/2026) */
-.dest-cab{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 16px;margin-top:30px}
-.dest-cab h2{margin:0}
-.dest-cab label{display:flex;align-items:center;gap:6px;font-size:.85rem}
-.kpi.dest-c .v{font-size:clamp(1.1rem,1.9vw,1.5rem)}
-.kpi.dest-c .q{font-size:.95rem;font-weight:700;color:var(--kc);margin-top:2px}
-.kpi.dest-c ol{margin:8px 0 0;padding:6px 0 0 18px;border-top:1px solid #333;font-size:.78rem;color:#C9D4D2}
-.kpi.dest-c ol li{margin:2px 0}
-.kpi.dest-c ol b{color:#fff}
-.dest-t{min-width:900px}
-.dest-t td.l,.dest-t th.l{text-align:left}
-.dest-t .gan{display:inline-block;margin-left:6px;padding:0 7px;border-radius:999px;font-size:.72rem;font-weight:800;color:#000;background:var(--kc,#FFD23F)}
-.dest-nota{margin:8px 0 0;font-size:.78rem;color:#C9D4D2;max-width:120ch}
-.dest-nota b{color:#fff}
 .nota{font-size:.82rem;color:#C9DAD7;margin:4px 0 0}
 .tbl{overflow-x:auto;margin-top:12px;color:#000;border:1px solid #fff;border-radius:8px;background:var(--panel)}
 table{width:100%;border-collapse:collapse;font-size:1.02rem;min-width:1180px}
@@ -142,16 +128,6 @@ tr.det td:first-child{padding-left:34px}
 
 <div id="app">
   <section class="kpis" id="kpis"></section>
-
-  <section id="destacados" aria-labelledby="destTit">
-    <div class="dest-cab">
-      <h2 id="destTit">Destacados del día</h2>
-      <label>Día <select id="fDest" aria-label="Día de los destacados"></select></label>
-    </div>
-    <div class="kpis dest" id="destCards"></div>
-    <div class="tbl"><table class="dest-t"><thead id="dHead"></thead><tbody id="dBody"></tbody></table></div>
-    <p class="dest-nota">Por fecha de carga, con IVA. <b>Mejor del día</b>: venta sobre su objetivo diario (objetivo del mes ÷ días hábiles). <b>Pedidos</b>: clientes con pedido en el día (un pedido facturado en Lago Puelo y Elebes cuenta una vez). <b>Ruta</b>: clientes de su cartera con visita ese día que hicieron pedido. <b>Combos</b>: combos vendidos en el día (se cuentan desde el 20/10/2026).</p>
-  </section>
 
   <h2>Total equipo de ventas</h2>
   <div class="tbl"><table><thead id="eqHead"></thead><tbody id="eqBody"></tbody></table></div>
@@ -250,13 +226,10 @@ function procesar(txt, nombre, ymPedido, dia){
   const icat=H.indexOf('Categoria'), icar=H.indexOf('FechaCarga'), ient=H.indexOf('FechaEntrega'), cargas=new Set();
   const imot=H.indexOf('MotivoDevolucion'), irs=H.indexOf('RazonSocial'), icod=H.indexOf('Codigo'), iart=H.indexOf('Articulo'), motivos={};   // rechazos por vendedor y motivo: {v:{motivo:{imp, comp:Set, cli:{cod:{imp,comp:Set,rs}}}}}
   const add=(o,k,x)=>{o[k]=(o[k]||0)+x;};
-  const porDia={}, rechG={}, DV={};
+  const porDia={}, rechG={};
   for(const r of R){
     const v=parseInt(r[I.cv],10); if(isNaN(v)) continue;
     const car=icar>=0? (r[icar]||'').trim() : ''; if(car) cargas.add(car);
-    // destacados del dia: venta, pedidos y clientes de cada vendedor por fecha de carga (todos los dias, sin importar el filtro)
-    if(car && VEND.has(v)){ const nro=(r[I.nro]||'').trim(), t3=nro.slice(0,3).toUpperCase();
-      if(t3!=='NCR'&&t3!=='NDB'){ const dd=DV[car]||(DV[car]={}), x=dd[v]||(dd[v]={venta:0,cli:new Set()}); x.venta+=num(r[I.imp]); x.cli.add(String(r[I.cli]).trim().replace(/^0+(?=.)/,'')); } }
     if(dia && car!==dia) continue;
     let fx='';
     if(!dia){   // el CSV del mes trae los renglones con cualquiera de las tres fechas en el mes: se queda con los de la fecha elegida
@@ -327,7 +300,7 @@ function procesar(txt, nombre, ymPedido, dia){
   const corte= st? `${st[3]}/${st[2]}/${st[1]} ${st[4]}:${st[5]}` : ult.split('-').reverse().join('/');
   // dias de carga del mes (para el selector Dia), del mas nuevo al mas viejo
   const diasCarga=[...cargas].filter(d=>/^\d{2}-\d{2}-\d{4}$/.test(d) && d.slice(6)+'-'+d.slice(3,5)===ym).sort((a,b)=>(b.slice(6)+b.slice(3,5)+b.slice(0,2)).localeCompare(a.slice(6)+a.slice(3,5)+a.slice(0,2)));
-  return {vendedores,equipo,dT,dH,ym,mes:MESES[mo-1]+' '+y,corte,conObj:!!OBJ,objCat:(CFG.objCatPorMes||{})[ym]||null,dia:dia||'',fObj,diasCarga,motivos,porDia,rechG,DV};
+  return {vendedores,equipo,dT,dH,ym,mes:MESES[mo-1]+' '+y,corte,conObj:!!OBJ,objCat:(CFG.objCatPorMes||{})[ym]||null,dia:dia||'',fObj,diasCarga,motivos,porDia,rechG};
 }
 
 // ---- Dibujo ----
@@ -511,52 +484,6 @@ function filaMotivos(k,cod,quien,ncols,span,g,soloTabla){
 const btnP=(k,ab,txt)=>`<button class="tg" type="button" data-pg="${k}" aria-expanded="${ab}" aria-label="Ver categorías de ${txt}">${ab?'−':'+'}</button>`;
 
 const DIAS_SEM=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
-// ---- Destacados del dia (pedido de Bruno, 29/10/2026): mejor del dia, mas pedidos, recorrio la ruta y foco en combos ----
-// combos: vivo/combos.json (robot de combos, cada 15 minutos) trae porDia = {aaaa-mm-dd: {vendedor: [combos, clientes]}}
-let COMBOS=null, diaDest='', dSortK='alc', dSortD=-1;
-const cargarCombos=()=>fetch('vivo/combos.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok? r.json() : null).then(j=>{ COMBOS=j; if(D) renderDest(); }).catch(()=>{});
-cargarCombos(); setInterval(cargarCombos, 10*60*1000);
-const LETRA_DIA=['','L','M','X','J','V','S'];
-function renderDest(){
-  const dias=D.diasCarga||[]; $('destacados').hidden=!dias.length; if(!dias.length) return;
-  if(!dias.includes(diaDest)) diaDest= D.dia && dias.includes(D.dia)? D.dia : dias[0];
-  $('fDest').innerHTML=dias.map(d=>{ const [dd,mm,yy]=d.split('-'); return `<option value="${d}">${DIAS_SEM[new Date(+yy,+mm-1,+dd).getDay()]} ${dd}/${mm}</option>`; }).join('');
-  $('fDest').value=diaDest;
-  const [dd,mm,yy]=diaDest.split('-'), letra=LETRA_DIA[new Date(+yy,+mm-1,+dd).getDay()]||'', iso=`${yy}-${mm}-${dd}`;
-  const dv=(D.DV||{})[diaDest]||{}, combosOk=!!(COMBOS&&COMBOS.porDia&&COMBOS.mes===iso.slice(0,7)), cb=combosOk? (COMBOS.porDia[iso]||{}) : {};
-  const norm=s=>String(s).trim().replace(/^0+(?=.)/,'');
-  const F=D.vendedores.map(v=>{ const x=dv[v.c]||{venta:0,cli:new Set()};
-    const objDia=D.dH? ((v.filas.TOTAL.obj||0)/(D.fObj||1))/D.dH : 0;   // objetivo del mes / dias habiles
-    const cart=CART&&CART.v&&CART.v[String(v.c)], ruta=cart&&letra? cart.filter(k=>k[5]===letra) : null;
-    const rCon=ruta? ruta.filter(k=>x.cli.has(norm(k[0]))).length : null, c=cb[String(v.c)]||[0,0];
-    return {c:v.c,n:v.n,venta:x.venta,objDia,alc:objDia? x.venta/objDia : null,ped:x.cli.size,ruta:ruta? ruta.length : null,rCon,
-      rP:ruta&&ruta.length? rCon/ruta.length : null,cmb:combosOk? c[0] : null,cmbCli:c[1],cmbP:x.cli.size&&combosOk? c[1]/x.cli.size : null}; });
-  const top=(k,n=3)=>F.filter(f=>f[k]!=null&&f[k]>0).sort((a,b)=>b[k]-a[k]||b.venta-a.venta).slice(0,n);
-  const fp=x=>x==null? '—' : fmtP(x), nom=f=>`${f.c} · ${esc(f.n)}`;
-  const vacia=(cls,tit,txt)=>`<div class="kpi dest-c ${cls}"><div class="l">${tit}</div><div class="v">—</div><div class="n">${txt}</div></div>`;
-  const card=(cls,tit,k,val,sub)=>{ const t=top(k); if(!t.length) return vacia(cls,tit,'Sin datos para este día');
-    return `<div class="kpi dest-c ${cls}"><div class="l">${tit}</div><div class="v">${nom(t[0])}</div><div class="q">${val(t[0])}</div><div class="n">${sub(t[0])}</div>`
-      +(t.length>1? `<ol start="2">${t.slice(1).map(f=>`<li>${nom(f)} · <b>${val(f)}</b></li>`).join('')}</ol>` : '')+'</div>'; };
-  $('destCards').innerHTML=[
-    card('c2','Mejor del día','alc',f=>fp(f.alc)+' del objetivo',f=>`${fmt$(f.venta)} vendidos · objetivo del día ${fmt$(f.objDia)}`),
-    card('c1','Más pedidos','ped',f=>`${fmtN(f.ped)} pedidos`,f=>`${fmt$(f.venta)} vendidos`),
-    card('c3','Recorrió la ruta','rP',f=>`${fp(f.rP)} de la ruta`,f=>`${fmtN(f.rCon)} de ${fmtN(f.ruta)} clientes de la ruta con pedido`),
-    combosOk? card('c4','Foco en combos','cmb',f=>`${fmtN(f.cmb)} combos`,f=>`${fmtN(f.cmbCli)} clientes · ${fp(f.cmbP)} de sus pedidos`)
-      : vacia('c4','Foco en combos',COMBOS? 'Sin datos de combos para este mes' : 'Cargando combos…')
-  ].join('');
-  // tabla de todos los vendedores del dia; "1°" marca al ganador de cada indicador
-  const gan={alc:top('alc',1)[0],ped:top('ped',1)[0],rP:top('rP',1)[0],cmb:top('cmb',1)[0]};
-  const g1=(k,f,col)=> gan[k]&&gan[k].c===f.c? ` <span class="gan" style="--kc:${col}">1°</span>` : '';
-  const COLS=[['n','Vendedor','l'],['venta','Venta del día',''],['alc','% objetivo del día',''],['ped','Pedidos',''],['rP','Ruta con pedido',''],['cmb','Combos','']];
-  $('dHead').innerHTML='<tr>'+COLS.map(([k,t,c])=>`<th class="s ${c}" data-dk="${k}" tabindex="0" aria-sort="${dSortK===k? (dSortD>0?'ascending':'descending') : 'none'}">${t}${dSortK===k? (dSortD>0?' ▲':' ▼') : ''}</th>`).join('')+'</tr>';
-  const L=[...F].sort((a,b)=>{ const x=a[dSortK], y=b[dSortK]; if(x==null&&y==null) return 0; if(x==null) return 1; if(y==null) return -1; return (typeof x==='string'? x.localeCompare(y) : x-y)*dSortD; });
-  $('dBody').innerHTML=L.map(f=>`<tr><td class="l">${nom(f)}</td><td>${fmt$(f.venta)}</td><td>${fp(f.alc)}${g1('alc',f,'#FFD23F')}</td>`
-    +`<td>${fmtN(f.ped)}${g1('ped',f,'#3DDBB4')}</td><td>${f.ruta==null? '—' : `${fp(f.rP)} <span class="muted">(${fmtN(f.rCon)} de ${fmtN(f.ruta)})</span>`}${g1('rP',f,'#5AA9FF')}</td>`
-    +`<td>${f.cmb==null? '—' : fmtN(f.cmb)}${g1('cmb',f,'#FF7A66')}</td></tr>`).join('');
-}
-$('fDest').addEventListener('change',e=>{ diaDest=e.target.value; renderDest(); });
-$('dHead').addEventListener('click',e=>{ const th=e.target.closest('th[data-dk]'); if(!th) return; const k=th.dataset.dk; if(dSortK===k) dSortD*=-1; else { dSortK=k; dSortD=k==='n'? 1 : -1; } renderDest(); });
-$('dHead').addEventListener('keydown',e=>{ if((e.key==='Enter'||e.key===' ')&&e.target.closest('th[data-dk]')){ e.preventDefault(); e.target.click(); } });
 function arrancar(txt,nombre,ym,dia){
   try{
     D=procesar(txt,nombre,ym,dia);
@@ -577,7 +504,7 @@ function arrancar(txt,nombre,ym,dia){
     if(!D.dia) $('hSub').textContent=`Venta por ${NOMBRE_TIPO[TIPO_F]} · ${$('hSub').textContent}`;
     if(D.dia) $('hSub').textContent=`Venta cargada el ${D.dia.replace(/-/g,'/')} · ${$('hSub').textContent}`;
     $('hSub').hidden=true;   // la fecha de los datos va arriba a la derecha
-    render(); renderDest();
+    render();
   }catch(e){ mostrarError('No se pudo procesar el archivo: '+e.message); }
 }
 function mostrarError(m){ $('estado').firstChild.textContent=m+' Podés abrir el CSV manualmente: '; $('manual').style.display='block'; }
