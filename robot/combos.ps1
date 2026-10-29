@@ -45,5 +45,19 @@ GROUP BY 1, 2
   $out.combos[$cb] = [ordered]@{ v = $v; clientes = $cl ; detalle = $dd }
   "Combo $cb en $($mes): $(($v.Values | Measure-Object -Sum).Sum) en $($v.Count) vendedores"
 }
+# Todos los combos por dia de carga y vendedor (pedido de Bruno, 29/10/2026: indicador "quien se focalizo en combos"
+# del Reporte diario): solo pedidos (VEN), por la fecha de carga, la misma del selector Dia del reporte.
+# porDia = { 'aaaa-mm-dd': { vendedor: [combos, clientes con combo] } }
+$pd = Sql @"
+SELECT substr(v.fecha, 1, 10) AS dia, CAST(v.vendedor AS INTEGER) AS ven, SUM(c.cantidad) AS cant, COUNT(DISTINCT v.cliente) AS clientes
+FROM venta_combos c JOIN ventas v ON v.id = c.venta_id
+WHERE v.tipo = 'VEN' AND substr(v.fecha, 1, 7) = '$mes'
+GROUP BY 1, 2
+"@
+$out.porDia = [ordered]@{}
+foreach ($f in ($pd | Sort-Object dia, { [int]$_.ven })) { if ($null -eq $f.ven -or -not $f.dia) { continue }
+  if (-not $out.porDia.Contains("$($f.dia)")) { $out.porDia["$($f.dia)"] = [ordered]@{} }
+  $out.porDia["$($f.dia)"]["$($f.ven)"] = @([double]$f.cant, [int]$f.clientes) }
+"Combos por dia en $($mes): $($out.porDia.Count) dias"
 $dir = Join-Path (Resolve-Path $Salida) 'vivo'; if (-not (Test-Path $dir)) { New-Item -ItemType Directory $dir | Out-Null }
 [IO.File]::WriteAllText((Join-Path $dir 'combos.json'), ($out | ConvertTo-Json -Depth 6 -Compress), (New-Object Text.UTF8Encoding $false))
