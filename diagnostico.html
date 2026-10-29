@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diagnóstico y plan de acción</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F2F3F5;--card:#fff;--ink:#1F2328;--ink2:#6B7280;--line:#E5E7EB;--negro:#111318;--azul:#2F6FDE;--rojo:#C0392B;--verde:#2E8B4E;--amar:#B7791F}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#F2F3F5; } }
+:root[data-theme="dark"]{ --bg:#F2F3F5; }
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Roboto,system-ui,-apple-system,"Segoe UI",Arial,sans-serif;font-variant-numeric:tabular-nums;line-height:1.4}
+.wrap{max-width:1300px;margin:0 auto;padding:20px 16px 40px}
+.card{background:var(--card);border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.head{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:16px 22px;border:3px solid var(--negro)}
+.head h1{margin:0;font-size:1.4rem;font-weight:900}
+.meta{font-size:.88rem;color:var(--ink2);margin-top:3px}
+.ctrl{display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:.88rem}
+select{font:inherit;font-size:.88rem;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:10px;padding:7px 10px}
+.kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));margin-top:14px;background:var(--negro);color:#fff}
+@media (max-width:1000px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:560px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{padding:14px 18px;border-right:1px solid #2E3138;border-bottom:1px solid #2E3138;min-width:0}
+.kpi .l{font-size:.8rem;color:#D7D9DE}.kpi .v{font-size:1.5rem;font-weight:700;margin:4px 0 2px}.kpi .n{font-size:.8rem;color:#B9BCC4}
+.up{color:#4ADE80}.dn{color:#FF7B72}
+.sec{margin-top:16px;padding:18px 22px;border:3px solid var(--negro)}
+.sec h2{margin:0 0 4px;font-size:1.15rem;font-weight:900}
+.sec .nota{margin:0 0 12px;font-size:.85rem;color:var(--ink2)}
+.sec h3{margin:18px 0 8px;font-size:.98rem}
+.ess{margin:0;padding:0;list-style:none;display:grid;gap:10px}
+.ess li{padding:10px 14px;border-left:5px solid var(--azul);background:#F7F9FC;border-radius:6px;font-size:.92rem}
+.ess li.malo{border-color:var(--rojo);background:#FDF4F3}.ess li.bueno{border-color:var(--verde);background:#F2FAF4}
+.tag{display:inline-block;font-size:.7rem;font-weight:700;letter-spacing:.04em;padding:1px 6px;border-radius:4px;margin-right:6px;vertical-align:1px;background:#E6F0FF;color:var(--azul)}
+.tag.h{background:#FFF4DB;color:var(--amar)}
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:.86rem}
+th,td{padding:7px 8px;border-bottom:1px solid #EDEDED;text-align:left;white-space:nowrap}
+th{font-size:.74rem;text-transform:uppercase;color:#fff;background:var(--negro);position:sticky;top:0}
+td.r,th.r{text-align:right}
+tr.tot td{font-weight:900;background:#FAFAFA}
+.neg{color:var(--rojo);font-weight:700}.pos{color:var(--verde);font-weight:700}
+.chip{display:inline-block;font-size:.72rem;font-weight:700;padding:2px 7px;border-radius:999px;background:#EEF0F3}
+.chip.CAE,.chip.DORMIDO{background:#FDE2DF;color:var(--rojo)}.chip.CRECE,.chip.NUEVO{background:#DDF3E4;color:var(--verde)}.chip.ESTRELLA{background:#FFF1C2;color:#8A5A00}
+.barra{height:8px;border-radius:4px;background:#E9ECF1;min-width:60px;position:relative}.barra i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--azul)}
+.graf{width:100%;height:220px;display:block}
+.leyenda{font-size:.8rem;color:var(--ink2);display:flex;gap:16px;flex-wrap:wrap;margin-top:6px}.leyenda i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.plan td{white-space:normal;vertical-align:top}.plan td:first-child{font-weight:900;font-size:1.1rem}
+.dos{display:grid;grid-template-columns:1fr 1fr;gap:20px}@media (max-width:900px){.dos{grid-template-columns:1fr}}
+.cargando{padding:40px;text-align:center;color:var(--ink2)}
+footer{margin-top:16px;font-size:.78rem;color:var(--ink2);text-align:center;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card head">
+    <div><h1>Diagnóstico y plan de acción · LP - ELEBES</h1><div class="meta" id="meta">Cargando…</div></div>
+    <div class="ctrl">
+      <label>Comparar <select id="fA" aria-label="Mes base"></select></label>
+      <label>contra <select id="fB" aria-label="Mes a analizar"></select></label>
+      <label>Fecha <select id="fFecha" aria-label="Tipo de fecha"><option value="car">De pedido (carga)</option><option value="comp">De comprobante</option><option value="ent">De entrega</option></select></label>
+      <select id="fEmp" aria-label="Empresa"><option value="">LP + Elebes</option><option value="LP">Lago Puelo</option><option value="ELB">Elebes</option></select>
+    </div>
+  </div>
+  <div id="cuerpo"><div class="card sec cargando">Bajando las ventas de los dos meses…</div></div>
+  <footer>Fuente: base de Gescom (ventas por renglón, cartera de clientes y stock disponible). Importes con IVA, netos de devoluciones; el margen usa el costo de cada renglón.
+    Todo se compara por día hábil (lunes a viernes con ventas). <b>[HECHO]</b> sale de los datos; <b>[HIPÓTESIS]</b> es una explicación posible que hay que verificar.</footer>
+</div>
+<script>
+// Diagnostico de ventas mes contra mes, al estilo del informe "Diagnostico y plan de accion" (pedido de Bruno, 29/10/2026)
+const RAW='https://raw.githubusercontent.com/1605-83/Reporte-Diario-Ventas/main/';
+const STOCK='https://raw.githubusercontent.com/1605-83/Lista-Precios-Octubre-2026/main/stock-unidades.json';
+const FERIADOS=new Set(['2026-11-23','2026-12-08','2026-12-25']);   // para contar los dias habiles que faltan
+const MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const num=s=>{ s=String(s??'').trim(); return s? (parseFloat(s.replace(/\./g,'').replace(',','.'))||0) : 0; };
+const dmyIso=d=>{ const m=String(d||'').trim().match(/^(\d{2})-(\d{2})-(\d{4})/); return m? m[3]+'-'+m[2]+'-'+m[1] : ''; };
+const dm=s=>s? s.slice(8)+'/'+s.slice(5,7) : '';
+const nomMes=ym=>MESES[+ym.slice(5)-1];
+const titulo=s=>{ s=(s||'').trim(); if(!(s===s.toUpperCase() && /[A-ZÁÉÍÓÚÑ]/.test(s))) return s; return s.toLowerCase().replace(/(^|[^a-záéíóúñü])([a-záéíóúñü])/g,(m,a,b)=>a+b.toUpperCase()); };
+const fN=n=>Math.round(n).toLocaleString('es-AR');
+const f1=n=>n.toLocaleString('es-AR',{minimumFractionDigits:1,maximumFractionDigits:1});
+const fM=n=>'$ '+(n/1e6).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2})+' M';
+const fMil=n=>'$ '+fN(n/1e3)+' mil';
+const f$=n=>'$ '+fN(n);
+const pct=(b,a)=>a>0? (b/a-1)*100 : (b>0? Infinity : 0);
+const fP=p=>!isFinite(p)? 'nuevo' : (p>0?'+':'')+f1(p)+'%';
+const cP=p=>`<span class="${p<-0.05?'neg':p>0.05?'pos':''}">${fP(p)}</span>`;
+const diaSem=s=>new Date(s+'T12:00:00Z').getUTCDay();
+const habil=s=>{ const d=diaSem(s); return d>=1 && d<=5; };
+const empDe=s=>/ELEBES/i.test(s)? 'ELB' : 'LP';
+
+let FILAS=[], CART={}, CFG=null, STK=null, MESES_DISP=[], CORTE='';
+
+function parseCSV(t){ const rows=[]; let row=[], f='', q=false;
+  for(let i=0;i<t.length;i++){ const ch=t[i];
+    if(q){ if(ch==='"'){ if(t[i+1]==='"'){f+='"';i++;} else q=false; } else f+=ch; }
+    else if(ch==='"') q=true; else if(ch===';'){ row.push(f); f=''; }
+    else if(ch==='\n'){ row.push(f.replace(/\r$/,'')); rows.push(row); row=[]; f=''; } else f+=ch; }
+  if(f!==''||row.length){ row.push(f.replace(/\r$/,'')); rows.push(row); } return rows; }
+
+// los archivos de cada mes traen renglones por cualquiera de las tres fechas: se juntan sin repetir renglones
+function leer(textos){
+  const vistos=new Set(), out=[];
+  for(const txt of textos){
+    const lineas=txt.split('\n'); const H=lineas.shift().replace(/\r$/,'').split(';').map(h=>h.trim()); const ix=n=>H.indexOf(n);
+    const I={cli:ix('Cliente'),fc:ix('FechaComprobante'),fe:ix('FechaEntrega'),tipo:ix('TipoDeVenta'),emp:ix('Empresa'),cod:ix('Codigo'),cant:ix('CantBase'),neto:ix('ImporteNetoItem'),imp:ix('ImporteItem'),rs:ix('RazonSocial'),cv:ix('CodVendedor'),vn:ix('Vendedor'),art:ix('Articulo'),costo:ix('PrecioCosto'),prov:ix('Proveedor'),cat:ix('Categoria'),car:ix('FechaCarga'),mot:ix('MotivoDevolucion')};
+    for(const l of lineas){ const s=l.replace(/\r$/,''); if(!s || vistos.has(s)) continue; vistos.add(s);
+      const r=parseCSV(s)[0]; if(!r || r.length<10) continue;
+      const v=parseInt(r[I.cv],10);
+      out.push({cli:(r[I.cli]||'').trim(), fc:(r[I.fc]||'').trim().slice(0,10), fe:dmyIso(r[I.fe]), car:dmyIso(r[I.car]), tipo:(r[I.tipo]||'').trim(), emp:empDe(r[I.emp]),
+        cod:(r[I.cod]||'').trim(), cant:num(r[I.cant]), neto:num(r[I.neto]), imp:num(r[I.imp]), rs:(r[I.rs]||'').trim(), v:isNaN(v)? 0 : v, vn:titulo(r[I.vn]),
+        art:(r[I.art]||'').trim(), costo:num(r[I.costo]), prov:(r[I.prov]||'').trim(), cat:(r[I.cat]||'').trim(), mot:(r[I.mot]||'').trim()}); } }
+  return out; }
+
+function grupoDe(prov){ if(!CFG) return 'Otros'; for(const g of CFG.grupos) if((CFG.nomenclador[g]||[]).includes(prov)) return g; return 'Otros'; }
+
+// ---------- calculo de un mes ----------
+function mes(R, ym, tf){
+  const M={ym, R:[], dias:new Set(), porDia:new Map(), bruta:0, dev:0, neto:0, costo:0, compras:new Set(), cliNet:new Map()};
+  for(const x of R){ const f= tf==='comp'? x.fc : tf==='ent'? x.fe : x.car; if(!f || f.slice(0,7)!==ym) continue;
+    x.f=f; M.R.push(x);
+    if(x.imp>0){ M.bruta+=x.imp; M.compras.add(x.cli+'|'+f); if(habil(f)) M.dias.add(f); } else M.dev-=x.imp;
+    M.neto+=x.neto; M.costo+=x.costo;
+    M.porDia.set(f,(M.porDia.get(f)||0)+x.imp); M.cliNet.set(x.cli,(M.cliNet.get(x.cli)||0)+x.imp); }
+  M.nd=M.dias.size||1; M.neta=M.bruta-M.dev; M.dia=M.neta/M.nd; M.compDia=M.compras.size/M.nd; M.ticket=M.compras.size? M.bruta/M.compras.size : 0;
+  M.clientes=[...M.cliNet.values()].filter(v=>v>0).length; M.margen=M.neto? (M.neto-M.costo)/M.neto*100 : 0; M.devPct=M.bruta? M.dev/M.bruta*100 : 0;
+  M.ultimo=[...M.dias].sort().pop()||ym+'-01';
+  return M; }
+
+// agrupa los renglones de un mes por una clave: importe neto, compras (cliente-dia), clientes con compra
+function por(M, clave){ const G=new Map();
+  for(const x of M.R){ const k=clave(x); if(k==null) continue; let g=G.get(k); if(!g){ g={k, imp:0, bruta:0, dev:0, neto:0, costo:0, cant:0, comp:new Set(), cli:new Map(), dias:new Set(), x}; G.set(k,g); }
+    g.imp+=x.imp; g.neto+=x.neto; g.costo+=x.costo; g.cant+=x.cant; if(x.imp>0){ g.bruta+=x.imp; g.comp.add(x.cli+'|'+x.f); g.dias.add(x.f); } else g.dev-=x.imp;
+    g.cli.set(x.cli,(g.cli.get(x.cli)||0)+x.imp); }
+  for(const g of G.values()){ g.nCli=[...g.cli.values()].filter(v=>v>0).length; }
+  return G; }
+
+// tabla A contra B de una dimension, ordenada por aporte a la variacion
+function comparar(A,B,clave){ const GA=por(A,clave), GB=por(B,clave), tot=B.dia-A.dia, out=[];
+  for(const k of new Set([...GA.keys(),...GB.keys()])){ const a=GA.get(k), b=GB.get(k), da=a? a.imp/A.nd : 0, db=b? b.imp/B.nd : 0;
+    out.push({k, a, b, da, db, var:pct(db,da), aporte: tot? (db-da)/tot*100 : 0, ca:a? a.comp.size/A.nd : 0, cb:b? b.comp.size/B.nd : 0, cliA:a? a.nCli : 0, cliB:b? b.nCli : 0,
+      mgB: b&&b.neto? (b.neto-b.costo)/b.neto*100 : 0, mgA: a&&a.neto? (a.neto-a.costo)/a.neto*100 : 0}); }
+  return out.sort((x,y)=>(x.db-x.da)-(y.db-y.da)); }
+
+function diasRestantes(ym, desde){ let n=0; const [y,m]=ym.split('-').map(Number); const fin=new Date(Date.UTC(y,m,0));
+  for(let d=new Date(desde+'T12:00:00Z'); d<=fin; d.setUTCDate(d.getUTCDate()+1)){ const s=d.toISOString().slice(0,10); if(s>desde && habil(s) && !FERIADOS.has(s)) n++; } return n; }
+
+// ---------- dibujo ----------
+function dibujar(){
+  const ya=$('fA').value, yb=$('fB').value, tf=$('fFecha').value, emp=$('fEmp').value;
+  const R=emp? FILAS.filter(x=>x.emp===emp) : FILAS;
+  const A=mes(R,ya,tf), B=mes(R,yb,tf);
+  const nA=nomMes(ya), nB=nomMes(yb), parcial=B.ultimo < finDeMes(yb);
+  $('meta').textContent=`${titulo(nA)} (${A.nd} días hábiles) contra ${nB}${parcial? ' a la fecha' : ''} (${B.nd} días) · corte ${CORTE} · ${emp==='LP'?'Lago Puelo':emp==='ELB'?'Elebes':'Lago Puelo + Elebes'}`;
+  let h='';
+
+  // KPIs
+  // pts: indicadores en porcentaje, la variacion va en puntos; inv: bajar es bueno
+  const k=(l,va,vb,f,nota,inv,pts)=>{ const p=pts? vb-va : pct(vb,va), bueno=inv? p<0 : p>0, txt=pts? (p>0?'+':'')+f1(p)+' pts' : fP(p);
+    return `<div class="kpi"><div class="l">${l}</div><div class="v">${f(vb)}</div><div class="n"><span class="${Math.abs(p)<0.05?'':bueno?'up':'dn'}">${txt}</span> · ${nA}: ${f(va)}${nota? ' · '+nota : ''}</div></div>`; };
+  h+=`<div class="card kpis">${k('Venta neta por día hábil',A.dia,B.dia,fM)}${k('Compras por día',A.compDia,B.compDia,f1,'cliente-día')}${k('Ticket por compra',A.ticket,B.ticket,f$,'bruto')}
+    ${k('Clientes con compra',A.clientes,B.clientes,fN, parcial? 'mes parcial' : '')}${k('Devoluciones / venta bruta',A.devPct,B.devPct,v=>f1(v)+'%','',true,true)}${k('Margen bruto',A.margen,B.margen,v=>f1(v)+'%','costo real',false,true)}</div>`;
+
+  // datos para el resto
+  const vend=comparar(A,B,x=>x.v), canal=comparar(A,B,x=>canalDe(x.cli)), grp=comparar(A,B,x=>grupoDe(x.prov)), cat=comparar(A,B,x=>x.prov+' · '+x.cat);
+  const art=articulos(A,B), cli=clientes(A,B);
+  const dTot=B.dia-A.dia, fx=(B.compDia-A.compDia)*A.ticket, frec= (B.bruta/B.nd-A.bruta/A.nd)? fx/(B.bruta/B.nd-A.bruta/A.nd)*100 : 0;
+
+  // lo esencial
+  const ess=[]; const sube=dTot>=0;
+  ess.push([sube?'bueno':'malo','HECHO',`La venta neta por día hábil ${sube?'sube':'baja'} ${fP(pct(B.dia,A.dia))}: de ${fM(A.dia)} a ${fM(B.dia)}. Las compras por día pasan de ${f1(A.compDia)} a ${f1(B.compDia)} (${fP(pct(B.compDia,A.compDia))}) y el ticket de ${f$(A.ticket)} a ${f$(B.ticket)} (${fP(pct(B.ticket,A.ticket))}). ${frec<0? `Las compras por día van en sentido contrario: la variación es toda de <b>ticket</b> (cuánto compra cada cliente cada vez).` : frec>=50? `Es sobre todo <b>frecuencia</b> (${fN(Math.min(100,frec))}% de la variación de la venta bruta).` : `Pesa más el <b>ticket</b> (${fN(100-frec)}%) que la frecuencia (${fN(frec)}%).`}`]);
+  // pedidos grandes: una compra (cliente-dia) de mas de $3 M mueve mucho el promedio
+  const sinG=M=>{ const G=por(M,x=>x.cli+'|'+x.f); let g=0, n=0; for(const x of G.values()) if(x.bruta>3e6){ g+=x.imp; n++; } return {n, dia:(M.neta-g)/M.nd}; };
+  const gA=sinG(A), gB=sinG(B);
+  if(gA.n+gB.n) ess.push(['','HECHO',`Parte es ruido de pedidos únicos: ${nA} tuvo ${gA.n} compras de más de $3 M y ${nB} ${gB.n}. Sin ellas la venta por día va de ${fM(gA.dia)} a ${fM(gB.dia)} (${fP(pct(gB.dia,gA.dia))}), no ${fP(pct(B.dia,A.dia))}.`]);
+  const vNeg=vend.filter(v=>(v.db-v.da)*(sube?1:-1)<0 || !sube).filter(v=>v.db-v.da<0).slice(0,3);
+  if(!sube && vNeg.length) ess.push(['malo','HECHO',`Tres vendedores explican ${fN(vNeg.reduce((s,v)=>s+v.aporte,0))}% de la caída: ${vNeg.map(v=>`<b>${v.k} ${esc(nomV(v))}</b> (${fP(v.var)})`).join(', ')}.`]);
+  if(sube){ const vPos=[...vend].reverse().slice(0,3); ess.push(['bueno','HECHO',`Los que más empujan: ${vPos.map(v=>`<b>${v.k} ${esc(nomV(v))}</b> (${fP(v.var)})`).join(', ')}.`]); }
+  const c0=canal[sube? canal.length-1 : 0]; if(c0) ess.push([sube?'bueno':'malo','HECHO',`Por canal, <b>${esc(c0.k)}</b> ${sube?'aporta':'explica'} ${fN(c0.aporte)}% de la variación (${fP(c0.var)}; compras por día de ${f1(c0.ca)} a ${f1(c0.cb)}).`]);
+  const g0=grp.filter(g=>sube? g.db>g.da : g.db<g.da).slice(0,2); if(g0.length) ess.push([sube?'bueno':'malo','HECHO',`Por proveedor: ${g0.map(g=>`<b>${esc(g.k)}</b> ${fP(g.var)} (${fN(g.aporte)}% de la variación)`).join(' y ')}.`]);
+  if(art.critA) ess.push(['malo','HECHO',`${art.criticos.length} artículos que venden fuerte están sin stock o con menos de 7 días hábiles de cobertura; pesan ${f1(art.critPct)}% de la venta de ${nA}.${STK? '' : ' (sin dato de stock)'}`]);
+  if(art.sobre.length) ess.push(['','HECHO',`En paralelo, ${art.sobre.length} artículos tienen más de 60 días de stock o no rotan: ${fM(art.sobreVal)} a costo inmovilizados.`]);
+  ess.push(['malo','HECHO',`${fN(cli.perdidos.length)} de los ${fN(cli.nA)} clientes que compraron en ${nA} no compraron en ${nB}${parcial?' a la fecha':''} (${fM(cli.perdVal)} de venta de ${nA}); ${fN(cli.frecuentes)} de ellos compraban 2 veces o más. Entraron ${fN(cli.nuevos)} clientes que no habían comprado en ${nA}.`]);
+  if(B.devPct>A.devPct+0.5) ess.push(['malo','HECHO',`Las devoluciones suben de ${f1(A.devPct)}% a ${f1(B.devPct)}% de la venta bruta; el motivo principal es "${esc(motivos(B)[0]?.k||'—')}".`]);
+  ess.push(['','HIPÓTESIS',`Si la caída de compras por día no se explica por quiebres de stock, la causa más probable es menos visitas efectivas o menos conversión de visita a pedido: hay que cruzar con el GPS y las visitas de Axum para separarlas.`]);
+  h+=`<div class="card sec"><h2>Lo esencial</h2><p class="nota">Lo que más mueve la venta entre ${nA} y ${nB}, de mayor a menor peso.</p><ul class="ess">${ess.map(([c,t,s])=>`<li class="${c}"><span class="tag${t==='HIPÓTESIS'?' h':''}">${t}</span>${s}</li>`).join('')}</ul></div>`;
+
+  // grafico diario
+  h+=`<div class="card sec"><h2>1. Venta por día</h2><p class="nota">Venta neta de cada día hábil. La línea punteada es el promedio de cada mes.</p>${grafico(A,B)}
+    <div class="leyenda"><span><i style="background:#9DB7E8"></i>${titulo(nA)} · ${fM(A.dia)} por día</span><span><i style="background:var(--azul)"></i>${titulo(nB)} · ${fM(B.dia)} por día</span></div>
+    <div class="tw" style="margin-top:12px"><table><thead><tr><th>Indicador</th><th class="r">${titulo(nA)}</th><th class="r">${titulo(nB)}</th><th class="r">Variación por día</th></tr></thead><tbody>
+    <tr><td>Venta neta c/IVA</td><td class="r">${fM(A.neta)}</td><td class="r">${fM(B.neta)}</td><td class="r">${cP(pct(B.dia,A.dia))}</td></tr>
+    <tr><td>Compras (cliente-día con venta)</td><td class="r">${fN(A.compras.size)} (${f1(A.compDia)}/día)</td><td class="r">${fN(B.compras.size)} (${f1(B.compDia)}/día)</td><td class="r">${cP(pct(B.compDia,A.compDia))}</td></tr>
+    <tr><td>Ticket por compra (bruto)</td><td class="r">${f$(A.ticket)}</td><td class="r">${f$(B.ticket)}</td><td class="r">${cP(pct(B.ticket,A.ticket))}</td></tr>
+    <tr><td>Clientes con compra en el mes</td><td class="r">${fN(A.clientes)}</td><td class="r">${fN(B.clientes)}</td><td class="r">${parcial?'mes parcial':cP(pct(B.clientes,A.clientes))}</td></tr>
+    <tr><td>Devoluciones sobre venta bruta</td><td class="r">${f1(A.devPct)}%</td><td class="r">${f1(B.devPct)}%</td><td class="r">${f1(B.devPct-A.devPct)} puntos</td></tr>
+    <tr><td>Margen bruto (costo real)</td><td class="r">${f1(A.margen)}%</td><td class="r">${f1(B.margen)}%</td><td class="r">${f1(B.margen-A.margen)} puntos</td></tr></tbody></table></div></div>`;
+
+  // vendedores
+  const base=v=>(CART[v]||[]).length;
+  h+=`<div class="card sec"><h2>2. Dónde se mueve: vendedor, canal y proveedor</h2><p class="nota">Venta neta por día hábil de la empresa. "Aporte" es la parte de la variación total que explica cada fila (suman 100%). Ordenado de lo que más resta a lo que más suma.</p>
+    <h3>2.1 Por vendedor</h3><div class="tw"><table><thead><tr><th>Cód.</th><th>Vendedor</th><th class="r">${nA} $/día</th><th class="r">${nB} $/día</th><th class="r">Variación</th><th class="r">Aporte</th><th class="r">Compras/día</th><th class="r">Clientes ${nA} → ${nB}</th><th class="r">Cartera</th><th class="r">Penetración ${nB}</th><th class="r">Días sin venta ${nB}</th></tr></thead><tbody>
+    ${vend.filter(v=>v.da||v.db).map(v=>{ const b=base(v.k), sv=diasSin(B,v.b); return `<tr><td>${v.k}</td><td>${esc(nomV(v))}</td><td class="r">${fMil(v.da)}</td><td class="r">${fMil(v.db)}</td><td class="r">${cP(v.var)}</td><td class="r">${f1(v.aporte)}%</td><td class="r">${f1(v.ca)} → ${f1(v.cb)}</td><td class="r">${v.cliA} → ${v.cliB}</td><td class="r">${b||'—'}</td><td class="r">${b? fN(Math.min(v.cliB,b)/b*100)+'%' : '—'}</td><td class="r ${sv>2?'neg':''}">${b? sv : '—'}</td></tr>`; }).join('')}
+    <tr class="tot"><td></td><td>Total</td><td class="r">${fMil(A.dia)}</td><td class="r">${fMil(B.dia)}</td><td class="r">${cP(pct(B.dia,A.dia))}</td><td class="r">100%</td><td class="r">${f1(A.compDia)} → ${f1(B.compDia)}</td><td class="r">${A.clientes} → ${B.clientes}</td><td></td><td></td><td></td></tr></tbody></table></div>
+    <div class="dos"><div><h3>2.2 Por canal</h3>${tablaDim(canal,'Canal',nA,nB,true)}</div><div><h3>2.3 Por proveedor</h3>${tablaDim(grp,'Proveedor',nA,nB,false,true)}</div></div>
+    <h3>2.4 Categorías que más se mueven</h3><div class="dos"><div>${tablaCat(cat.slice(0,10),'Las que más restan')}</div><div>${tablaCat([...cat].reverse().slice(0,10),'Las que más suman')}</div></div></div>`;
+
+  // articulos
+  h+=`<div class="card sec"><h2>3. Artículos: qué rota, qué no y qué falta</h2><p class="nota">Unidades por día hábil de cada artículo en los dos meses${STK? `, y stock disponible al ${esc(STK.corte.slice(8,10)+'/'+STK.corte.slice(5,7)+' '+STK.corte.slice(11,16))} (stock menos pedidos sin facturar)` : ' (no se pudo leer el stock)'}. Cobertura = días hábiles que dura el stock al ritmo de ${nB}.</p>
+    <div class="tw"><table><thead><tr><th>Clase</th><th>Definición</th><th class="r">Art.</th><th class="r">${nA} $/día</th><th class="r">${nB} $/día</th><th class="r">Var.</th><th class="r">Stock a costo</th><th class="r">% venta ${nB}</th></tr></thead><tbody>
+    ${art.clases.map(c=>`<tr><td><span class="chip ${c.k}">${c.k}</span></td><td>${c.def}</td><td class="r">${c.n}</td><td class="r">${fMil(c.a)}</td><td class="r">${fMil(c.b)}</td><td class="r">${c.a>0? cP(pct(c.b,c.a)) : '—'}</td><td class="r">${STK? fM(c.stock) : '—'}</td><td class="r">${f1(c.pB)}%</td></tr>`).join('')}</tbody></table></div>
+    <h3>3.1 Reponer ya (${art.criticos.length} artículos fuertes sin stock o con menos de 7 días)</h3>${STK? tablaArt(art.criticos.slice(0,25),'repo') : '<p class="nota">Sin dato de stock.</p>'}
+    <h3>3.2 Empujar con el stock que ya hay (caen más de 25% y tienen 30 días o más de stock)</h3>${STK? tablaArt(art.empujar.slice(0,15),'emp') : ''}
+    <h3>3.3 Congelar compras y liquidar (más de 60 días de stock o sin venta en ${nB})</h3>${STK? `<p class="nota">${art.sobre.length} artículos con ${fM(art.sobreVal)} a costo; el exceso sobre 45 días es ${fM(art.excesoVal)}.</p>`+tablaArt(art.sobre.slice(0,15),'sob') : ''}</div>`;
+
+  // clientes
+  const pv=[...cli.porVend].sort((a,b)=>b[1].val-a[1].val);
+  h+=`<div class="card sec"><h2>4. Clientes y cartera</h2><p class="nota">Clientes que compraron en ${nA} y no compraron en ${nB}${parcial?' a la fecha':''}. "Frecuentes" = 2 compras o más en ${nA}.</p>
+    <div class="dos"><div><h3>4.1 Clientes perdidos por vendedor</h3><div class="tw"><table><thead><tr><th>Vendedor</th><th class="r">Perdidos</th><th class="r">Frecuentes</th><th class="r">Venta ${nA}</th></tr></thead><tbody>
+      ${pv.slice(0,25).map(([v,o])=>`<tr><td>${v} ${esc(NOMV[v]||'')}</td><td class="r">${o.n}</td><td class="r">${o.fr}</td><td class="r">${fM(o.val)}</td></tr>`).join('')}</tbody></table></div></div>
+    <div><h3>4.2 Clientes perdidos por canal</h3><div class="tw"><table><thead><tr><th>Canal</th><th class="r">Perdidos</th><th class="r">Frecuentes</th><th class="r">Venta ${nA}</th></tr></thead><tbody>
+      ${[...cli.porCanal].sort((a,b)=>b[1].val-a[1].val).map(([c,o])=>`<tr><td>${esc(c)}</td><td class="r">${o.n}</td><td class="r">${o.fr}</td><td class="r">${fM(o.val)}</td></tr>`).join('')}</tbody></table></div></div></div>
+    <h3>4.3 Los 40 clientes perdidos de mayor venta (reactivar primero)</h3><div class="tw"><table><thead><tr><th>Cliente</th><th>Razón social</th><th>Vendedor</th><th>Canal</th><th class="r">Compras ${nA}</th><th class="r">Venta ${nA}</th><th>Última compra</th></tr></thead><tbody>
+      ${cli.perdidos.slice(0,40).map(c=>`<tr><td><b>${esc(c.cli)}</b></td><td>${esc(titulo(c.rs))}</td><td>${c.v} ${esc(NOMV[c.v]||'')}</td><td>${esc(c.canal)}</td><td class="r">${c.comp}</td><td class="r">${f$(c.val)}</td><td>${dm(c.ult)}</td></tr>`).join('')}</tbody></table></div></div>`;
+
+  // margen y devoluciones
+  const mot=motivos(B), dc=devClientes(B);
+  h+=`<div class="card sec"><h2>5. Margen y devoluciones</h2><div class="dos"><div><h3>5.1 Margen bruto por proveedor</h3><div class="tw"><table><thead><tr><th>Proveedor</th><th class="r">${nA}</th><th class="r">${nB}</th><th class="r">Diferencia</th></tr></thead><tbody>
+    ${[...grp].sort((a,b)=>b.db-a.db).map(g=>`<tr><td>${esc(g.k)}</td><td class="r">${f1(g.mgA)}%</td><td class="r">${f1(g.mgB)}%</td><td class="r ${g.mgB<g.mgA-1?'neg':''}">${f1(g.mgB-g.mgA)} pts</td></tr>`).join('')}</tbody></table></div></div>
+    <div><h3>5.2 Devoluciones de ${nB} por motivo</h3><div class="tw"><table><thead><tr><th>Motivo</th><th class="r">Importe</th><th class="r">% del total</th></tr></thead><tbody>
+    ${mot.slice(0,12).map(m=>`<tr><td>${esc(titulo(m.k)||'Sin motivo')}</td><td class="r">${f$(m.v)}</td><td class="r">${f1(m.p)}%</td></tr>`).join('')}</tbody></table></div>
+    <h3>5.3 Los 10 clientes con más devolución en ${nB}</h3><div class="tw"><table><thead><tr><th>Cliente</th><th>Vendedor</th><th class="r">Devuelto</th><th class="r">% de su compra</th></tr></thead><tbody>
+    ${dc.slice(0,10).map(c=>`<tr><td><b>${esc(c.cli)}</b> ${esc(titulo(c.rs))}</td><td>${c.v}</td><td class="r">${f$(c.dev)}</td><td class="r">${f1(c.p)}%</td></tr>`).join('')}</tbody></table></div></div></div></div>`;
+
+  // objetivos
+  const obj=objetivos(B,R);
+  if(obj) h+=`<div class="card sec"><h2>6. La brecha contra los objetivos de ${nB}</h2><p class="nota">Objetivos del Reporte de ventas por grupo de proveedores (con IVA). Proyección = venta a la fecha + ritmo por día × ${obj.rest} días hábiles que faltan.</p>
+    <div class="tw"><table><thead><tr><th>Grupo</th><th class="r">Objetivo</th><th class="r">Venta a la fecha</th><th class="r">%</th><th class="r">Proyección al cierre</th><th class="r">% proyectado</th><th class="r">Necesario por día</th><th class="r">× ritmo actual</th><th>Clasificación</th></tr></thead><tbody>
+    ${obj.filas.map(o=>`<tr${o.k==='TOTAL'?' class="tot"':''}><td>${esc(o.k)}</td><td class="r">${fM(o.obj)}</td><td class="r">${fM(o.v)}</td><td class="r">${fN(o.p)}%</td><td class="r">${fM(o.proy)}</td><td class="r ${o.pp<90?'neg':'pos'}">${fN(o.pp)}%</td><td class="r">${obj.rest? fM(o.nec) : '—'}</td><td class="r">${obj.rest? f1(o.x)+'×' : '—'}</td><td>${o.cl}</td></tr>`).join('')}</tbody></table></div></div>`;
+
+  // plan
+  const plan=armarPlan({A,B,nA,nB,vend,canal,grp,art,cli,mot,obj,parcial});
+  h+=`<div class="card sec"><h2>7. Plan de acción</h2><p class="nota">Acciones ordenadas por impacto, con el número que las sostiene. Los impactos son dimensionamientos con supuestos explícitos, no pronósticos.</p>
+    <div class="tw plan"><table><thead><tr><th>#</th><th>Acción</th><th>Indicador y meta</th><th>Impacto o nota</th></tr></thead><tbody>
+    ${plan.map((p,i)=>`<tr><td>${i+1}</td><td><b>${p.t}</b><br>${p.d}</td><td>${p.m}</td><td>${p.i}</td></tr>`).join('')}</tbody></table></div></div>`;
+
+  h+=`<div class="card sec"><h2>8. Límites de este análisis</h2><ul class="ess">
+    <li>${parcial? `${titulo(nB)} es parcial (${B.nd} días hábiles al corte): todo se compara por día hábil y las proyecciones son escenarios, no pronósticos.` : `Los dos meses están completos.`}</li>
+    <li>Día hábil = lunes a viernes con ventas; un feriado con pedidos cuenta como día hábil. Los sábados suman venta pero no días.</li>
+    <li>Los pedidos grandes y únicos mueven mucho el promedio de un vendedor: mirá el detalle antes de sacar conclusiones de una sola fila.</li>
+    <li>El stock es el de hoy, no el que había cada día: la cobertura muestra cómo estamos ahora, no prueba que la venta cayó por falta de mercadería.</li>
+    <li>Todo es observacional: las asociaciones (stock y ventas, caída de un vendedor y de un canal) no prueban causa.</li></ul></div>`;
+  $('cuerpo').innerHTML=h;
+}
+function finDeMes(ym){ const [y,m]=ym.split('-').map(Number); let d=new Date(Date.UTC(y,m,0)); while(!habil(d.toISOString().slice(0,10))||FERIADOS.has(d.toISOString().slice(0,10))) d.setUTCDate(d.getUTCDate()-1); return d.toISOString().slice(0,10); }
+function nomV(v){ return NOMV[v.k] || (v.b? v.b.x.vn : v.a? v.a.x.vn : 'Vendedor '+v.k); }
+function canalDe(cli){ const c=CLI[cli]; if(!c) return 'Sin cartera'; let s=(c.canal||'').trim(); if(!s) return 'Sin canal'; s=s.toUpperCase(); if(/AUTOSERV/.test(s)) return 'Autoservicios'; if(/ALMAC/.test(s)) return 'Almacenes'; if(/KIOS/.test(s)) return 'Kioscos'; if(/MAYOR/.test(s)) return 'Mayoristas'; return titulo(s); }
+function diasSin(B,g){ let n=0; for(const d of B.dias) if(!g || !g.dias.has(d)) n++; return n; }
+function tablaDim(L,nom,nA,nB,cli,mg){ return `<div class="tw"><table><thead><tr><th>${nom}</th><th class="r">${nA} $/día</th><th class="r">${nB} $/día</th><th class="r">Var.</th><th class="r">Aporte</th><th class="r">Compras/día</th>${cli?'<th class="r">Clientes</th>':''}</tr></thead><tbody>
+  ${L.filter(x=>Math.abs(x.da)+Math.abs(x.db)>1000).map(x=>`<tr><td>${esc(x.k)}</td><td class="r">${fMil(x.da)}</td><td class="r">${fMil(x.db)}</td><td class="r">${cP(x.var)}</td><td class="r">${f1(x.aporte)}%</td><td class="r">${f1(x.ca)} → ${f1(x.cb)}</td>${cli?`<td class="r">${x.cliA} → ${x.cliB}</td>`:''}</tr>`).join('')}</tbody></table></div>`; }
+function tablaCat(L,tit){ return `<div class="tw"><table><thead><tr><th>${tit}</th><th class="r">$/día antes → ahora</th><th class="r">Var.</th><th class="r">Aporte</th></tr></thead><tbody>
+  ${L.map(x=>`<tr><td>${esc(titulo(x.k))}</td><td class="r">${fMil(x.da)} → ${fMil(x.db)}</td><td class="r">${cP(x.var)}</td><td class="r">${f1(x.aporte)}%</td></tr>`).join('')}</tbody></table></div>`; }
+function tablaArt(L,tipo){ if(!L.length) return '<p class="nota">No hay artículos en este grupo.</p>';
+  return `<div class="tw"><table><thead><tr><th>Código</th><th>Artículo</th><th>Proveedor</th><th>Clase</th><th class="r">Unid/día antes</th><th class="r">Unid/día ahora</th><th class="r">Stock (u)</th><th class="r">Días de stock</th>${tipo==='repo'?'<th class="r">Pedido sugerido (u)</th><th class="r">$/día en juego</th>':tipo==='sob'?'<th class="r">Stock a costo</th>':'<th class="r">$/día perdido</th>'}</tr></thead><tbody>
+  ${L.map(a=>`<tr><td>${esc(a.cod)}</td><td>${esc(a.art)}</td><td>${esc(titulo(a.prov))}</td><td><span class="chip ${a.clase}">${a.clase}</span></td><td class="r">${f1(a.uA)}</td><td class="r">${f1(a.uB)}</td><td class="r ${a.stock<=0?'neg':''}">${fN(a.stock)}</td><td class="r">${a.cob===Infinity?'sin venta':fN(a.cob)}</td>${tipo==='repo'?`<td class="r">${fN(a.sug)}</td><td class="r">${fMil(Math.max(a.dA,a.dB))}</td>`:tipo==='sob'?`<td class="r">${fM(a.val)}</td>`:`<td class="r">${fMil(a.dA-a.dB)}</td>`}</tr>`).join('')}</tbody></table></div>`; }
+
+function grafico(A,B){ const d=[...[...A.dias].sort().map(f=>({f,v:A.porDia.get(f)||0,m:0})),...[...B.dias].sort().map(f=>({f,v:B.porDia.get(f)||0,m:1}))];
+  if(!d.length) return ''; const W=1200,H=220,pad=34, max=Math.max(...d.map(x=>x.v))*1.08||1, bw=(W-pad)/d.length;
+  const y=v=>H-20-(Math.max(0,v)/max)*(H-34);
+  let s=`<svg class="graf" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Venta neta por día">`;
+  for(let i=0;i<=3;i++){ const v=max*i/3, yy=y(v); s+=`<line x1="${pad}" x2="${W}" y1="${yy}" y2="${yy}" stroke="#EDEDED"/><text x="0" y="${yy+4}" font-size="11" fill="#6B7280">${fN(v/1e6)}M</text>`; }
+  d.forEach((x,i)=>{ s+=`<rect x="${pad+i*bw+1}" y="${y(x.v)}" width="${Math.max(1,bw-2)}" height="${H-20-y(x.v)}" fill="${x.m?'#2F6FDE':'#9DB7E8'}"><title>${dm(x.f)}: ${fM(x.v)}</title></rect>`; if(i%3===0) s+=`<text x="${pad+i*bw+bw/2}" y="${H-5}" font-size="10" text-anchor="middle" fill="#6B7280">${dm(x.f)}</text>`; });
+  const nA=A.dias.size, prom=(M,i0,i1)=>`<line x1="${pad+i0*bw}" x2="${pad+i1*bw}" y1="${y(M.dia)}" y2="${y(M.dia)}" stroke="${M===A?'#5B7DB8':'#111318'}" stroke-width="2" stroke-dasharray="6 4"/>`;
+  s+=prom(A,0,nA)+prom(B,nA,d.length)+'</svg>'; return s; }
+
+// ---------- articulos ----------
+function articulos(A,B){
+  const P=new Map(), costoU=new Map();
+  for(const x of FILAS) if(x.cant>0 && x.costo>0) costoU.set(x.cod, x.costo/x.cant);   // costo unitario del ultimo renglon leido
+  const add=(M,lado)=>{ for(const x of M.R){ let a=P.get(x.cod); if(!a){ a={cod:x.cod, art:x.art, prov:x.prov, cA:0, cB:0, iA:0, iB:0}; P.set(x.cod,a); } a['c'+lado]+=x.cant; a['i'+lado]+=x.imp; } };
+  add(A,'A'); add(B,'B');
+  const L=[...P.values()]; const totB=B.neta||1, totA=A.neta||1;
+  // curva A: articulos que hacen el 80% de la venta de cada mes
+  const curva=(k)=>{ const s=new Set(); let acc=0, tot=L.reduce((t,a)=>t+Math.max(0,a[k]),0); for(const a of [...L].sort((x,y)=>y[k]-x[k])){ if(acc>=tot*0.8) break; s.add(a.cod); acc+=Math.max(0,a[k]); } return s; };
+  const cvA=curva('iA'), cvB=curva('iB');
+  for(const a of L){ a.uA=a.cA/A.nd; a.uB=a.cB/B.nd; a.dA=a.iA/A.nd; a.dB=a.iB/B.nd; a.var=pct(a.uB,a.uA);
+    a.stock=STK? (STK.u[a.cod]||0) : 0; const ritmo=a.uB>0? a.uB : 0; a.cob= ritmo? a.stock/ritmo : (a.stock>0? Infinity : 0);
+    a.val=Math.max(0,a.stock)*(costoU.get(a.cod)||0);
+    a.clase= a.cA+a.cB<10? 'MARGINAL' : a.cA<=0 && a.cB>0? 'NUEVO' : a.cA>0 && a.uB<a.uA*0.1? 'DORMIDO' : a.var<-25? 'CAE' : a.var>25? 'CRECE' : cvB.has(a.cod)? 'ESTRELLA' : 'ESTABLE'; }
+  // articulos con stock que no vendieron en ninguno de los dos meses
+  const sinRot=[]; if(STK) for(const [c,u] of Object.entries(STK.u)) if(u>0 && !P.has(c) && costoU.has(c)) sinRot.push({cod:c, stock:u, val:u*costoU.get(c)});
+  const DEF={CAE:'cae más de 25% por día',ESTRELLA:`curva A de ${nomMes(B.ym)} (80% de la venta), estable`,ESTABLE:'variación entre -25% y +25%',CRECE:'sube más de 25% por día',DORMIDO:`vendía y casi nada en ${nomMes(B.ym)}`,NUEVO:`empezó a venderse en ${nomMes(B.ym)}`,MARGINAL:'menos de 10 unidades en los dos meses'};
+  const clases=Object.keys(DEF).map(k=>{ const X=L.filter(a=>a.clase===k); return {k, def:DEF[k], n:X.length, a:X.reduce((s,a)=>s+a.dA,0), b:X.reduce((s,a)=>s+a.dB,0), stock:X.reduce((s,a)=>s+a.val,0), pB:X.reduce((s,a)=>s+a.iB,0)/totB*100}; });
+  if(STK) clases.push({k:'SIN ROTACIÓN', def:'con stock y sin venta en los dos meses', n:sinRot.length, a:0, b:0, stock:sinRot.reduce((s,a)=>s+a.val,0), pB:0});
+  const fuertes=L.filter(a=>cvA.has(a.cod)||cvB.has(a.cod));
+  const criticos=STK? fuertes.filter(a=>a.stock<=0 || (a.uB>0 && a.cob<7) || (a.uB===0 && a.uA>0 && a.stock<a.uA*7)).map(a=>({...a, sug:Math.max(0,Math.ceil(Math.max(a.uA,a.uB)*21-Math.max(0,a.stock)))})).sort((x,y)=>Math.max(y.dA,y.dB)-Math.max(x.dA,x.dB)) : [];
+  const empujar=STK? L.filter(a=>a.clase==='CAE' && a.stock>0 && a.cob>=30).sort((x,y)=>(x.dB-x.dA)-(y.dB-y.dA)) : [];
+  const sobre=STK? L.filter(a=>a.stock>0 && a.val>0 && (a.cob>60)).concat(sinRot.map(s=>({cod:s.cod, art:'(sin venta en los dos meses)', prov:'', clase:'SIN ROTACIÓN', uA:0, uB:0, stock:s.stock, cob:Infinity, val:s.val, dA:0, dB:0}))).sort((x,y)=>y.val-x.val) : [];
+  for(const s of sobre) if(s.art==='(sin venta en los dos meses)'){ const r=FILAS.find(x=>x.cod===s.cod); if(r){ s.art=r.art; s.prov=r.prov; } }
+  const excesoVal=sobre.reduce((t,a)=>t+(a.cob===Infinity? a.val : a.val*Math.max(0,(a.cob-45)/a.cob)),0);
+  const critA=criticos.reduce((s,a)=>s+a.iA,0);
+  return {clases, criticos, empujar, sobre, sobreVal:sobre.reduce((s,a)=>s+a.val,0), excesoVal, critA, critPct:critA/totA*100}; }
+
+// ---------- clientes ----------
+function clientes(A,B){
+  const GA=por(A,x=>x.cli), GB=por(B,x=>x.cli), perdidos=[]; let nA=0, nuevos=0;
+  const VS=new Map(); for(const x of A.R) if(x.imp>0){ const m=VS.get(x.cli)||new Map(); m.set(x.v,(m.get(x.v)||0)+x.imp); VS.set(x.cli,m); }   // venta de cada cliente por vendedor
+  for(const [c,g] of GA){ if(g.imp<=0) continue; nA++; const b=GB.get(c); if(b && b.imp>0) continue;
+    const vs=VS.get(c)||new Map();
+    const vCart=CLI[c]?.v; const v= vCart!=null? vCart : [...vs].sort((a,b)=>b[1]-a[1])[0]?.[0];
+    perdidos.push({cli:c, rs:g.x.rs, v, canal:canalDe(c), comp:g.comp.size, val:g.imp, ult:[...g.dias].sort().pop()}); }
+  for(const [c,g] of GB) if(g.imp>0 && !(GA.get(c)?.imp>0)) nuevos++;
+  perdidos.sort((a,b)=>b.val-a.val);
+  const porVend=new Map(), porCanal=new Map();
+  for(const p of perdidos){ for(const [M,k] of [[porVend,p.v],[porCanal,p.canal]]){ const o=M.get(k)||{n:0,fr:0,val:0}; o.n++; if(p.comp>=2) o.fr++; o.val+=p.val; M.set(k,o); } }
+  return {perdidos, nA, nuevos, frecuentes:perdidos.filter(p=>p.comp>=2).length, perdVal:perdidos.reduce((s,p)=>s+p.val,0), porVend, porCanal}; }
+
+function motivos(M){ const G=new Map(); let t=0; for(const x of M.R) if(x.imp<0){ const k=x.mot||x.tipo; G.set(k,(G.get(k)||0)-x.imp); t-=x.imp; }
+  return [...G].map(([k,v])=>({k,v,p:t? v/t*100 : 0})).sort((a,b)=>b.v-a.v); }
+function devClientes(M){ const G=por(M,x=>x.cli); return [...G.values()].filter(g=>g.dev>0).map(g=>({cli:g.k, rs:g.x.rs, v:g.x.v, dev:g.dev, p:g.bruta? g.dev/g.bruta*100 : 100})).sort((a,b)=>b.dev-a.dev); }
+
+// ---------- objetivos del mes (los del Reporte de ventas) ----------
+function objetivos(B,R){
+  if(!CFG || CFG.mes!==B.ym) return null;
+  const emp=$('fEmp').value; if(emp) return null;   // los objetivos son de la empresa completa
+  const rest=diasRestantes(B.ym, B.ultimo), G=por(B,x=>grupoDe(x.prov)), filas=[];
+  let to=0, tv=0, td=0;
+  for(const g of CFG.grupos){ const o=CFG.equipoObj[g]||0, v=G.get(g)?.imp||0, ritmo=v/B.nd; to+=o; tv+=v; td+=ritmo;
+    filas.push(fila(g,o,v,ritmo)); }
+  filas.push(fila('TOTAL',to,tv,td));
+  function fila(k,o,v,ritmo){ const proy=v+ritmo*rest, nec=rest? Math.max(0,o-v)/rest : 0, x=ritmo? nec/ritmo : 0, pp=o? proy/o*100 : 0;
+    return {k, obj:o, v, p:o? v/o*100 : 0, proy, pp, nec, x, cl: pp>=100? 'En camino' : pp>=90? 'Alcanzable' : x<=1.5? 'Difícil' : 'Fuera de alcance'}; }
+  return {rest, filas}; }
+
+// ---------- plan de accion ----------
+function armarPlan(D){ const {A,B,nA,nB,vend,canal,grp,art,cli,mot,obj}=D, P=[];
+  if(art.criticos.length){ const top=art.criticos.slice(0,5).map(a=>esc(a.art)).join(', '), u=art.criticos.reduce((s,a)=>s+a.sug,0), juego=art.criticos.reduce((s,a)=>s+Math.max(a.dA,a.dB),0);
+    P.push({t:'Reponer los artículos fuertes sin stock', d:`${art.criticos.length} artículos de la curva A sin stock o con menos de 7 días. Primero: ${top}. Pedido sugerido para 21 días de ritmo: ${fN(u)} unidades.`, m:'Artículos curva A con menos de 7 días de stock: de '+art.criticos.length+' a 10 o menos', i:`Hasta ${fM(juego)} por día de venta de esos artículos depende de tener mercadería (techo, no pronóstico).`}); }
+  if(cli.frecuentes){ const fr=cli.perdidos.filter(p=>p.comp>=2), val=fr.reduce((s,p)=>s+p.val,0), top=fr.slice(0,5).map(p=>`${esc(p.cli)} ${esc(titulo(p.rs))}`).join(', ');
+    const vt=[...cli.porVend].sort((a,b)=>b[1].fr-a[1].fr).slice(0,3).map(([v,o])=>`${v} ${esc(NOMV[v]||'')} (${o.fr})`).join(', ');
+    P.push({t:'Reactivar los clientes frecuentes que dejaron de comprar', d:`${fr.length} clientes con 2 compras o más en ${nA} y ninguna en ${nB} (${fM(val)} de venta de ${nA}). Primero: ${top}. Los vendedores con más casos: ${vt}.`, m:'Reactivar al menos la mitad; medir cada lunes', i:`Recuperar la mitad = +${fM(val/2/Math.max(1,A.nd))} por día (supone el mismo ticket).`}); }
+  const caen=vend.filter(v=>v.db<v.da && v.da>0).slice(0,4);
+  if(caen.length) P.push({t:'Recuperar el ritmo de compras de los vendedores que más caen', d:caen.map(v=>`<b>${v.k} ${esc(nomV(v))}</b>: ${fMil(v.da)} → ${fMil(v.db)} por día, compras/día ${f1(v.ca)} → ${f1(v.cb)}`).join('<br>'), m:'Volver a las compras por día de '+nA+' (piso por vendedor); revisar días sin venta cada semana', i:`Volver al nivel de ${nA} en estos vendedores = +${fM(caen.reduce((s,v)=>s+(v.da-v.db),0))} por día.`});
+  if(obj){ const lejos=obj.filas.filter(o=>o.k!=='TOTAL' && o.pp<100).sort((a,b)=>(b.obj-b.proy)-(a.obj-a.proy)).slice(0,3);
+    if(lejos.length) P.push({t:'Cerrar la brecha de los proveedores más atrasados', d:lejos.map(o=>`<b>${esc(o.k)}</b>: proyecta ${fN(o.pp)}% del objetivo; necesita ${fM(o.nec)} por día (${f1(o.x)}× el ritmo actual)`).join('<br>'), m:'Venta por día de cada grupo contra el necesario, todos los días', i:obj.rest? `Quedan ${obj.rest} días hábiles. Lo que pida más de 1,5× el ritmo actual no es realista sin una acción comercial fuerte (combo, exhibición, precio).` : 'El mes ya cerró: usar como base del objetivo del mes siguiente.'}); }
+  if(art.empujar.length) P.push({t:'Empujar con el stock que ya hay', d:`${art.empujar.length} artículos caen más de 25% teniendo 30 días o más de stock. Primero: ${art.empujar.slice(0,5).map(a=>esc(a.art)).join(', ')}. Si falta una presentación, ofrecer la que hay.`, m:'Unidades por día de estos artículos de vuelta al ritmo de '+nA, i:`Están perdiendo ${fM(art.empujar.reduce((s,a)=>s+Math.max(0,a.dA-a.dB),0))} por día contra ${nA}.`});
+  if(art.sobre.length) P.push({t:'Congelar compras de sobrestock y liquidar lo que no rota', d:`${art.sobre.length} artículos con más de 60 días de stock o sin venta: ${fM(art.sobreVal)} a costo. No comprar hasta bajar de 45 días; combo, precio o devolución al proveedor para lo dormido.`, m:`Exceso sobre 45 días (${fM(art.excesoVal)} a costo) a la mitad en 8 semanas`, i:'Libera caja para reponer lo que sí rota.'});
+  const cn=canal.filter(c=>c.db<c.da).slice(0,2); if(cn.length) P.push({t:'Atacar el canal que más cae', d:cn.map(c=>`<b>${esc(c.k)}</b>: ${fP(c.var)}, clientes ${c.cliA} → ${c.cliB}, compras/día ${f1(c.ca)} → ${f1(c.cb)}`).join('<br>'), m:'Clientes con compra por canal al nivel de '+nA, i:`Explica ${fN(cn.reduce((s,c)=>s+c.aporte,0))}% de la variación.`});
+  const baja=vend.filter(v=>(CART[v.k]||[]).length>=30).map(v=>({v, p:Math.min(v.cliB,(CART[v.k]||[]).length)/(CART[v.k]||[]).length*100})).sort((a,b)=>a.p-b.p).slice(0,4);
+  if(baja.length) P.push({t:'Subir la cobertura de cartera de los vendedores con menos penetración', d:baja.map(o=>`${o.v.k} ${esc(nomV(o.v))}: ${fN(o.p)}% de su cartera compró en ${nB}`).join('<br>'), m:'Penetración de cartera de 60% o más por vendedor', i:'Más clientes con compra es la palanca más estable: no depende de un pedido grande.'});
+  if(mot[0] && B.devPct>3) P.push({t:'Bajar devoluciones', d:`Devoluciones de ${f1(B.devPct)}% de la venta bruta. Motivos principales: ${mot.slice(0,3).map(m=>`${esc(titulo(m.k))} (${fN(m.p)}%)`).join(', ')}.`, m:'Devoluciones de 4% o menos de la venta bruta', i:`Cada punto menos son ${fM(B.bruta/B.nd/100)} por día que no se pierden.`});
+  const mg=grp.filter(g=>g.db>0 && g.mgB<g.mgA-1).slice(0,3); if(mg.length) P.push({t:'Revisar el margen de los proveedores que lo pierden', d:mg.map(g=>`${esc(g.k)}: ${f1(g.mgA)}% → ${f1(g.mgB)}%`).join('<br>'), m:'Margen igual o mayor que el de '+nA, i:'Revisar descuentos, combos y costos nuevos sin actualizar en la lista.'});
+  P.push({t:'Seguimiento semanal', d:'Cada lunes: venta por día contra el necesario, compras por día por vendedor, clientes reactivados, artículos curva A sin stock y devoluciones.', m:'Una página por semana con ritmo, brecha y plan', i:'Permite corregir a mitad de mes y no al cierre.'});
+  return P; }
+
+// ---------- carga ----------
+let NOMV={}, CLI={};
+(async function(){
+  try{
+    try{ const html=await (await fetch('index.html?t='+Date.now(),{cache:'no-store'})).text(); const m=html.match(/^const CFG = (.*);\s*$/m); if(m){ CFG=JSON.parse(m[1]); CFG.vendedores.forEach(v=>NOMV[v.c]=v.n); } }catch(e){}
+    try{ const c=await (await fetch(RAW+'carteras.json?t='+Date.now(),{cache:'no-store'})).json(); for(const [v,L] of Object.entries(c.v||{})){ CART[+v]=L; for(const r of L) CLI[String(r[0])]={v:+v, canal:r[4], frec:r[5]}; } }catch(e){}
+    try{ const s=await fetch(STOCK+'?t='+Date.now(),{cache:'no-store'}); if(s.ok) STK=await s.json(); }catch(e){}
+    const arch=((await (await fetch('archivos.json?t='+Date.now(),{cache:'no-store'})).json()).archivos||[]);
+    const ult={}; for(const p of arch){ const mm=p.match(/ventas-(\d{4}-\d{2})-/); if(mm && (!ult[mm[1]]||p>ult[mm[1]])) ult[mm[1]]=p; }
+    MESES_DISP=Object.keys(ult).sort();
+    $('meta').textContent='Bajando ventas de '+MESES_DISP.map(nomMes).join(', ')+'…';
+    const txts=await Promise.all(MESES_DISP.map(async ym=>{ const r=await fetch(RAW+ult[ym].split('/').map(encodeURIComponent).join('/'),{cache:'no-store'}); return r.ok? new TextDecoder('windows-1252').decode(await r.arrayBuffer()) : ''; }));
+    FILAS=leer(txts);
+    for(const x of FILAS) if(x.v && !NOMV[x.v] && x.vn) NOMV[x.v]=x.vn;   // vendedores fuera del equipo: el nombre de las ventas
+    const u=ult[MESES_DISP[MESES_DISP.length-1]], st=u.match(/-(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})\d{2}/); CORTE= st? `${st[3]}/${st[2]} ${st[4]}:${st[5]}` : '';
+    const opts=MESES_DISP.map(ym=>`<option value="${ym}">${titulo(nomMes(ym))} ${ym.slice(0,4)}</option>`).join('');
+    $('fA').innerHTML=opts; $('fB').innerHTML=opts;
+    $('fB').value=MESES_DISP[MESES_DISP.length-1]; $('fA').value=MESES_DISP[Math.max(0,MESES_DISP.length-2)];
+    ['fA','fB','fFecha','fEmp'].forEach(id=>$(id).addEventListener('change',dibujar));
+    dibujar();
+  }catch(e){ $('cuerpo').innerHTML=`<div class="card sec cargando">No se pudieron leer los datos: ${esc(e.message)}</div>`; console.error(e); }
+})();
+</script>
+</body>
+</html>
