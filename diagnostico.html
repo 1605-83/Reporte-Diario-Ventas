@@ -64,13 +64,14 @@ footer{margin-top:16px;font-size:.78rem;color:var(--ink2);text-align:center;line
     </div>
   </div>
   <div id="cuerpo"><div class="card sec cargando">Bajando las ventas de los dos meses…</div></div>
-  <footer>Fuente: base de Gescom (ventas por renglón, cartera de clientes y stock disponible). Importes con IVA, netos de devoluciones; el margen usa el costo de cada renglón.
+  <footer>Fuente: base de Gescom (ventas por renglón, cartera de clientes y stock disponible). Sin los vendedores 76, 50 y 38. Importes con IVA, netos de devoluciones; el margen usa el costo de cada renglón.
     Todo se compara por día hábil (lunes a viernes con ventas). <b>[HECHO]</b> sale de los datos; <b>[HIPÓTESIS]</b> es una explicación posible que hay que verificar.</footer>
 </div>
 <script>
 // Diagnostico de ventas mes contra mes, al estilo del informe "Diagnostico y plan de accion" (pedido de Bruno, 29/10/2026)
 const RAW='https://raw.githubusercontent.com/1605-83/Reporte-Diario-Ventas/main/';
 const STOCK='https://raw.githubusercontent.com/1605-83/Lista-Precios-Octubre-2026/main/stock-unidades.json';
+const EXCLUIR_V=new Set([76,50,38]);   // vendedores que no van en el diagnostico (pedido de Bruno, 29/10/2026)
 const FERIADOS=new Set(['2026-11-23','2026-12-08','2026-12-25']);   // para contar los dias habiles que faltan
 const MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 const $=id=>document.getElementById(id);
@@ -109,7 +110,7 @@ function leer(textos){
     const I={cli:ix('Cliente'),fc:ix('FechaComprobante'),fe:ix('FechaEntrega'),tipo:ix('TipoDeVenta'),emp:ix('Empresa'),cod:ix('Codigo'),cant:ix('CantBase'),neto:ix('ImporteNetoItem'),imp:ix('ImporteItem'),rs:ix('RazonSocial'),cv:ix('CodVendedor'),vn:ix('Vendedor'),art:ix('Articulo'),costo:ix('PrecioCosto'),prov:ix('Proveedor'),cat:ix('Categoria'),car:ix('FechaCarga'),mot:ix('MotivoDevolucion')};
     for(const l of lineas){ const s=l.replace(/\r$/,''); if(!s || vistos.has(s)) continue; vistos.add(s);
       const r=parseCSV(s)[0]; if(!r || r.length<10) continue;
-      const v=parseInt(r[I.cv],10);
+      const v=parseInt(r[I.cv],10); if(EXCLUIR_V.has(v)) continue;
       out.push({cli:(r[I.cli]||'').trim(), fc:(r[I.fc]||'').trim().slice(0,10), fe:dmyIso(r[I.fe]), car:dmyIso(r[I.car]), tipo:(r[I.tipo]||'').trim(), emp:empDe(r[I.emp]),
         cod:(r[I.cod]||'').trim(), cant:num(r[I.cant]), neto:num(r[I.neto]), imp:num(r[I.imp]), rs:(r[I.rs]||'').trim(), v:isNaN(v)? 0 : v, vn:titulo(r[I.vn]),
         art:(r[I.art]||'').trim(), costo:num(r[I.costo]), prov:(r[I.prov]||'').trim(), cat:(r[I.cat]||'').trim(), mot:(r[I.mot]||'').trim()}); } }
