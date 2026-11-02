@@ -289,14 +289,12 @@ function procesar(txt, nombre, ymPedido, dia, rango){
   // desde-hasta: el objetivo es el del mes por los dias habiles del rango sobre los del mes
   const hR=rango? habiles(rango.d,rango.h) : 0;
   const fObj=dia? 1/dH : rango? hR/dH : 1;
-  // si el rango pasa de un mes al otro, cada mes aporta su objetivo por sus dias habiles dentro del rango
-  const OBJS=[];
-  if(rango && rango.d.slice(0,7)!==rango.h.slice(0,7)){
-    for(let m=rango.d.slice(0,7); m<=rango.h.slice(0,7); m=new Date(Date.UTC(+m.slice(0,4),+m.slice(5,7),1)).toISOString().slice(0,7)){
-      const Om=(CFG.objetivosPorMes||{})[m] || (CFG.mes===m ? {vend:Object.fromEntries(CFG.vendedores.map(v=>[v.c,v.o])), equipo:CFG.equipoObj} : null); if(!Om) continue;
-      const [my,mm]=m.split('-').map(Number), fin=m+'-'+String(new Date(my,mm,0).getDate()).padStart(2,'0');
-      const dHm=habiles(m+'-01',fin), hRm=habiles(rango.d>m+'-01'? rango.d : m+'-01', rango.h<fin? rango.h : fin);
-      if(dHm) OBJS.push({O:Om,f:hRm/dHm}); }
+  // si el rango pasa de un mes al otro (p. ej. del 01/10 al 02/11), el objetivo queda fijo: el del mes entero del "desde"
+  // (pedido de Bruno, 02/11/2026: la venta de los primeros dias del mes siguiente suma, el objetivo no cambia)
+  const OBJS=[], mesD=rango? rango.d.slice(0,7) : ym, cruza=!!rango && mesD!==rango.h.slice(0,7);
+  if(cruza){
+    const Om=(CFG.objetivosPorMes||{})[mesD] || (CFG.mes===mesD ? {vend:Object.fromEntries(CFG.vendedores.map(v=>[v.c,v.o])), equipo:CFG.equipoObj} : null);
+    if(Om) OBJS.push({O:Om,f:1});
   } else if(OBJ) OBJS.push({O:OBJ,f:fObj});
   const objV=(c,g)=>OBJS.reduce((a,x)=>a+((x.O.vend[c]? x.O.vend[c][g] : 0)||0)*x.f,0);
   const objE=g=>OBJS.reduce((a,x)=>a+(x.O.equipo[g]||0)*x.f,0);
@@ -327,7 +325,7 @@ function procesar(txt, nombre, ymPedido, dia, rango){
   const corte= st? `${st[3]}/${st[2]}/${st[1]} ${st[4]}:${st[5]}` : ult.split('-').reverse().join('/');
   // dias de carga del mes (para el selector Dia), del mas nuevo al mas viejo
   const diasCarga=[...cargas].filter(d=>/^\d{2}-\d{2}-\d{4}$/.test(d) && d.slice(6)+'-'+d.slice(3,5)===ym).sort((a,b)=>(b.slice(6)+b.slice(3,5)+b.slice(0,2)).localeCompare(a.slice(6)+a.slice(3,5)+a.slice(0,2)));
-  return {vendedores,equipo,dT,dH,ym,mes:MESES[mo-1]+' '+y,corte,conObj:!!OBJ,objCat:(CFG.objCatPorMes||{})[ym]||null,dia:dia||'',rango:rango||null,hR,fObj:OBJS.length>1? OBJS.reduce((a,x)=>a+x.f,0) : fObj,diasCarga,motivos,porDia,rechG};
+  return {vendedores,equipo,dT,dH,ym,mes:MESES[mo-1]+' '+y,corte,conObj:!!OBJ,objCat:(CFG.objCatPorMes||{})[cruza? mesD : ym]||null,dia:dia||'',rango:rango||null,hR,fObj:cruza? 1 : fObj,diasCarga,motivos,porDia,rechG};
 }
 
 // ---- Dibujo ----
@@ -574,14 +572,14 @@ async function bajarMes(ym){
   return it;
 }
 async function cargarMes(ym,dia,rango){
-  // desde-hasta que pasa de un mes al otro: se bajan todos los meses del rango y se procesan juntos (el reporte queda en el mes del "hasta")
+  // desde-hasta que pasa de un mes al otro: se bajan todos los meses del rango y se procesan juntos (el reporte queda en el mes del "desde", con su objetivo)
   if(!dia && rango && rango.d.slice(0,7)!==rango.h.slice(0,7)){
     const partes=[]; let it=null;
     for(const x of MESES_REPO.map(x=>x.ym).filter(m=>m>=rango.d.slice(0,7) && m<=rango.h.slice(0,7)).sort()){
       it=await bajarMes(x); if(it) partes.push({ym:x, txt:CACHE[x].txt}); }
     if(!partes.length) return;
-    const ymH=partes[partes.length-1].ym; $('fMes').value=ymH;
-    return arrancar(partes, it.nombre, ymH, '', rango);
+    const ymD=partes[0].ym; $('fMes').value=ymD;
+    return arrancar(partes, it.nombre, ymD, '', rango);
   }
   if(!dia && rango) ym=rango.d.slice(0,7);   // rango dentro de un mes: se pasa a ese mes
   const it=await bajarMes(ym); if(!it) return;
