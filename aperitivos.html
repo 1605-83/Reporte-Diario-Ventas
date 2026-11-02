@@ -61,6 +61,7 @@ footer{margin-top:16px;font-size:.78rem;color:var(--ink2);text-align:center;line
     <div><h1>Ventas Aperitivos Cepas <span class="vivo off" id="vivo" hidden><i aria-hidden="true"></i><span id="vivoTxt"></span></span></h1><div class="meta" id="meta">Cargando…</div></div>
     <div class="ctrl">
       <label>Desde <input type="date" id="fDesde" value="2026-10-22"></label>
+      <label>Hasta <input type="date" id="fHasta"></label>
       <select id="fDia" aria-label="Día de la semana"><option value="">Todos los días</option><option value="1">Lunes</option><option value="2">Martes</option><option value="3">Miércoles</option><option value="4">Jueves</option><option value="5">Viernes</option></select>
       <select id="fVend" aria-label="Vendedor"><option value="">Todos los vendedores</option></select>
       <details class="multi" id="fCliBox"><summary id="fCliTxt">Todos los clientes</summary>
@@ -107,9 +108,9 @@ function leer(txt){
   return out; }
 
 function dibujar(){
-  const desde=$('fDesde').value||'2026-10-22', fv=$('fVend').value, fd=$('fDia').value;
+  const desde=$('fDesde').value||'2026-10-22', hasta=$('fHasta').value||'9999-12-31', fv=$('fVend').value, fd=$('fDia').value;
   const diaSem=s=>String(new Date(s+'T12:00:00Z').getUTCDay());   // 1 = lunes ... 5 = viernes, por fecha de carga
-  const F0=[...MES.filter(x=>!(VIVO.length && x.car===HOY)), ...VIVO].filter(x=>x.car>=desde && (!fv||String(x.v)===fv) && (!fd||diaSem(x.car)===fd));
+  const F0=[...MES.filter(x=>!(VIVO.length && x.car===HOY)), ...VIVO].filter(x=>x.car>=desde && x.car<=hasta && (!fv||String(x.v)===fv) && (!fd||diaSem(x.car)===fd));
   // desplegable de clientes: los que tienen movimiento con los otros filtros; se mantiene el elegido
   const cs=new Map(); for(const x of F0) if(!cs.has(x.cli)) cs.set(x.cli,x.rs);
   for(const c of selCli) if(!cs.has(c)) cs.set(c,rsCli[c]||'');
@@ -123,7 +124,7 @@ function dibujar(){
     const c=v.cli.get(x.cli)||(v.cli.set(x.cli,{cli:x.cli,rs:x.rs,p:[0,0,0,0],bol:[0,0,0,0],imp:0,ult:''}),v.cli.get(x.cli)); (x.b? c.bol : c.p)[x.p]+=x.cant; c.imp+=x.imp; if(x.car>c.ult) c.ult=x.car; }
   const L=[...V.values()].map(v=>({...v, ncli:[...v.cli.values()].filter(c=>c.p.some(u=>u>0)||c.bol.some(u=>u>0)).length}));
   const tot=[0,1,2,3].map(i=>L.reduce((a,v)=>a+v.p[i],0)), tu=tot.reduce((a,b)=>a+b,0), ti=L.reduce((a,v)=>a+v.imp,0), tc=L.reduce((a,v)=>a+v.ncli,0), tbol=[0,1,2,3].map(i=>L.reduce((a,v)=>a+v.bol[i],0)), tb=tbol.reduce((a,b)=>a+b,0);
-  $('meta').textContent=`Pedidos cargados desde el ${dmy(desde)}${fd? ', solo los '+$('fDia').selectedOptions[0].text.toLowerCase() : ''} · ventas al ${vivoCorte||corteMes}`;
+  $('meta').textContent=`Pedidos cargados desde el ${dmy(desde)}${$('fHasta').value? ' hasta el '+dmy(hasta) : ''}${fd? ', solo los '+$('fDia').selectedOptions[0].text.toLowerCase() : ''} · ventas al ${vivoCorte||corteMes}`;
   $('kpis').innerHTML=`<div class="kpi"><div class="l">Unidades vendidas</div><div class="v">${fmtN(tu)}</div><div class="n">netas de devoluciones</div></div>
     <div class="kpi"><div class="l">Importe</div><div class="v">${fmt$(ti)}</div><div class="n">con IVA</div></div>
     <div class="kpi"><div class="l">Clientes</div><div class="v">${fmtN(tc)}</div><div class="n">con compra de estos productos</div></div>
@@ -139,14 +140,14 @@ function dibujar(){
     if(ab){ const C=[...v.cli.values()].sort((a,b)=>b.p.reduce((s,u)=>s+u,0)-a.p.reduce((s,u)=>s+u,0));
       h+=`<div class="det"><table><thead><tr><th>Código</th><th>Razón social</th>${PROD.map(p=>`<th class="r">${p[1]}</th>`).join('')}<th>Bolsas</th><th class="r">Importe</th><th>Último pedido</th></tr></thead><tbody>${C.map(c=>`<tr><td><b>${esc(c.cli)}</b></td><td>${esc(titulo(c.rs))}</td>${c.p.map(u=>`<td class="r">${u? fmtN(u) : '—'}</td>`).join('')}<td>${c.bol.map((u,i)=>u>0? fmtN(u)+' '+PROD[i][1] : '').filter(Boolean).join(', ')||'—'}</td><td class="r">${fmt$(c.imp)}</td><td>${dmy(c.ult)}</td></tr>`).join('')}</tbody></table></div>`; } }
   if(L.length) h+=`<div class="vrow tot" style="cursor:default"><span></span><span>Total</span>${tot.map((u,i)=>`<span class="r m">${fmtN(u)}${bolC(tbol[i])}</span>`).join('')}<span class="r">${fmtN(tu)}</span><span class="r m">${fmtN(tb)}</span><span class="r m">${fmt$(ti)}</span></div>`;
-  $('filas').innerHTML=h||`<div class="vacio">No hay ventas de Gancia, Fernet 1882, Martini ni Amargo Obrero cargadas desde el ${dmy(desde)}.</div>`;
+  $('filas').innerHTML=h||`<div class="vacio">No hay ventas de Gancia, Fernet 1882, Martini ni Amargo Obrero cargadas desde el ${dmy(desde)}${$('fHasta').value? ' hasta el '+dmy(hasta) : ''}.</div>`;
 }
 document.addEventListener('click',e=>{
   const vr=e.target.closest('.vrow[data-v]'); if(vr){ const c=+vr.dataset.v; abiertos.has(c)? abiertos.delete(c) : abiertos.add(c); dibujar(); return; }
   const th=e.target.closest('.th span[data-k]'); if(th){ const k=th.dataset.k; if(sortK===k) sortD=-sortD; else { sortK=k; sortD=k==='n'? 1 : -1; } dibujar(); }
 });
 document.addEventListener('keydown',e=>{ const vr=e.target.closest&&e.target.closest('.vrow[data-v]'); if(vr&&(e.key==='Enter'||e.key===' ')){ e.preventDefault(); vr.click(); } });
-$('fDesde').addEventListener('change',dibujar); $('fVend').addEventListener('change',dibujar); $('fDia').addEventListener('change',dibujar);
+$('fDesde').addEventListener('change',dibujar); $('fHasta').addEventListener('change',dibujar); $('fVend').addEventListener('change',dibujar); $('fDia').addEventListener('change',dibujar);
 // clientes tildados (ninguno = todos)
 const selCli=new Set(), rsCli={};
 const norm=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
