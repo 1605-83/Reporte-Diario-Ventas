@@ -334,8 +334,11 @@ function procesar(txt, nombre, ymPedido, dia, rango){
 // ---- Dibujo ----
 let D=null, abiertos=new Set(), sortK='c', sortD=1, rSortK='rech', rSortD=-1;
 const STORE='reporte-diario-dias';
-function dias(){ if(D.dia||D.rango) return {dT:1,dH:1};   // un dia o un rango: el ideal es el 100% del objetivo del periodo y la tendencia es la venta
-  return {dT:+$('dT').value||D.dT, dH:+$('dH').value||D.dH}; }
+// dias por defecto: un dia o un rango arrancan con transcurridos = habiles (ideal 100% del objetivo del periodo, tendencia = venta)
+// cualquiera que abra el link puede cambiarlos, tambien con Desde-Hasta (pedido de Bruno, 03/11/2026); se recuerdan en su navegador
+function diasDef(){ if(D.dia) return {dT:1,dH:1}; if(D.rango){ const h=D.hR||1; return {dT:h,dH:h}; } return {dT:D.dT,dH:D.dH}; }
+const diasKey=()=>D.rango? D.rango.d+'_'+D.rango.h : D.dia? 'dia_'+D.dia : D.ym;
+function dias(){ const f=diasDef(); return {dT:+$('dT').value||f.dT, dH:+$('dH').value||f.dH}; }
 const ddmm=d=>d.slice(8)+'/'+d.slice(5,7);
 function chipA(a,ideal){ if(a==null) return '<span class="muted">—</span>'; /* rangos fijos (pedido de Bruno): 0 a 79% rojo, 80 a 99% amarillo, 100% o mas verde */ const c=a>=1?'#7CFF6B':a>=.8?'#FFE14D':'#FF6B6B'; return `<span class="chip" style="background:${c}">${fmtP(a)}</span>`; }
 function calc(f){ const {dT,dH}=dias(); const tend=f.venta/dT*dH; return {...f, alc:f.obj? f.venta/f.obj:null, tend, alcT:f.obj? tend/f.obj:null, cob:f.base? f.ccc/f.base:null}; }
@@ -531,9 +534,8 @@ function arrancar(txt,nombre,ym,dia,rango){
     $('fDia').innerHTML='<option value="">Mes completo</option>'+D.diasCarga.map(d=>{ const [dd,mm,yy]=d.split('-'); const ds=DIAS_SEM[new Date(+yy,+mm-1,+dd).getDay()];
       return `<option value="${d}">${d===hoyDmy?'Hoy · ':''}${ds} ${dd}/${mm}</option>`; }).join('');
     $('fDia').value=D.dia;
-    $('dT').disabled=$('dH').disabled=!!(D.dia||D.rango);
-    let st={}; try{ st=JSON.parse(localStorage.getItem(STORE)||'{}')[D.ym]||{}; }catch(e){}
-    $('dT').value=st.dT||D.dT; $('dH').value=st.dH||D.dH;
+    let st={}; try{ st=JSON.parse(localStorage.getItem(STORE)||'{}')[diasKey()]||{}; }catch(e){}
+    { const f=diasDef(); $('dT').value=st.dT||f.dT; $('dH').value=st.dH||f.dH; }
     $('hMes').textContent=D.mes; document.title='Reporte diario de ventas LP · ELB, '+D.mes;
     $('hAct').textContent=`Datos de ventas al ${String(D.corte).split(' ')[0]} · Se actualiza a las 7 hs y 13:30 hs`;
     $('hSub').textContent=`Corte al ${D.corte} · Lago Puelo S.A. y Elebes · ${D.vendedores.length} vendedores`;
@@ -681,7 +683,7 @@ $('xls').addEventListener('click',async()=>{
   }catch(e){ alert('No se pudo armar el Excel: '+e.message); }
   b.disabled=false; b.textContent=txt; });
 $('csvFile').addEventListener('change',async e=>{ const f=e.target.files[0]; if(f) arrancar(new TextDecoder('windows-1252').decode(await f.arrayBuffer()), f.name); });
-['dT','dH'].forEach(id=>$(id).addEventListener('input',()=>{ if(!D) return; try{ const all=JSON.parse(localStorage.getItem(STORE)||'{}'); all[D.ym]={dT:+$('dT').value,dH:+$('dH').value}; localStorage.setItem(STORE,JSON.stringify(all)); }catch(e){} render(); }));
+['dT','dH'].forEach(id=>$(id).addEventListener('input',()=>{ if(!D) return; try{ const all=JSON.parse(localStorage.getItem(STORE)||'{}'); all[diasKey()]={dT:+$('dT').value,dH:+$('dH').value}; localStorage.setItem(STORE,JSON.stringify(all)); }catch(e){} render(); }));
 $('fEmp').addEventListener('change',render);
 $('fVend').addEventListener('change',render);
 $('vHead').addEventListener('click',e=>{ const th=e.target.closest('th[data-k]'); if(!th) return; const k=th.dataset.k; if(sortK===k) sortD*=-1; else { sortK=k; sortD=(k==='c'||k==='n')?1:-1; } render(); });
