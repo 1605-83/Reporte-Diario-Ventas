@@ -607,41 +607,79 @@ $('fHasta').addEventListener('change',cambioRango);
 $('fLimpiar').addEventListener('click',()=>{ $('fDesde').value=$('fHasta').value=''; cambioRango(); });
 // ---- Descargar Excel (pedido de Bruno, 03/11/2026): lo que se ve en pantalla, con los filtros elegidos, una hoja por tabla.
 // Los importes y porcentajes van como numeros (se pueden sumar en Excel). La libreria se baja solo al tocar el boton ----
-let XLSXlib=null;
-const cargarXLSX=()=>XLSXlib? Promise.resolve(XLSXlib) : new Promise((ok,mal)=>{ const s=document.createElement('script');
-  s.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'; s.onload=()=>ok(XLSXlib=window.XLSX); s.onerror=()=>mal(new Error('no se pudo bajar la librería de Excel')); document.head.appendChild(s); });
+// ExcelJS (03/11/2026): con los colores de la pantalla y cada vendedor desplegable (agrupado con el + de Excel)
+let EXJ=null;
+const cargarExcelJS=()=>EXJ? Promise.resolve(EXJ) : new Promise((ok,mal)=>{ const s=document.createElement('script');
+  s.src='https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js'; s.onload=()=>ok(EXJ=window.ExcelJS); s.onerror=()=>mal(new Error('no se pudo bajar la librería de Excel')); document.head.appendChild(s); });
+const XFILL={SOFTYS:'DCEBFF',AYUDIN:'DDF5D8',ILOLAY:'FFF6C7',GEORGALOS:'FFE3CC',RIOSMA:'F1E1FF',CEPAS:'FFDDE6',OTM:'E8E8E8'};   // los mismos de las filas de cada empresa
+const xFill=h=>({type:'pattern',pattern:'solid',fgColor:{argb:'FF'+h}});
+const semA=a=>a==null? null : a>=1?'7CFF6B':a>=.8?'FFE14D':'FF6B6B', semC=c=>c==null? null : c>=.9?'7CFF6B':c>=.5?'FFE14D':'FF6B6B';   // como los chips
+const XNUM=['"$" #,##0','"$" #,##0','0.0%','"$" #,##0','0.0%','#,##0','#,##0','0.0%','0.0%'];
+function xCab(ws,titulos){ const r=ws.addRow(titulos); r.eachCell(c=>{ c.fill=xFill('3B9AE1'); c.font={bold:true,color:{argb:'FFFFFFFF'}}; c.alignment={horizontal:'center',vertical:'middle'}; }); r.height=20; return r; }
+// una fila con las 9 columnas de la pantalla; pre = las primeras columnas (empresa, o codigo y vendedor)
+function xFila(ws,pre,f,{bg=null,bold=false,blanco=false,nivel=0,oculta=false}={}){
+  const x=calc(f), vals=[x.obj||null,x.venta,x.alc,x.tend,x.cob,x.base||null,x.ccc,x.margen,x.rechP];
+  const r=ws.addRow([...pre,...vals]); r.outlineLevel=nivel; r.hidden=oculta;
+  r.eachCell({includeEmpty:true},(c,i)=>{ if(bg) c.fill=xFill(bg); c.font={bold,color:{argb:blanco?'FFFFFFFF':'FF000000'}};
+    c.border={bottom:{style:'thin',color:{argb:'FFB7C3CF'}}}; const k=i-pre.length-1; if(k>=0){ c.numFmt=XNUM[k]; c.alignment={horizontal:'right'}; } });
+  const ca=r.getCell(pre.length+3), cc=r.getCell(pre.length+5);
+  if(semA(x.alc)){ ca.fill=xFill(semA(x.alc)); ca.font={bold:true,color:{argb:'FF000000'}}; }
+  if(semC(x.cob)){ cc.fill=xFill(semC(x.cob)); cc.font={bold:true,color:{argb:'FF000000'}}; }
+  return r; }
+function xTabla(ws,partes){   // rechazos y margenes: como estan en pantalla, con el encabezado celeste
+  let cab=true; for(const p of partes){ const el=$(p); if(!el) continue;
+    for(const tr of el.querySelectorAll('tr')){ const fila=[...tr.children].flatMap(c=>{ const k=c.cloneNode(true); k.querySelectorAll('button,.mini,svg').forEach(b=>b.remove()); return [valorXls(k.textContent), ...Array((+c.colSpan||1)-1).fill({v:''})]; });
+      if(!fila.some(x=>x.v!=='')) continue;
+      if(cab&&p.endsWith('Head')){ xCab(ws,fila.map(x=>x.v)); continue; }
+      const r=ws.addRow(fila.map(x=>x.v)); const tot=tr.classList.contains('tot');
+      fila.forEach((x,i)=>{ const c=r.getCell(i+1); if(x.z) c.numFmt=x.z; c.border={bottom:{style:'thin',color:{argb:'FFB7C3CF'}}}; if(tot){ c.fill=xFill('3B9AE1'); c.font={bold:true,color:{argb:'FFFFFFFF'}}; } }); } }
+  ws.views=[{state:'frozen',ySplit:1}]; ws.columns.forEach((c,i)=>{ c.width= i===1? 26 : 15; }); }
 function valorXls(txt){
   const t=txt.replace(/[▲▼]/g,'').replace(/\s+/g,' ').trim(); if(!t||t==='—') return {v:''};
   let m=t.match(/^(-?)\$ ?(-?[\d.]+(?:,\d+)?)$/); if(m) return {v:(m[1]? -1 : 1)*parseFloat(m[2].replace(/\./g,'').replace(',','.')), z:'"$" #,##0'};
   m=t.match(/^(-?[\d.]+(?:,\d+)?) ?%$/); if(m) return {v:parseFloat(m[1].replace(/\./g,'').replace(',','.'))/100, z:'0.0%'};
   if(/^-?\d{1,3}(\.\d{3})*(,\d+)?$/.test(t)||/^-?\d+(,\d+)?$/.test(t)) return {v:parseFloat(t.replace(/\./g,'').replace(',','.')), z:'#,##0.##'};
   return {v:t}; }
-function hojaDe(X,partes){
-  const filas=[]; for(const p of partes){ const el=$(p); if(!el) continue;
-    for(const tr of el.querySelectorAll('tr')){ if(tr.offsetParent===null && getComputedStyle(tr).display==='none') continue; const fila=[];
-      for(const c of tr.children){ const k=c.cloneNode(true); k.querySelectorAll('button,.mini,svg').forEach(b=>b.remove());
-        fila.push(valorXls(k.textContent)); for(let i=1;i<(+c.colSpan||1);i++) fila.push({v:''}); }
-      if(fila.some(x=>x.v!=='')) filas.push(fila); } }
-  const ws=X.utils.aoa_to_sheet(filas.map(f=>f.map(x=>x.v)));
-  filas.forEach((f,r)=>f.forEach((x,c)=>{ if(x.z){ const ref=X.utils.encode_cell({r,c}); if(ws[ref]) ws[ref].z=x.z; } }));
-  ws['!cols']=(filas[0]||[]).map((_,c)=>({wch:Math.min(45,Math.max(10,...filas.map(f=>String((f[c]||{}).v??'').length+2)))}));
-  return ws; }
+async function armarExcel(){
+  const EJ=await cargarExcelJS(), wb=new EJ.Workbook(); wb.creator='Reporte diario LP · ELB';
+  const per= D.rango? `${D.rango.d.split('-').reverse().join('/')} al ${D.rango.h.split('-').reverse().join('/')}` : D.mes;
+  const TIT=COLS.map(c=>c[1]), emp=$('fEmp').value, E=D.equipo;
+  // Resumen: periodo, filtros e indicadores de arriba
+  const wr=wb.addWorksheet('Resumen');
+  wr.addRow(['Reporte diario de ventas · Lago Puelo · Elebes']).font={bold:true,size:14};
+  [['Período',per],['Venta por',NOMBRE_TIPO[TIPO_F]||''],['Datos',$('hAct').textContent],['Vendedor',$('fVend').selectedOptions[0]?.textContent||'Todos'],['Empresa',NOMBRE_G[emp]||emp]].forEach(f=>{ const r=wr.addRow(f); r.getCell(1).font={bold:true}; });
+  wr.addRow([]); xCab(wr,['Indicador','Valor','Detalle']);
+  document.querySelectorAll('#kpis .kpi').forEach(k=>{ const v=valorXls(k.querySelector('.v')?.textContent||''); const r=wr.addRow([k.querySelector('.l')?.textContent.trim()||'', v.v, k.querySelector('.n')?.textContent.trim()||'']); if(v.z) r.getCell(2).numFmt=v.z; r.getCell(2).font={bold:true}; });
+  wr.columns=[{width:28},{width:20},{width:64}];
+  // Total equipo de ventas: una fila por empresa con su color, y el total en celeste
+  const we=wb.addWorksheet('Total equipo'); xCab(we,['Empresa',...TIT]);
+  for(const g of CFG.grupos) xFila(we,[NOMBRE_G[g]],E[g],{bg:XFILL[g]});
+  xFila(we,['Total'],E.TOTAL,{bg:'3B9AE1',bold:true,blanco:true});
+  we.columns.forEach((c,i)=>{ c.width= i===0? 16 : 15; }); we.views=[{state:'frozen',ySplit:1}];
+  // Por vendedor: la fila del vendedor y, agrupadas debajo (se despliegan con el + de Excel), sus empresas y su total
+  const wv=wb.addWorksheet('Por vendedor',{properties:{outlineProperties:{summaryBelow:false,summaryRight:false}}});
+  xCab(wv,['Cód','Vendedor',...TIT]);
+  const sel=+$('fVend').value||0, lista=sel? D.vendedores.filter(v=>v.c===sel) : D.vendedores;
+  const rs=lista.map(v=>({v,x:calc(v.filas[emp])}));
+  rs.sort((a,b)=>{ const A=sortK==='c'?a.v.c:sortK==='n'?a.v.n:a.x[sortK], B=sortK==='c'?b.v.c:sortK==='n'?b.v.n:b.x[sortK];
+    if(A==null&&B==null) return 0; if(A==null) return 1; if(B==null) return -1; return (typeof A==='string'?A.localeCompare(B):A-B)*sortD; });
+  for(const {v} of rs){
+    xFila(wv,[v.c,v.n],v.filas[emp],{bold:true,bg:'FFFFFF'});
+    for(const g of CFG.grupos) xFila(wv,['','   '+NOMBRE_G[g]],v.filas[g],{bg:XFILL[g],nivel:1,oculta:true});
+    xFila(wv,['','   Total '+v.n],v.filas.TOTAL,{bg:'CFE3F7',bold:true,nivel:1,oculta:true});
+  }
+  xFila(wv,['','Total equipo · '+(NOMBRE_G[emp]||emp)],E[emp],{bg:'3B9AE1',bold:true,blanco:true});
+  wv.columns.forEach((c,i)=>{ c.width= i===0? 8 : i===1? 30 : 15; }); wv.views=[{state:'frozen',ySplit:1}];
+  xTabla(wb.addWorksheet('Rechazos'),['rHead','rBody','rFoot']);
+  xTabla(wb.addWorksheet('Márgenes'),['mHead','mBody','mFoot']);
+  return {wb, nombre:`Reporte diario LP-ELB ${per.replace(/\//g,'-')}.xlsx`};
+}
 $('xls').addEventListener('click',async()=>{
   if(!D) return; const b=$('xls'), txt=b.textContent; b.disabled=true; b.textContent='Armando el Excel…';
   try{
-    const X=await cargarXLSX(), wb=X.utils.book_new();
-    const per= D.rango? `${D.rango.d.split('-').reverse().join('/')} al ${D.rango.h.split('-').reverse().join('/')}` : D.mes;
-    const res=[['Reporte diario de ventas · Lago Puelo · Elebes'],['Período',per],['Venta por',NOMBRE_TIPO[TIPO_F]||''],['Datos',$('hAct').textContent],
-      ['Vendedor',$('fVend').selectedOptions[0]?.textContent||'Todos'],['Empresa',$('fEmp').selectedOptions[0]?.textContent||''],[],['Indicador','Valor','Detalle']];
-    const fmts=[];
-    document.querySelectorAll('#kpis .kpi').forEach(k=>{ const v=valorXls(k.querySelector('.v')?.textContent||''); fmts.push(v.z); res.push([k.querySelector('.l')?.textContent.trim()||'', v.v, k.querySelector('.n')?.textContent.trim()||'']); });
-    const wr=X.utils.aoa_to_sheet(res); fmts.forEach((z,i)=>{ if(z){ const ref=X.utils.encode_cell({r:8+i,c:1}); if(wr[ref]) wr[ref].z=z; } }); wr['!cols']=[{wch:28},{wch:18},{wch:60}];
-    X.utils.book_append_sheet(wb,wr,'Resumen');
-    X.utils.book_append_sheet(wb,hojaDe(X,['eqHead','eqBody']),'Equipo');
-    X.utils.book_append_sheet(wb,hojaDe(X,['vHead','vBody','vFoot']),'Por vendedor');
-    X.utils.book_append_sheet(wb,hojaDe(X,['rHead','rBody','rFoot']),'Rechazos');
-    X.utils.book_append_sheet(wb,hojaDe(X,['mHead','mBody','mFoot']),'Márgenes');
-    X.writeFile(wb,`Reporte diario LP-ELB ${per.replace(/\//g,'-')}.xlsx`);
+    const {wb,nombre}=await armarExcel(), buf=await wb.xlsx.writeBuffer();
+    const url=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+    const a=document.createElement('a'); a.href=url; a.download=nombre; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),5000);
   }catch(e){ alert('No se pudo armar el Excel: '+e.message); }
   b.disabled=false; b.textContent=txt; });
 $('csvFile').addEventListener('change',async e=>{ const f=e.target.files[0]; if(f) arrancar(new TextDecoder('windows-1252').decode(await f.arrayBuffer()), f.name); });
