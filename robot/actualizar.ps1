@@ -171,11 +171,15 @@ if (-not $SoloHoy) { try {   # en vivo no se rehacen las carteras (salen en las 
 # pero la copia de la base los sigue dando activos: la copia solo actualiza los clientes que cambian y no ve esas bajas
 $NO_ACTIVOS = "'101466','103062','106218','106559','108768','197','3186','3229','326','329372','3557','4153','5799','711','104111','106161','106162','106273','107503','107885','3039','388'"
   $cli = @((Pedir 'POST' '/consulta' @{ sql = "SELECT c.codigo, COALESCE(NULLIF(c.razon_social,''), c.nombre) AS n, c.localidad, COALESCE(NULLIF(sr.descripcion,''), NULLIF(c.ramo,'')) AS ramo, c.vendedor, c.rutas FROM clientes c LEFT JOIN subramos sr ON sr.codigo = c.subramo WHERE c.activo = 1 AND NULLIF(c.vendedor,'') IS NOT NULL AND ltrim(c.codigo,'0') NOT IN ($NO_ACTIVOS) ORDER BY c.vendedor, c.codigo" }).filas)
+  # Cambios de dia ya cargados en Gescom que la copia de la base todavia no tomo (mismo ajuste que el mapa Base ruta):
+  # codigo de cliente => dia (L M X J V). Sacarlos cuando la copia ya los tenga.
+  $CAMBIO_DIA = @{}; foreach ($k in '3091','4228','3703','4826','4749','4688','3609','24060','22525','4008','841') { $CAMBIO_DIA[$k] = 'X' }   # vendedor 53, de jueves a miercoles (04/11/2026)
   $porV = [ordered]@{}
   foreach ($c in $cli) {
     $v = "$($c.vendedor)".Trim(); if ($v -match '^\d+$') { $v = "$([int]$v)" }
     $dias = ''; try { $rr = "$($c.rutas)" | ConvertFrom-Json; if ($rr) { $dias = "$(@($rr)[0].dias)" } } catch { }
     $cod = "$($c.codigo)".Trim()
+    if ($CAMBIO_DIA.ContainsKey($cod.TrimStart('0'))) { $dias = $CAMBIO_DIA[$cod.TrimStart('0')] }
     $fila = '[' + ((@($cod, $c.n, $extra.direcciones.$cod, $c.localidad, $c.ramo, $dias) | ForEach-Object { JsonTxt $_ }) -join ',') + ']'
     if (-not $porV.Contains($v)) { $porV[$v] = New-Object Collections.Generic.List[string] }
     $porV[$v].Add($fila)
