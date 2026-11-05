@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Seguimiento diario de coberturas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;800;900&display=swap" rel="stylesheet">
+<style>
+/* Pedido de Bruno (05/11/2026): fondo violeta oscuro; indicadores en blanco con letras negras */
+:root{ --bg:#2A1446; --head:#fff; --head2:#DCCBF5; --ink:#000; --line:#E2D9F0; --ok:#5BE36B; --mid:#FFE14D; --low:#FF7A7A; color-scheme:dark; }
+@media (prefers-color-scheme: light){ :root:not([data-theme="dark"]){ --bg:#2A1446; } }
+:root[data-theme="light"]{ --bg:#2A1446; }
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--head);font-family:"Archivo",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;font-variant-numeric:tabular-nums;line-height:1.4}
+.wrap{max-width:1320px;margin:0 auto;padding:28px 16px 48px}
+header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px;border-bottom:3px solid #fff;padding-bottom:14px}
+h1{font-size:clamp(1.6rem,3.4vw,2.5rem);font-weight:900;margin:0;letter-spacing:-.02em;line-height:1.05}
+.sub{margin:6px 0 0;font-size:.95rem;color:var(--head2)}
+.act{margin:4px 0 0;font-size:.8rem;color:var(--head2)}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.controls label{font-size:.88rem;display:flex;align-items:center;gap:6px}
+select{font:inherit;color:#000;background:#fff;border:1px solid #fff;border-radius:6px;padding:6px 8px}
+select:disabled{opacity:1;color:#000;-webkit-text-fill-color:#000}
+:focus-visible{outline:3px solid #FFD60A;outline-offset:2px}
+.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;margin-top:22px}
+@media (max-width:1000px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:600px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{padding:14px 16px;border:2px solid #000;border-radius:10px;box-shadow:5px 5px 0 #000;background:#fff;color:#000;min-width:0}
+.kpi .l{font-size:.9rem;font-weight:700;line-height:1.2;min-height:2.4em}
+.kpi .v{font-size:clamp(1.3rem,2.4vw,2.1rem);font-weight:900;line-height:1.1;white-space:nowrap}
+.kpi .n{font-size:.8rem;margin-top:6px}
+h2{font-size:1.35rem;font-weight:900;margin:34px 0 8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+h2 .tag{font-size:.8rem;font-weight:700;border-radius:999px;padding:2px 10px;background:#fff;color:#000}
+.hint{font-size:.85rem;color:var(--head2);margin:0 0 6px}
+.tbl{overflow-x:auto;border:1px solid #000;border-radius:8px;background:#fff;color:#000}
+table{border-collapse:collapse;width:100%;min-width:900px;font-size:.92rem}
+th,td{padding:7px 8px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th{background:#000;color:#fff;font-weight:600;font-size:.8rem}
+th.l,td.l{text-align:left}
+th.c,td.c{text-align:center}
+tbody tr:hover{background:#F4EEFC}
+tfoot td{font-weight:800;border-top:2px solid #000;border-bottom:0;background:#fff}
+th.ord{padding:0}
+.ordb{all:unset;box-sizing:border-box;display:block;width:100%;padding:8px;cursor:pointer;color:#fff;font-weight:600;font-size:.8rem;line-height:1.2;text-align:inherit;white-space:normal}
+.ordb span{opacity:.75;font-size:.75rem}
+.ordb:hover{background:#222}
+.cod{font-weight:800}
+.dia{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;flex-direction:column;align-items:center;min-width:76px;padding:3px 6px;border:1px solid #000;border-radius:8px;color:#000;line-height:1.15}
+.dia b{font-size:.92rem}.dia small{font-size:.72rem}
+.dia.hoy{outline:3px solid #6A2BC2;outline-offset:1px}
+.dia[aria-expanded="true"]{box-shadow:inset 0 0 0 2px #000}
+.fut{color:#888;font-size:.8rem}
+.chip{display:inline-block;min-width:62px;text-align:center;padding:2px 8px;border-radius:999px;border:1px solid #000;font-weight:800;color:#000}
+tr.sub td{background:#FAF7FF;padding:0 10px 12px;white-space:normal}
+.sublist{border:1px solid var(--line);border-radius:6px;max-height:320px;overflow:auto;margin-top:8px;background:#fff}
+.sublist table{min-width:0;font-size:.85rem}
+.sublist th{position:sticky;top:0}
+.subnote{font-size:.85rem;margin:8px 0 0;color:#000}
+footer{margin-top:22px;font-size:.82rem;color:var(--head2);max-width:95ch}
+#loadMsg{margin:18px 0 0;font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div>
+    <h1>Seguimiento diario de coberturas<br>Softys y Clorox</h1>
+    <p class="sub" id="sub">Cobertura de lunes a viernes por vendedor · objetivo 70%</p>
+    <p class="act" id="hAct"></p>
+  </div>
+  <div class="controls">
+    <label>Semana <select id="sem" aria-label="Semana"></select></label>
+  </div>
+</header>
+
+<p id="loadMsg">Buscando las ventas más recientes…</p>
+<div id="app" hidden>
+  <section class="kpis" id="kpis"></section>
+  <h2>Softys <span class="tag" id="tagS">Objetivo 70%</span></h2>
+  <p class="hint">Cada día: clientes de la ruta de ese día con pedido de Softys ÷ clientes de la ruta. Tocá un día para ver los clientes sin pedido. Tocá el título de una columna para ordenar: ▲ de menor a mayor · ▼ de mayor a menor.</p>
+  <div id="tblS"></div>
+  <h2>Clorox <span class="tag" id="tagC">Objetivo 70%</span></h2>
+  <p class="hint">Grupo Ayudin (Clorox, Ayudin y demás marcas del grupo). Mismo cálculo que Softys.</p>
+  <div id="tblC"></div>
+  <footer>
+    Cobertura del día = clientes de la cartera del vendedor con visita ese día (según la ruta de Gescom) que tienen un pedido de la marca cargado en la semana ÷ clientes con visita ese día.
+    Cobertura de la semana = clientes de la cartera con pedido de la marca cargado de lunes a sábado ÷ clientes de la cartera con día de visita.
+    Se mide por fecha de carga del pedido (el día que el vendedor lo toma), con o sin factura; no se descuentan los rechazos.
+    Verde: 70% o más; amarillo: dos tercios del objetivo (46,7%) o más; rojo: menos. Los días que todavía no llegaron se muestran con «—».
+    <span id="fuente"></span>
+  </footer>
+</div>
+</div>
+
+<script>
+const REPO='1605-83/Reporte-Diario-Ventas', RAW='https://raw.githubusercontent.com/'+REPO+'/main/';
+const OBJ=0.70;
+const MARCAS={S:/SOFTYS/i, C:/AYUDIN/i};
+const VEND={2:'Fernanda Cejas',4:'Selene Pawlikowski',5:'Eliana Huber',6:'Nieves Alegre',7:'Myrian Lertora',24:'Cecilia Gauchez',
+  26:'Sabrina Pereira',27:'Samanta Dogliotti',28:'Nadia Diaz',29:'Camila Navarrete',30:'Oriana Sorgini',51:'Ezequiel Valente',
+  52:'Nicole Sosa',53:'Verona Abati',54:'Leonel Caruzo',56:'Ezequiel Ferreira',61:'Nailah Guzman',62:'Nahuel Martinez',
+  63:'Daniel Martin',64:'Karina Fernandez',73:'Florencia Cubilla',74:'Romina Baez',75:'Julieta Yegros'};
+const DIAS=['L','M','X','J','V'], DNOM={L:'Lunes',M:'Martes',X:'Miércoles',J:'Jueves',V:'Viernes'};
+const $=id=>document.getElementById(id);
+const fmtN=n=>Math.round(n).toLocaleString('es-AR');
+const fmtP=n=>(n*100).toLocaleString('es-AR',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const cli=s=>String(s||'').trim().replace(/^0+(?=\d)/,'');
+const color=c=>c>=OBJ?'var(--ok)':c>=OBJ*2/3?'var(--mid)':'var(--low)';
+const HOY=new Date(Date.now()-3*3600e3).toISOString().slice(0,10);
+const addD=(iso,n)=>{const d=new Date(iso+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);};
+const lunesDe=iso=>{const d=new Date(iso+'T12:00:00Z');const w=(d.getUTCDay()+6)%7;return addD(iso,-w);};
+const ddmm=iso=>iso.slice(8)+'/'+iso.slice(5,7);
+let st={}; try{st=JSON.parse(localStorage.getItem('cob-diaria-v1')||'{}')||{};}catch(e){}
+const save=()=>{try{localStorage.setItem('cob-diaria-v1',JSON.stringify(st));}catch(e){}};
+
+function parseCSV(txt){const rows=[];let row=[],f='',q=false;for(let i=0;i<txt.length;i++){const ch=txt[i];
+  if(q){if(ch==='"'){if(txt[i+1]==='"'){f+='"';i++;}else q=false;}else f+=ch;}
+  else if(ch==='"')q=true;else if(ch===';'){row.push(f);f='';}else if(ch==='\n'){row.push(f.replace(/\r$/,''));rows.push(row);row=[];f='';}else f+=ch;}
+  if(f!==''||row.length){row.push(f.replace(/\r$/,''));rows.push(row);}return rows;}
+const num=s=>{s=String(s||'').trim();return s?parseFloat(s.replace(/\./g,'').replace(',','.'))||0:0;};
+const iso=s=>{s=String(s||'').trim();let m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return m[0];
+  m=s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/);return m?m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0'):'';};
+
+// PED[marca][vendedor][fecha de carga] = Set de clientes con pedido
+const PED={S:{},C:{}}; const CART={}; let FMAX='';
+function procesar(txt){
+  const R=parseCSV(txt).filter(r=>r.length>5); const H=R.shift().map(h=>h.trim());
+  const ix=n=>{const i=H.indexOf(n);if(i<0)throw new Error('Falta la columna '+n);return i;};
+  const I={cli:ix('Cliente'),fca:ix('FechaCarga'),tipo:ix('TipoDeVenta'),cant:ix('CantBase'),cv:ix('CodVendedor'),prov:ix('Proveedor')};
+  R.forEach(r=>{ const p=r[I.prov]||''; const mk=MARCAS.S.test(p)?'S':MARCAS.C.test(p)?'C':null; if(!mk) return;
+    if(!/^Venta/i.test(r[I.tipo]||'')||num(r[I.cant])<=0) return;
+    const v=parseInt(r[I.cv],10); if(!(v in VEND)) return;
+    const f=iso(r[I.fca]); if(!f||f>HOY) return; if(f>FMAX) FMAX=f;
+    const o=(PED[mk][v]=PED[mk][v]||{}); (o[f]=o[f]||new Set()).add(cli(r[I.cli])); });
+}
+
+let ORDEN=(st.orden&&st.orden.k)?st.orden:{k:'sem',dir:-1};
+let ABIERTO=null; // {mk,v,d}
+function calc(mk,lun){
+  const fechas=DIAS.map((d,i)=>addD(lun,i)), sab=addD(lun,5);
+  return Object.keys(VEND).map(Number).map(v=>{
+    const lst=CART[v]||[], ped=PED[mk][v]||{};
+    // clientes con pedido en la semana (lunes a sabado)
+    const sem=new Set(); for(let i=0;i<6;i++){ const s=ped[addD(lun,i)]; if(s) s.forEach(k=>sem.add(k)); }
+    const r={cod:v,nom:VEND[v],dias:{}};
+    let baseT=0,ccT=0;
+    DIAS.forEach((d,i)=>{ const ruta=lst.filter(c=>String(c[5]||'').includes(d));
+      const fut=fechas[i]>HOY; const cc=ruta.filter(c=>sem.has(cli(c[0]))).length;
+      r.dias[d]={base:ruta.length,cc,cob:ruta.length?cc/ruta.length:0,fut,fecha:fechas[i],sin:ruta.filter(c=>!sem.has(cli(c[0])))}; });
+    const conDia=lst.filter(c=>DIAS.some(d=>String(c[5]||'').includes(d)));
+    baseT=conDia.length; ccT=conDia.filter(c=>sem.has(cli(c[0]))).length;
+    // semana "hasta hoy": solo los dias que ya pasaron
+    const pas=conDia.filter(c=>DIAS.some((d,i)=>fechas[i]<=HOY&&String(c[5]||'').includes(d)));
+    const ccP=pas.filter(c=>sem.has(cli(c[0]))).length;
+    Object.assign(r,{base:baseT,cc:ccT,sem:baseT?ccT/baseT:0,baseP:pas.length,ccP,semP:pas.length?ccP/pas.length:0,
+      meta:Math.ceil(baseT*OBJ),falta:Math.max(Math.ceil(baseT*OBJ)-ccT,0)});
+    DIAS.forEach(d=>r['d'+d]=r.dias[d].fut?-1:r.dias[d].cob);
+    return r; });
+}
+function tabla(mk,lun){
+  const rs=calc(mk,lun);
+  const sorted=[...rs].sort((a,b)=>{const x=a[ORDEN.k],y=b[ORDEN.k];const d=typeof x==='string'?x.localeCompare(y,'es'):x-y;return ORDEN.dir*d||(b.cc-a.cc);});
+  const th=(k,t,cls='')=>{const on=ORDEN.k===k;return `<th class="${cls} ord"${on?` aria-sort="${ORDEN.dir>0?'ascending':'descending'}"`:''}><button type="button" class="ordb" data-k="${k}" title="Ordenar de menor a mayor o de mayor a menor">${t} <span>${on?(ORDEN.dir>0?'▲':'▼'):'↕'}</span></button></th>`;};
+  const celda=(r,d)=>{const x=r.dias[d]; if(!x.base) return '<span class="fut">sin ruta</span>'; if(x.fut) return `<span class="fut">— (${x.base})</span>`;
+    const ab=ABIERTO&&ABIERTO.mk===mk&&ABIERTO.v===r.cod&&ABIERTO.d===d;
+    return `<button type="button" class="dia${x.fecha===HOY?' hoy':''}" style="background:${color(x.cob)}" data-mk="${mk}" data-v="${r.cod}" data-d="${d}" aria-expanded="${ab}" title="${DNOM[d]} ${ddmm(x.fecha)}: ${x.cc} de ${x.base} clientes"><b>${fmtP(x.cob)}</b><small>${x.cc}/${x.base}</small></button>`;};
+  const tot={}; DIAS.forEach(d=>{ const b=rs.reduce((a,r)=>a+r.dias[d].base,0), c=rs.reduce((a,r)=>a+r.dias[d].cc,0); tot[d]={b,c,fut:addD(lun,DIAS.indexOf(d))>HOY}; });
+  const tb=rs.reduce((a,r)=>a+r.base,0), tc=rs.reduce((a,r)=>a+r.cc,0), tm=rs.reduce((a,r)=>a+r.meta,0), tf=rs.reduce((a,r)=>a+r.falta,0);
+  const html=`<div class="tbl"><table><thead><tr>${th('cod','Código','l')}${th('nom','Vendedor','l')}${DIAS.map((d,i)=>th('d'+d,DNOM[d]+' '+ddmm(addD(lun,i)),'c')).join('')}${th('base','Clientes con ruta')}${th('cc','Con pedido en la semana')}${th('sem','Cobertura semana','c')}${th('falta','Faltan para 70%')}</tr></thead>
+  <tbody>${sorted.map(r=>{ let fila=`<tr><td class="l cod">${r.cod}</td><td class="l">${esc(r.nom)}</td>${DIAS.map(d=>`<td class="c">${celda(r,d)}</td>`).join('')}
+    <td>${fmtN(r.base)}</td><td><b>${fmtN(r.cc)}</b></td><td class="c"><span class="chip" style="background:${color(r.sem)}">${fmtP(r.sem)}</span></td><td><b>${r.falta?fmtN(r.falta):'✔ cumplido'}</b></td></tr>`;
+    if(ABIERTO&&ABIERTO.mk===mk&&ABIERTO.v===r.cod){ const x=r.dias[ABIERTO.d];
+      fila+=`<tr class="sub"><td colspan="11"><p class="subnote"><b>${esc(r.nom)} · ${DNOM[ABIERTO.d]} ${ddmm(x.fecha)}: ${fmtN(x.sin.length)} clientes de la ruta sin pedido de ${mk==='S'?'Softys':'Clorox'} en la semana.</b></p>${x.sin.length?`<div class="sublist"><table><thead><tr><th class="l">Cliente</th><th class="l">Razón social</th><th class="l">Dirección</th><th class="l">Localidad</th><th class="l">Ramo</th></tr></thead><tbody>${x.sin.map(c=>`<tr><td class="l">${esc(c[0])}</td><td class="l">${esc(c[1])}</td><td class="l">${esc(c[2])}</td><td class="l">${esc(c[3])}</td><td class="l">${esc(c[4])}</td></tr>`).join('')}</tbody></table></div>`:'<p class="subnote">Todos los clientes de la ruta tienen pedido.</p>'}</td></tr>`; }
+    return fila; }).join('')}</tbody>
+  <tfoot><tr><td class="l" colspan="2">Equipo (${rs.length} vendedores)</td>${DIAS.map(d=>{const t=tot[d];return `<td class="c">${t.fut?'<span class="fut">—</span>':`<span class="chip" style="background:${color(t.b?t.c/t.b:0)}">${fmtP(t.b?t.c/t.b:0)}</span>`}</td>`;}).join('')}
+    <td>${fmtN(tb)}</td><td>${fmtN(tc)}</td><td class="c"><span class="chip" style="background:${color(tb?tc/tb:0)}">${fmtP(tb?tc/tb:0)}</span></td><td>${tf?fmtN(tf):'✔ cumplido'}</td></tr></tfoot></table></div>`;
+  return {html,rs,tb,tc,tm,tf,tot};
+}
+function render(){
+  const lun=$('sem').value;
+  const S=tabla('S',lun), C=tabla('C',lun);
+  $('tblS').innerHTML=S.html; $('tblC').innerHTML=C.html;
+  const hoyIdx=DIAS.findIndex((d,i)=>addD(lun,i)===HOY); const dh=hoyIdx>=0?DIAS[hoyIdx]:null;
+  const ultimo=dh||DIAS.slice().reverse().find((d,i)=>addD(lun,4-i)<=HOY);
+  const dCob=(T,d)=>d&&T.tot[d].b?T.tot[d].c/T.tot[d].b:0;
+  const ok=(T)=>T.rs.filter(r=>r.base&&r.sem>=OBJ).length;
+  $('sub').textContent=`Semana del ${ddmm(lun)} al ${ddmm(addD(lun,4))} · objetivo 70% · ${Object.keys(VEND).length} vendedores · pedidos por fecha de carga`;
+  const etq=ultimo?(dh?'hoy':DNOM[ultimo].toLowerCase()):'';
+  $('kpis').innerHTML=[
+    ['Cobertura Softys de la semana',fmtP(S.tb?S.tc/S.tb:0),`${fmtN(S.tc)} de ${fmtN(S.tb)} clientes · faltan ${fmtN(S.tf)} para el 70%`],
+    ['Cobertura Clorox de la semana',fmtP(C.tb?C.tc/C.tb:0),`${fmtN(C.tc)} de ${fmtN(C.tb)} clientes · faltan ${fmtN(C.tf)} para el 70%`],
+    [`Softys ${etq||'del día'}`,ultimo?fmtP(dCob(S,ultimo)):'—',ultimo?`Ruta del ${DNOM[ultimo].toLowerCase()}: ${fmtN(S.tot[ultimo].c)} de ${fmtN(S.tot[ultimo].b)}`:'La semana todavía no empezó'],
+    [`Clorox ${etq||'del día'}`,ultimo?fmtP(dCob(C,ultimo)):'—',ultimo?`Ruta del ${DNOM[ultimo].toLowerCase()}: ${fmtN(C.tot[ultimo].c)} de ${fmtN(C.tot[ultimo].b)}`:'La semana todavía no empezó'],
+    ['Vendedores en 70% o más',`${ok(S)} · ${ok(C)}`,'Softys · Clorox, en la semana']
+  ].map(k=>`<div class="kpi"><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="n">${k[2]}</div></div>`).join('');
+}
+document.addEventListener('click',e=>{
+  const o=e.target.closest('.ordb'); if(o){const k=o.dataset.k;ORDEN=ORDEN.k===k?{k,dir:-ORDEN.dir}:{k,dir:1};st.orden=ORDEN;save();render();return;}
+  const b=e.target.closest('.dia'); if(b){const x={mk:b.dataset.mk,v:+b.dataset.v,d:b.dataset.d};
+    ABIERTO=(ABIERTO&&ABIERTO.mk===x.mk&&ABIERTO.v===x.v&&ABIERTO.d===x.d)?null:x; render();}
+});
+$('sem').addEventListener('change',()=>{ABIERTO=null;render();});
+
+(async()=>{
+  try{
+    const [aj,cc]=await Promise.all([
+      fetch('archivos.json?t='+Date.now(),{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('No se pudo leer la lista de archivos');return r.json();}),
+      fetch('carteras.json?t='+Date.now(),{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('No se pudieron leer las carteras');return r.json();})]);
+    // los dos meses mas recientes (alcanza para la semana en curso y las anteriores del mes)
+    const files=(aj.archivos||[]).filter(n=>/^meses\/ventas-\d{4}-\d{2}-.*\.csv$/i.test(n)).sort().slice(-2);
+    if(!files.length) throw new Error('No hay archivos de ventas');
+    const txts=await Promise.all(files.map(f=>fetch(RAW+f.split('/').map(encodeURIComponent).join('/')+'?t='+Date.now()).then(r=>{if(!r.ok)throw new Error('No se pudo descargar '+f);return r.arrayBuffer();})));
+    txts.forEach(b=>procesar(new TextDecoder('windows-1252').decode(b)));
+    Object.keys(VEND).forEach(v=>CART[v]=(cc.v&&cc.v[v])||[]);
+    // semanas disponibles: desde el primer lunes del mes anterior hasta la semana en curso
+    const m0=files[0].match(/ventas-(\d{4}-\d{2})/)[1]+'-01'; let l=lunesDe(m0); if(l<m0) l=addD(l,7);
+    const sems=[]; const actual=lunesDe(HOY); while(l<=actual){ sems.push(l); l=addD(l,7); }
+    $('sem').innerHTML=sems.reverse().map(s=>`<option value="${s}">${ddmm(s)} al ${ddmm(addD(s,4))}${s===actual?' (esta semana)':''}</option>`).join('');
+    const m=files[files.length-1].match(/-(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})\d{2}-r/);
+    $('hAct').textContent=(m?`Datos de ventas al ${m[3]}/${m[2]}/${m[1]} ${m[4]}:${m[5]} · `:'')+'Carteras al '+(cc.fecha||'')+' · se actualiza de lunes a viernes';
+    $('fuente').textContent='Archivos: '+files.map(f=>f.split('/').pop()).join(', ')+'.';
+    $('loadMsg').hidden=true; $('app').hidden=false; render();
+  }catch(e){ $('loadMsg').textContent='No se pudieron cargar los datos: '+e.message; }
+})();
+</script>
+</body>
+</html>
