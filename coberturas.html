@@ -85,7 +85,7 @@ footer{margin-top:22px;font-size:.82rem;color:var(--head2);max-width:95ch}
   <div id="tblC"></div>
   <footer>
     Cobertura del día = clientes de la cartera del vendedor con visita ese día (según la ruta de Gescom) que tienen un pedido de la marca cargado en la semana ÷ clientes con visita ese día.
-    Cobertura de la semana = clientes de la cartera con pedido de la marca cargado de lunes a sábado ÷ clientes de la cartera con día de visita.
+    Cobertura de la semana = clientes de la cartera con pedido de la marca cargado de lunes a sábado ÷ clientes de la cartera con día de visita. Período del seguimiento: martes 03/11 al miércoles 30/12/2026; «Todo el período» suma las visitas de los días ya transcurridos de todas las semanas.
     Se mide por fecha de carga del pedido (el día que el vendedor lo toma), con o sin factura; no se descuentan los rechazos.
     Verde: 70% o más; amarillo: dos tercios del objetivo (46,7%) o más; rojo: menos. Los días que todavía no llegaron se muestran con «—».
     <span id="fuente"></span>
@@ -138,86 +138,110 @@ function procesar(txt){
 
 let ORDEN=(st.orden&&st.orden.k)?st.orden:{k:'sem',dir:-1};
 let ABIERTO=null; // {mk,v,d}
-function calc(mk,lun){
-  const fechas=DIAS.map((d,i)=>addD(lun,i)), sab=addD(lun,5);
+// Periodo del seguimiento (pedido de Bruno, 05/11/2026): del martes 3/11 al miercoles 30/12/2026
+const DESDE='2026-11-03', HASTA='2026-12-30';
+const enRango=f=>f>=DESDE&&f<=HASTA;
+function calcSem(mk,lun){
+  const fechas=DIAS.map((d,i)=>addD(lun,i));
   return Object.keys(VEND).map(Number).map(v=>{
     const lst=CART[v]||[], ped=PED[mk][v]||{};
-    // clientes con pedido en la semana (lunes a sabado)
-    const sem=new Set(); for(let i=0;i<6;i++){ const s=ped[addD(lun,i)]; if(s) s.forEach(k=>sem.add(k)); }
+    // clientes con pedido en la semana (lunes a sabado, solo dentro del periodo)
+    const sem=new Set(); for(let i=0;i<6;i++){ const f=addD(lun,i); if(!enRango(f)) continue; const s=ped[f]; if(s) s.forEach(k=>sem.add(k)); }
     const r={cod:v,nom:VEND[v],dias:{}};
-    let baseT=0,ccT=0;
     DIAS.forEach((d,i)=>{ const ruta=lst.filter(c=>String(c[5]||'').includes(d));
-      const fut=fechas[i]>HOY; const cc=ruta.filter(c=>sem.has(cli(c[0]))).length;
-      r.dias[d]={base:ruta.length,cc,cob:ruta.length?cc/ruta.length:0,fut,fecha:fechas[i],sin:ruta.filter(c=>!sem.has(cli(c[0])))}; });
-    const conDia=lst.filter(c=>DIAS.some(d=>String(c[5]||'').includes(d)));
-    baseT=conDia.length; ccT=conDia.filter(c=>sem.has(cli(c[0]))).length;
-    // semana "hasta hoy": solo los dias que ya pasaron
-    const pas=conDia.filter(c=>DIAS.some((d,i)=>fechas[i]<=HOY&&String(c[5]||'').includes(d)));
-    const ccP=pas.filter(c=>sem.has(cli(c[0]))).length;
-    Object.assign(r,{base:baseT,cc:ccT,sem:baseT?ccT/baseT:0,baseP:pas.length,ccP,semP:pas.length?ccP/pas.length:0,
-      meta:Math.ceil(baseT*OBJ),falta:Math.max(Math.ceil(baseT*OBJ)-ccT,0)});
-    DIAS.forEach(d=>r['d'+d]=r.dias[d].fut?-1:r.dias[d].cob);
+      const out=!enRango(fechas[i]), fut=fechas[i]>HOY; const cc=ruta.filter(c=>sem.has(cli(c[0]))).length;
+      r.dias[d]={base:ruta.length,cc,cob:ruta.length?cc/ruta.length:0,fut,out,fecha:fechas[i],sin:ruta.filter(c=>!sem.has(cli(c[0])))}; });
+    // base de la semana: clientes con dia de visita dentro del periodo (incluye los dias que faltan)
+    const conDia=lst.filter(c=>DIAS.some((d,i)=>!r.dias[d].out&&String(c[5]||'').includes(d)));
+    const pas=conDia.filter(c=>DIAS.some((d,i)=>!r.dias[d].out&&!r.dias[d].fut&&String(c[5]||'').includes(d)));
+    const base=conDia.length, cc=conDia.filter(c=>sem.has(cli(c[0]))).length;
+    Object.assign(r,{base,cc,basePas:pas.length,ccPas:pas.filter(c=>sem.has(cli(c[0]))).length});
     return r; });
 }
-function tabla(mk,lun){
-  const rs=calc(mk,lun);
+function calc(mk,sel){
+  let rs;
+  if(sel!=='P'){ rs=calcSem(mk,sel); }
+  else {
+    // todo el periodo: suma de las semanas que ya pasaron (solo los dias transcurridos)
+    const semanas=SEMS.filter(l=>l<=HOY).map(l=>calcSem(mk,l));
+    rs=Object.keys(VEND).map(Number).map((v,ix)=>{ const r={cod:v,nom:VEND[v],dias:{},base:0,cc:0};
+      DIAS.forEach(d=>{ let b=0,c=0; semanas.forEach(S=>{ const x=S[ix].dias[d]; if(!x.out&&!x.fut){ b+=x.base; c+=x.cc; } });
+        r.dias[d]={base:b,cc:c,cob:b?c/b:0,fut:!b,out:false,per:true,sin:[]}; });
+      semanas.forEach(S=>{ r.base+=S[ix].basePas; r.cc+=S[ix].ccPas; });
+      return r; });
+  }
+  rs.forEach(r=>{ r.sem=r.base?r.cc/r.base:0; r.meta=Math.ceil(r.base*OBJ); r.falta=Math.max(r.meta-r.cc,0);
+    DIAS.forEach(d=>r['d'+d]=(r.dias[d].fut||r.dias[d].out)?-1:r.dias[d].cob); });
+  return rs;
+}
+function tabla(mk,sel){
+  const P=sel==='P', lun=P?null:sel;
+  const rs=calc(mk,sel);
   const sorted=[...rs].sort((a,b)=>{const x=a[ORDEN.k],y=b[ORDEN.k];const d=typeof x==='string'?x.localeCompare(y,'es'):x-y;return ORDEN.dir*d||(b.cc-a.cc);});
   const th=(k,t,cls='')=>{const on=ORDEN.k===k;return `<th class="${cls} ord"${on?` aria-sort="${ORDEN.dir>0?'ascending':'descending'}"`:''}><button type="button" class="ordb" data-k="${k}" title="Ordenar de menor a mayor o de mayor a menor">${t} <span>${on?(ORDEN.dir>0?'▲':'▼'):'↕'}</span></button></th>`;};
-  const celda=(r,d)=>{const x=r.dias[d]; if(!x.base) return '<span class="fut">sin ruta</span>'; if(x.fut) return `<span class="fut">— (${x.base})</span>`;
+  const celda=(r,d)=>{const x=r.dias[d]; if(x.out) return '<span class="fut">fuera del período</span>';
+    if(!x.base) return `<span class="fut">${P?'—':'sin ruta'}</span>`; if(x.fut) return `<span class="fut">— (${x.base})</span>`;
+    if(x.per) return `<span class="dia" style="background:${color(x.cob)};cursor:default" title="${DNOM[d]}: ${x.cc} de ${x.base} visitas con pedido en el período"><b>${fmtP(x.cob)}</b><small>${fmtN(x.cc)}/${fmtN(x.base)}</small></span>`;
     const ab=ABIERTO&&ABIERTO.mk===mk&&ABIERTO.v===r.cod&&ABIERTO.d===d;
     return `<button type="button" class="dia${x.fecha===HOY?' hoy':''}" style="background:${color(x.cob)}" data-mk="${mk}" data-v="${r.cod}" data-d="${d}" aria-expanded="${ab}" title="${DNOM[d]} ${ddmm(x.fecha)}: ${x.cc} de ${x.base} clientes"><b>${fmtP(x.cob)}</b><small>${x.cc}/${x.base}</small></button>`;};
-  const tot={}; DIAS.forEach(d=>{ const b=rs.reduce((a,r)=>a+r.dias[d].base,0), c=rs.reduce((a,r)=>a+r.dias[d].cc,0); tot[d]={b,c,fut:addD(lun,DIAS.indexOf(d))>HOY}; });
+  const tot={}; DIAS.forEach(d=>{ const vale=rs.filter(r=>!r.dias[d].out&&!r.dias[d].fut); const b=vale.reduce((a,r)=>a+r.dias[d].base,0), c=vale.reduce((a,r)=>a+r.dias[d].cc,0);
+    tot[d]={b,c,out:rs.every(r=>r.dias[d].out),fut:!vale.length}; });
   const tb=rs.reduce((a,r)=>a+r.base,0), tc=rs.reduce((a,r)=>a+r.cc,0), tm=rs.reduce((a,r)=>a+r.meta,0), tf=rs.reduce((a,r)=>a+r.falta,0);
-  const html=`<div class="tbl"><table><thead><tr>${th('cod','Código','l')}${th('nom','Vendedor','l')}${DIAS.map((d,i)=>th('d'+d,DNOM[d]+' '+ddmm(addD(lun,i)),'c')).join('')}${th('base','Clientes con ruta')}${th('cc','Con pedido en la semana')}${th('sem','Cobertura semana','c')}${th('falta','Faltan para 70%')}</tr></thead>
+  const html=`<div class="tbl"><table><thead><tr>${th('cod','Código','l')}${th('nom','Vendedor','l')}${DIAS.map((d,i)=>th('d'+d,DNOM[d]+(P?'':' '+ddmm(addD(lun,i))),'c')).join('')}${th('base',P?'Visitas del período':'Clientes con ruta')}${th('cc',P?'Visitas con pedido':'Con pedido en la semana')}${th('sem',P?'Cobertura del período':'Cobertura semana','c')}${th('falta','Faltan para 70%')}</tr></thead>
   <tbody>${sorted.map(r=>{ let fila=`<tr><td class="l cod">${r.cod}</td><td class="l">${esc(r.nom)}</td>${DIAS.map(d=>`<td class="c">${celda(r,d)}</td>`).join('')}
     <td>${fmtN(r.base)}</td><td><b>${fmtN(r.cc)}</b></td><td class="c"><span class="chip" style="background:${color(r.sem)}">${fmtP(r.sem)}</span></td><td><b>${r.falta?fmtN(r.falta):'✔ cumplido'}</b></td></tr>`;
-    if(ABIERTO&&ABIERTO.mk===mk&&ABIERTO.v===r.cod){ const x=r.dias[ABIERTO.d];
+    if(!P&&ABIERTO&&ABIERTO.mk===mk&&ABIERTO.v===r.cod){ const x=r.dias[ABIERTO.d];
       fila+=`<tr class="sub"><td colspan="11"><p class="subnote"><b>${esc(r.nom)} · ${DNOM[ABIERTO.d]} ${ddmm(x.fecha)}: ${fmtN(x.sin.length)} clientes de la ruta sin pedido de ${mk==='S'?'Softys':'Clorox'} en la semana.</b></p>${x.sin.length?`<div class="sublist"><table><thead><tr><th class="l">Cliente</th><th class="l">Razón social</th><th class="l">Dirección</th><th class="l">Localidad</th><th class="l">Ramo</th></tr></thead><tbody>${x.sin.map(c=>`<tr><td class="l">${esc(c[0])}</td><td class="l">${esc(c[1])}</td><td class="l">${esc(c[2])}</td><td class="l">${esc(c[3])}</td><td class="l">${esc(c[4])}</td></tr>`).join('')}</tbody></table></div>`:'<p class="subnote">Todos los clientes de la ruta tienen pedido.</p>'}</td></tr>`; }
     return fila; }).join('')}</tbody>
-  <tfoot><tr><td class="l" colspan="2">Equipo (${rs.length} vendedores)</td>${DIAS.map(d=>{const t=tot[d];return `<td class="c">${t.fut?'<span class="fut">—</span>':`<span class="chip" style="background:${color(t.b?t.c/t.b:0)}">${fmtP(t.b?t.c/t.b:0)}</span>`}</td>`;}).join('')}
+  <tfoot><tr><td class="l" colspan="2">Equipo (${rs.length} vendedores)</td>${DIAS.map(d=>{const t=tot[d];return `<td class="c">${t.out?'<span class="fut">fuera</span>':t.fut?'<span class="fut">—</span>':`<span class="chip" style="background:${color(t.b?t.c/t.b:0)}">${fmtP(t.b?t.c/t.b:0)}</span>`}</td>`;}).join('')}
     <td>${fmtN(tb)}</td><td>${fmtN(tc)}</td><td class="c"><span class="chip" style="background:${color(tb?tc/tb:0)}">${fmtP(tb?tc/tb:0)}</span></td><td>${tf?fmtN(tf):'✔ cumplido'}</td></tr></tfoot></table></div>`;
   return {html,rs,tb,tc,tm,tf,tot};
 }
 function render(){
-  const lun=$('sem').value;
-  const S=tabla('S',lun), C=tabla('C',lun);
+  const sel=$('sem').value, P=sel==='P';
+  const S=tabla('S',sel), C=tabla('C',sel);
   $('tblS').innerHTML=S.html; $('tblC').innerHTML=C.html;
-  const hoyIdx=DIAS.findIndex((d,i)=>addD(lun,i)===HOY); const dh=hoyIdx>=0?DIAS[hoyIdx]:null;
-  const ultimo=dh||DIAS.slice().reverse().find((d,i)=>addD(lun,4-i)<=HOY);
-  const dCob=(T,d)=>d&&T.tot[d].b?T.tot[d].c/T.tot[d].b:0;
-  const ok=(T)=>T.rs.filter(r=>r.base&&r.sem>=OBJ).length;
-  $('sub').textContent=`Semana del ${ddmm(lun)} al ${ddmm(addD(lun,4))} · objetivo 70% · ${Object.keys(VEND).length} vendedores · pedidos por fecha de carga`;
+  const lun=P?lunesDe(HOY<=HASTA?HOY:HASTA):sel;
+  const T=P?{S:tabla('S',lun),C:tabla('C',lun)}:{S,C};   // en "todo el periodo", el dia de las tarjetas es el de la semana en curso
+  const hoyIdx=DIAS.findIndex((d,i)=>addD(lun,i)===HOY); const dh=hoyIdx>=0&&enRango(HOY)?DIAS[hoyIdx]:null;
+  const ultimo=dh||DIAS.slice().reverse().find((d,i)=>addD(lun,4-i)<=HOY&&enRango(addD(lun,4-i)));
+  const dCob=(X,d)=>d&&X.tot[d].b?X.tot[d].c/X.tot[d].b:0;
+  const ok=X=>X.rs.filter(r=>r.base&&r.sem>=OBJ).length;
+  $('sub').textContent=(P?`Todo el período: del ${ddmm(DESDE)} al ${ddmm(HASTA)} (días transcurridos)`:`Semana del ${ddmm(lun<DESDE?DESDE:lun)} al ${ddmm(addD(lun,4)>HASTA?HASTA:addD(lun,4))}`)+` · período del seguimiento: ${ddmm(DESDE)} al ${ddmm(HASTA)} · objetivo 70% · ${Object.keys(VEND).length} vendedores · pedidos por fecha de carga`;
   const etq=ultimo?(dh?'hoy':DNOM[ultimo].toLowerCase()):'';
+  const que=P?'del período':'de la semana';
   $('kpis').innerHTML=[
-    ['Cobertura Softys de la semana',fmtP(S.tb?S.tc/S.tb:0),`${fmtN(S.tc)} de ${fmtN(S.tb)} clientes · faltan ${fmtN(S.tf)} para el 70%`],
-    ['Cobertura Clorox de la semana',fmtP(C.tb?C.tc/C.tb:0),`${fmtN(C.tc)} de ${fmtN(C.tb)} clientes · faltan ${fmtN(C.tf)} para el 70%`],
-    [`Softys ${etq||'del día'}`,ultimo?fmtP(dCob(S,ultimo)):'—',ultimo?`Ruta del ${DNOM[ultimo].toLowerCase()}: ${fmtN(S.tot[ultimo].c)} de ${fmtN(S.tot[ultimo].b)}`:'La semana todavía no empezó'],
-    [`Clorox ${etq||'del día'}`,ultimo?fmtP(dCob(C,ultimo)):'—',ultimo?`Ruta del ${DNOM[ultimo].toLowerCase()}: ${fmtN(C.tot[ultimo].c)} de ${fmtN(C.tot[ultimo].b)}`:'La semana todavía no empezó'],
-    ['Vendedores en 70% o más',`${ok(S)} · ${ok(C)}`,'Softys · Clorox, en la semana']
+    [`Cobertura Softys ${que}`,fmtP(S.tb?S.tc/S.tb:0),`${fmtN(S.tc)} de ${fmtN(S.tb)} ${P?'visitas':'clientes'} · faltan ${fmtN(S.tf)} para el 70%`],
+    [`Cobertura Clorox ${que}`,fmtP(C.tb?C.tc/C.tb:0),`${fmtN(C.tc)} de ${fmtN(C.tb)} ${P?'visitas':'clientes'} · faltan ${fmtN(C.tf)} para el 70%`],
+    [`Softys ${etq||'del día'}`,ultimo?fmtP(dCob(T.S,ultimo)):'—',ultimo?`Ruta del ${DNOM[ultimo].toLowerCase()}: ${fmtN(T.S.tot[ultimo].c)} de ${fmtN(T.S.tot[ultimo].b)}`:'Sin días del período en esta semana'],
+    [`Clorox ${etq||'del día'}`,ultimo?fmtP(dCob(T.C,ultimo)):'—',ultimo?`Ruta del ${DNOM[ultimo].toLowerCase()}: ${fmtN(T.C.tot[ultimo].c)} de ${fmtN(T.C.tot[ultimo].b)}`:'Sin días del período en esta semana'],
+    ['Vendedores en 70% o más',`${ok(S)} · ${ok(C)}`,`Softys · Clorox, ${que}`]
   ].map(k=>`<div class="kpi"><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="n">${k[2]}</div></div>`).join('');
 }
 document.addEventListener('click',e=>{
   const o=e.target.closest('.ordb'); if(o){const k=o.dataset.k;ORDEN=ORDEN.k===k?{k,dir:-ORDEN.dir}:{k,dir:1};st.orden=ORDEN;save();render();return;}
-  const b=e.target.closest('.dia'); if(b){const x={mk:b.dataset.mk,v:+b.dataset.v,d:b.dataset.d};
+  const b=e.target.closest('button.dia'); if(b){const x={mk:b.dataset.mk,v:+b.dataset.v,d:b.dataset.d};
     ABIERTO=(ABIERTO&&ABIERTO.mk===x.mk&&ABIERTO.v===x.v&&ABIERTO.d===x.d)?null:x; render();}
 });
 $('sem').addEventListener('change',()=>{ABIERTO=null;render();});
 
+let SEMS=[];
 (async()=>{
   try{
     const [aj,cc]=await Promise.all([
       fetch('archivos.json?t='+Date.now(),{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('No se pudo leer la lista de archivos');return r.json();}),
       fetch('carteras.json?t='+Date.now(),{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('No se pudieron leer las carteras');return r.json();})]);
-    // los dos meses mas recientes (alcanza para la semana en curso y las anteriores del mes)
-    const files=(aj.archivos||[]).filter(n=>/^meses\/ventas-\d{4}-\d{2}-.*\.csv$/i.test(n)).sort().slice(-2);
-    if(!files.length) throw new Error('No hay archivos de ventas');
+    // los meses del periodo (noviembre y diciembre 2026)
+    const files=(aj.archivos||[]).filter(n=>{const m=n.match(/^meses\/ventas-(\d{4}-\d{2})-.*\.csv$/i);return m&&m[1]>=DESDE.slice(0,7)&&m[1]<=HASTA.slice(0,7);}).sort();
+    if(!files.length) throw new Error('No hay archivos de ventas del período');
     const txts=await Promise.all(files.map(f=>fetch(RAW+f.split('/').map(encodeURIComponent).join('/')+'?t='+Date.now()).then(r=>{if(!r.ok)throw new Error('No se pudo descargar '+f);return r.arrayBuffer();})));
     txts.forEach(b=>procesar(new TextDecoder('windows-1252').decode(b)));
     Object.keys(VEND).forEach(v=>CART[v]=(cc.v&&cc.v[v])||[]);
-    // semanas disponibles: desde el primer lunes del mes anterior hasta la semana en curso
-    const m0=files[0].match(/ventas-(\d{4}-\d{2})/)[1]+'-01'; let l=lunesDe(m0); if(l<m0) l=addD(l,7);
-    const sems=[]; const actual=lunesDe(HOY); while(l<=actual){ sems.push(l); l=addD(l,7); }
-    $('sem').innerHTML=sems.reverse().map(s=>`<option value="${s}">${ddmm(s)} al ${ddmm(addD(s,4))}${s===actual?' (esta semana)':''}</option>`).join('');
+    // semanas del periodo hasta la semana en curso
+    const actual=lunesDe(HOY<=HASTA?HOY:HASTA); let l=lunesDe(DESDE); while(l<=actual){ SEMS.push(l); l=addD(l,7); }
+    const lbl=s=>{const a=s<DESDE?DESDE:s, b=addD(s,4)>HASTA?HASTA:addD(s,4); return `${ddmm(a)} al ${ddmm(b)}`;};
+    $('sem').innerHTML=`<option value="P">Todo el período (${ddmm(DESDE)} al ${ddmm(HASTA)})</option>`+[...SEMS].reverse().map(s=>`<option value="${s}">${lbl(s)}${s===lunesDe(HOY)?' (esta semana)':''}</option>`).join('');
+    $('sem').value=SEMS.includes(lunesDe(HOY))?lunesDe(HOY):'P';
     const m=files[files.length-1].match(/-(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})\d{2}-r/);
     $('hAct').textContent=(m?`Datos de ventas al ${m[3]}/${m[2]}/${m[1]} ${m[4]}:${m[5]} · `:'')+'Carteras al '+(cc.fecha||'')+' · se actualiza de lunes a viernes';
     $('fuente').textContent='Archivos: '+files.map(f=>f.split('/').pop()).join(', ')+'.';
