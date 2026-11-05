@@ -295,7 +295,9 @@ async function cargar(){
   PED.S={}; PED.C={}; FMAX='';
   bufs.forEach(b=>procesar(dec(b))); if(vivo) procesar(dec(vivo));
   Object.keys(VEND).forEach(v=>CART[v]=(cc.v&&cc.v[v])||[]);
-  SELLO=sello; VIVO=ev; FILES=files; CC=cc;
+  // si GitHub entrego una copia vieja de hoy.csv (menos renglones que los que dice estado.json), se vuelve a probar en la proxima revision
+  const vivoN=vivo?parseCSV(dec(vivo)).filter(r=>r.length>5).length-1:0;
+  SELLO=(hayVivo&&vivoN<(ev.renglones||0))?'':sello; VIVO=ev; FILES=files; CC=cc;
   if(!LISTA){
     // semanas del periodo hasta la semana en curso
     const actual=lunesDe(HOY<=HASTA?HOY:HASTA); let l=lunesDe(DESDE); while(l<=actual){ SEMS.push(l); l=addD(l,7); }
