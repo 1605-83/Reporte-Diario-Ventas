@@ -31,6 +31,11 @@ select:disabled{opacity:1;color:#000;-webkit-text-fill-color:#000}
 .kpi .v{font-size:clamp(1.3rem,2.4vw,2.1rem);font-weight:900;line-height:1.1;white-space:nowrap}
 .kpi .n{font-size:.8rem;margin-top:6px}
 h2{font-size:1.35rem;font-weight:900;margin:34px 0 8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.marcas{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:34px 0 8px}
+.marca{font:inherit;font-size:1.25rem;font-weight:900;cursor:pointer;padding:6px 22px;border-radius:999px;border:2px solid #fff;background:transparent;color:#fff}
+.marca[aria-selected="true"]{background:#fff;color:#000}
+.marca:hover{background:rgba(255,255,255,.15)}.marca[aria-selected="true"]:hover{background:#fff}
+.marcas .tag{font-size:.8rem;font-weight:700;border-radius:999px;padding:2px 10px;background:#fff;color:#000}
 h2 .tag{font-size:.8rem;font-weight:700;border-radius:999px;padding:2px 10px;background:#fff;color:#000}
 .hint{font-size:.85rem;color:var(--head2);margin:0 0 6px}
 .tbl{overflow-x:auto;border:1px solid #000;border-radius:8px;background:#fff;color:#000}
@@ -80,12 +85,15 @@ footer{margin-top:22px;font-size:.82rem;color:var(--head2);max-width:95ch}
 <p id="loadMsg">Buscando las ventas más recientes…</p>
 <div id="app" hidden>
   <section class="kpis" id="kpis"></section>
-  <h2>Softys <span class="tag" id="tagS">Objetivo 70%</span></h2>
-  <p class="hint">Cada día: clientes de la ruta de ese día con pedido de Softys ÷ clientes de la ruta. Tocá un día para ver los clientes sin pedido. Tocá el título de una columna para ordenar: ▲ de menor a mayor · ▼ de mayor a menor.</p>
-  <div id="tblS"></div>
-  <h2>Clorox <span class="tag" id="tagC">Objetivo 70%</span></h2>
-  <p class="hint">Grupo Ayudin (Clorox, Ayudin y demás marcas del grupo). Mismo cálculo que Softys.</p>
-  <div id="tblC"></div>
+  <!-- Pedido de Bruno (05/11/2026): botones Softys / Clorox para pasar de un indicador al otro, una sola tabla a la vez -->
+  <div class="marcas" role="tablist" aria-label="Indicador">
+    <button type="button" role="tab" class="marca" id="tabS" data-mk="S" aria-controls="tblS">Softys</button>
+    <button type="button" role="tab" class="marca" id="tabC" data-mk="C" aria-controls="tblC">Clorox</button>
+    <span class="tag">Objetivo 70%</span>
+  </div>
+  <p class="hint" id="hintMk"></p>
+  <div id="tblS" role="tabpanel" aria-labelledby="tabS"></div>
+  <div id="tblC" role="tabpanel" aria-labelledby="tabC" hidden></div>
   <footer>
     Cobertura del día = clientes de la cartera del vendedor con visita ese día (según la ruta de Gescom) que tienen un pedido de la marca cargado en la semana ÷ clientes con visita ese día.
     Cobertura de la semana = clientes de la cartera con pedido de la marca cargado de lunes a sábado ÷ clientes de la cartera con día de visita. Período del seguimiento: martes 03/11 al miércoles 30/12/2026; «Todo el período» suma las visitas de los días ya transcurridos de todas las semanas.
@@ -211,6 +219,10 @@ function render(){
   const sel=$('sem').value, P=sel==='P';
   const S=tabla('S',sel), C=tabla('C',sel);
   $('tblS').innerHTML=S.html; $('tblC').innerHTML=C.html;
+  const MK=st.marca==='C'?'C':'S';
+  $('tblS').hidden=MK!=='S'; $('tblC').hidden=MK!=='C';
+  $('tabS').setAttribute('aria-selected',MK==='S'); $('tabC').setAttribute('aria-selected',MK==='C');
+  $('hintMk').textContent=(MK==='S'?'Softys':'Grupo Ayudin (Clorox, Ayudin y demás marcas del grupo)')+`: cada día, clientes de la ruta de ese día con pedido ÷ clientes de la ruta. Tocá un día para ver los clientes sin pedido. Tocá el título de una columna para ordenar: ▲ de menor a mayor · ▼ de mayor a menor.`;
   const lun=P?lunesDe(HOY<=HASTA?HOY:HASTA):sel;
   const T=P?{S:tabla('S',lun),C:tabla('C',lun)}:{S,C};   // en "todo el periodo", el dia de las tarjetas es el de la semana en curso
   const hoyIdx=DIAS.findIndex((d,i)=>addD(lun,i)===HOY); const dh=hoyIdx>=0&&enRango(HOY)?DIAS[hoyIdx]:null;
@@ -230,6 +242,7 @@ function render(){
 }
 document.addEventListener('click',e=>{
   const o=e.target.closest('.ordb'); if(o){const k=o.dataset.k;ORDEN=ORDEN.k===k?{k,dir:-ORDEN.dir}:{k,dir:1};st.orden=ORDEN;save();render();return;}
+  const t=e.target.closest('.marca'); if(t){st.marca=t.dataset.mk;save();render();return;}
   const x2=e.target.closest('.exp'); if(x2){const x={mk:x2.dataset.mk,v:+x2.dataset.v,d:'T'};
     ABIERTO=(ABIERTO&&ABIERTO.mk===x.mk&&ABIERTO.v===x.v&&ABIERTO.d==='T')?null:x; render(); return;}
   const b=e.target.closest('button.dia'); if(b){const x={mk:b.dataset.mk,v:+b.dataset.v,d:b.dataset.d};
