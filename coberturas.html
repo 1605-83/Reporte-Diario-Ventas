@@ -18,6 +18,9 @@ header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:fle
 h1{font-size:clamp(1.6rem,3.4vw,2.5rem);font-weight:900;margin:0;letter-spacing:-.02em;line-height:1.05}
 p.sub{margin:6px 0 0;font-size:.95rem;color:var(--head2)}
 .act{margin:4px 0 0;font-size:.8rem;color:var(--head2)}
+.act .vivo{display:inline-block;padding:1px 8px;margin-right:4px;border-radius:10px;background:#16A34A;color:#fff;font-weight:700;animation:lat 2s ease-in-out infinite}
+@keyframes lat{50%{opacity:.6}}
+@media (prefers-reduced-motion:reduce){.act .vivo{animation:none}}
 .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .controls label{font-size:.88rem;display:flex;align-items:center;gap:6px}
 select{font:inherit;color:#000;background:#fff;border:1px solid #fff;border-radius:6px;padding:6px 8px}
@@ -262,29 +265,56 @@ document.addEventListener('click',e=>{
 });
 $('sem').addEventListener('change',()=>{ABIERTO=null;render();});
 
-let SEMS=[];
-(async()=>{
-  try{
-    const [aj,cc]=await Promise.all([
-      fetch('archivos.json?t='+Date.now(),{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('No se pudo leer la lista de archivos');return r.json();}),
-      fetch('carteras.json?t='+Date.now(),{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('No se pudieron leer las carteras');return r.json();})]);
-    // los meses del periodo (noviembre y diciembre 2026)
-    const files=(aj.archivos||[]).filter(n=>{const m=n.match(/^meses\/ventas-(\d{4}-\d{2})-.*\.csv$/i);return m&&m[1]>=DESDE.slice(0,7)&&m[1]<=HASTA.slice(0,7);}).sort();
-    if(!files.length) throw new Error('No hay archivos de ventas del período');
-    const txts=await Promise.all(files.map(f=>fetch(RAW+f.split('/').map(encodeURIComponent).join('/')+'?t='+Date.now()).then(r=>{if(!r.ok)throw new Error('No se pudo descargar '+f);return r.arrayBuffer();})));
-    txts.forEach(b=>procesar(new TextDecoder('windows-1252').decode(b)));
-    Object.keys(VEND).forEach(v=>CART[v]=(cc.v&&cc.v[v])||[]);
+// ---- En vivo (pedido de Bruno, 05/11/2026): ademas de los meses, se lee vivo/hoy.csv (pedidos cargados hoy, el robot
+// en vivo lo sube cada vez que la base de Gescom suma ventas). Cada 2 minutos se revisa si hay datos nuevos y, si hay,
+// se recalcula todo sin recargar la pagina (se mantienen la semana elegida, la pestaña, el orden y la lista abierta) ----
+let SEMS=[], SELLO='', VIVO=null, LISTA=false, FILES=[], CC=null;
+const dec=b=>new TextDecoder('windows-1252').decode(b);
+const bajar=(p,bin)=>fetch(RAW+p.split('/').map(encodeURIComponent).join('/')+'?t='+Date.now(),{cache:'no-store'})
+  .then(r=>{if(!r.ok)throw new Error('No se pudo descargar '+p);return bin?r.arrayBuffer():r.json();});
+const hhmm=()=>new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Argentina/Buenos_Aires'});
+function cabecera(){
+  const m=FILES.length?FILES[FILES.length-1].match(/-(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})\d{2}-r/):null;
+  const vivoHoy=VIVO&&iso(VIVO.dia)===HOY;
+  $('hAct').innerHTML=`<span class="vivo">● En vivo</span> `+(vivoHoy?`Pedidos de hoy al ${esc(VIVO.corte)} (${fmtN(VIVO.renglones||0)} renglones)`:(m?`Datos de ventas al ${m[3]}/${m[2]}/${m[1]} ${m[4]}:${m[5]}`:''))
+    +` · revisado ${hhmm()} · se revisa solo cada 2 minutos · carteras al ${esc((CC&&CC.fecha)||'')}`;
+}
+async function cargar(){
+  const [aj,cc,ev]=await Promise.all([
+    fetch('archivos.json?t='+Date.now(),{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('No se pudo leer la lista de archivos');return r.json();}),
+    fetch('carteras.json?t='+Date.now(),{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('No se pudieron leer las carteras');return r.json();}),
+    bajar('vivo/estado.json').catch(()=>null)]);
+  // los meses del periodo (noviembre y diciembre 2026)
+  const files=(aj.archivos||[]).filter(n=>{const m=n.match(/^meses\/ventas-(\d{4}-\d{2})-.*\.csv$/i);return m&&m[1]>=DESDE.slice(0,7)&&m[1]<=HASTA.slice(0,7);}).sort();
+  if(!files.length) throw new Error('No hay archivos de ventas del período');
+  const hayVivo=ev&&iso(ev.dia)===HOY&&(ev.renglones||0)>0;
+  const sello=files.join('|')+'#'+(cc.fecha||'')+'#'+(hayVivo?ev.corte+'/'+ev.renglones:'');
+  if(sello===SELLO){ VIVO=ev||VIVO; cabecera(); return false; }
+  const [bufs,vivo]=await Promise.all([Promise.all(files.map(f=>bajar(f,true))), hayVivo?bajar('vivo/hoy.csv',true).catch(()=>null):null]);
+  // se arma todo de nuevo (los clientes van en Set: si un pedido de hoy ya esta en el mes, no se cuenta dos veces)
+  PED.S={}; PED.C={}; FMAX='';
+  bufs.forEach(b=>procesar(dec(b))); if(vivo) procesar(dec(vivo));
+  Object.keys(VEND).forEach(v=>CART[v]=(cc.v&&cc.v[v])||[]);
+  SELLO=sello; VIVO=ev; FILES=files; CC=cc;
+  if(!LISTA){
     // semanas del periodo hasta la semana en curso
     const actual=lunesDe(HOY<=HASTA?HOY:HASTA); let l=lunesDe(DESDE); while(l<=actual){ SEMS.push(l); l=addD(l,7); }
     const lbl=s=>{const a=s<DESDE?DESDE:s, b=addD(s,4)>HASTA?HASTA:addD(s,4); return `${ddmm(a)} al ${ddmm(b)}`;};
     $('sem').innerHTML=`<option value="P">Todo el período (${ddmm(DESDE)} al ${ddmm(HASTA)})</option>`+[...SEMS].reverse().map(s=>`<option value="${s}">${lbl(s)}${s===lunesDe(HOY)?' (esta semana)':''}</option>`).join('');
     $('sem').value=SEMS.includes(lunesDe(HOY))?lunesDe(HOY):'P';
-    const m=files[files.length-1].match(/-(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})\d{2}-r/);
-    $('hAct').textContent=(m?`Datos de ventas al ${m[3]}/${m[2]}/${m[1]} ${m[4]}:${m[5]} · `:'')+'Carteras al '+(cc.fecha||'')+' · se actualiza de lunes a viernes';
-    $('fuente').textContent='Archivos: '+files.map(f=>f.split('/').pop()).join(', ')+'.';
-    $('loadMsg').hidden=true; $('app').hidden=false; render();
-  }catch(e){ $('loadMsg').textContent='No se pudieron cargar los datos: '+e.message; }
-})();
+    LISTA=true;
+  }
+  $('fuente').textContent='Archivos: '+files.map(f=>f.split('/').pop()).join(', ')+(vivo?', vivo/hoy.csv (pedidos de hoy)':'')+'.';
+  cabecera(); $('loadMsg').hidden=true; $('app').hidden=false; render(); return true;
+}
+cargar().catch(e=>{ $('loadMsg').textContent='No se pudieron cargar los datos: '+e.message; });
+const revisar=()=>{
+  // si cambio el dia (pagina abierta desde ayer), se recarga entera para armar las semanas de nuevo
+  if(new Date(Date.now()-3*3600e3).toISOString().slice(0,10)!==HOY){ location.reload(); return; }
+  if(LISTA) cargar().catch(()=>{});
+};
+setInterval(revisar, 2*60*1000);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) revisar(); });
 </script>
 </body>
 </html>
