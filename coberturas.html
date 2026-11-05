@@ -96,7 +96,7 @@ footer{margin-top:22px;font-size:.82rem;color:var(--head2);max-width:95ch}
   <div id="tblC" role="tabpanel" aria-labelledby="tabC" hidden></div>
   <footer>
     Cobertura del día = clientes de la cartera del vendedor con visita ese día (según la ruta de Gescom) que tienen un pedido de la marca cargado en la semana ÷ clientes con visita ese día.
-    Cobertura de la semana = clientes de la cartera con pedido de la marca cargado de lunes a sábado ÷ clientes de la cartera con día de visita. Período del seguimiento: martes 03/11 al miércoles 30/12/2026; «Todo el período» suma las visitas de los días ya transcurridos de todas las semanas.
+    Cobertura de la semana = clientes de la cartera con pedido de la marca cargado de lunes a sábado ÷ base real del vendedor (todos los clientes activos de su cartera en Gescom). Meta = 70% de esa base. Período del seguimiento: martes 03/11 al miércoles 30/12/2026; «Todo el período»: clientes distintos con pedido desde el 03/11 hasta hoy ÷ base real del vendedor; los días muestran la suma de las rutas ya transcurridas.
     Se mide por fecha de carga del pedido (el día que el vendedor lo toma), con o sin factura; no se descuentan los rechazos.
     Verde: 70% o más; amarillo: dos tercios del objetivo (46,7%) o más; rojo: menos. Los días que todavía no llegaron se muestran con «—».
     <span id="fuente"></span>
@@ -162,12 +162,13 @@ function calcSem(mk,lun){
     DIAS.forEach((d,i)=>{ const ruta=lst.filter(c=>String(c[5]||'').includes(d));
       const out=!enRango(fechas[i]), fut=fechas[i]>HOY; const cc=ruta.filter(c=>sem.has(cli(c[0]))).length;
       r.dias[d]={base:ruta.length,cc,cob:ruta.length?cc/ruta.length:0,fut,out,fecha:fechas[i],sin:ruta.filter(c=>!sem.has(cli(c[0])))}; });
-    // base de la semana: clientes con dia de visita dentro del periodo (incluye los dias que faltan)
+    // clientes con dia de visita dentro del periodo (para los dias)
     const conDia=lst.filter(c=>DIAS.some((d,i)=>!r.dias[d].out&&String(c[5]||'').includes(d)));
     const pas=conDia.filter(c=>DIAS.some((d,i)=>!r.dias[d].out&&!r.dias[d].fut&&String(c[5]||'').includes(d)));
-    const base=conDia.length, cc=conDia.filter(c=>sem.has(cli(c[0]))).length;
+    // base real del vendedor (pedido de Bruno, 05/11/2026): toda su cartera de clientes activos de Gescom
+    const base=lst.length, cc=lst.filter(c=>sem.has(cli(c[0]))).length;
     Object.assign(r,{base,cc,basePas:pas.length,ccPas:pas.filter(c=>sem.has(cli(c[0]))).length,
-      sinSem:conDia.filter(c=>!sem.has(cli(c[0]))).sort((a,b)=>String(a[1]).localeCompare(String(b[1])))});
+      sinSem:lst.filter(c=>!sem.has(cli(c[0]))).sort((a,b)=>String(a[1]).localeCompare(String(b[1])))});
     return r; });
 }
 function calc(mk,sel){
@@ -179,10 +180,11 @@ function calc(mk,sel){
     rs=Object.keys(VEND).map(Number).map((v,ix)=>{ const r={cod:v,nom:VEND[v],dias:{},base:0,cc:0};
       DIAS.forEach(d=>{ let b=0,c=0; semanas.forEach(S=>{ const x=S[ix].dias[d]; if(!x.out&&!x.fut){ b+=x.base; c+=x.cc; } });
         r.dias[d]={base:b,cc:c,cob:b?c/b:0,fut:!b,out:false,per:true,sin:[]}; });
-      semanas.forEach(S=>{ r.base+=S[ix].basePas; r.cc+=S[ix].ccPas; });
-      // clientes sin compra: de la cartera con dia de visita, sin ningun pedido de la marca en lo que va del periodo
+      r.base=(CART[v]||[]).length;   // base real: toda la cartera
+      // clientes sin compra: toda la cartera, sin ningun pedido de la marca en lo que va del periodo
       const ped=PED[mk][v]||{}, todos=new Set(); Object.keys(ped).forEach(f=>{ if(enRango(f)&&f<=HOY) ped[f].forEach(k=>todos.add(k)); });
-      r.sinSem=(CART[v]||[]).filter(c=>DIAS.some(d=>String(c[5]||'').includes(d))&&!todos.has(cli(c[0]))).sort((a,b)=>String(a[1]).localeCompare(String(b[1])));
+      r.cc=(CART[v]||[]).filter(c=>todos.has(cli(c[0]))).length;
+      r.sinSem=(CART[v]||[]).filter(c=>!todos.has(cli(c[0]))).sort((a,b)=>String(a[1]).localeCompare(String(b[1])));
       return r; });
   }
   rs.forEach(r=>{ r.sinN=r.sinSem.length; r.sem=r.base?r.cc/r.base:0; r.meta=Math.ceil(r.base*OBJ); r.falta=Math.max(r.meta-r.cc,0);
@@ -202,7 +204,7 @@ function tabla(mk,sel){
   const tot={}; DIAS.forEach(d=>{ const vale=rs.filter(r=>!r.dias[d].out&&!r.dias[d].fut); const b=vale.reduce((a,r)=>a+r.dias[d].base,0), c=vale.reduce((a,r)=>a+r.dias[d].cc,0);
     tot[d]={b,c,out:rs.every(r=>r.dias[d].out),fut:!vale.length}; });
   const tb=rs.reduce((a,r)=>a+r.base,0), tc=rs.reduce((a,r)=>a+r.cc,0), tm=rs.reduce((a,r)=>a+r.meta,0), tf=rs.reduce((a,r)=>a+r.falta,0);
-  const html=`<div class="tbl"><table><thead><tr>${th('cod','Código','l')}${th('nom','Vendedor','l')}${DIAS.map((d,i)=>th('d'+d,DCORTO[d]+(P?'':' '+ddmm(addD(lun,i))),'c')).join('')}${th('base',P?'Visitas del período':'Clientes con ruta')}${th('cc',P?'Visitas con pedido':'Con pedido en la semana')}${th('sem',P?'Cobertura del período':'Cobertura semana','c')}${th('falta','Faltan para 70%')}${th('sinN','Clientes sin compra','c')}</tr></thead>
+  const html=`<div class="tbl"><table><thead><tr>${th('cod','Código','l')}${th('nom','Vendedor','l')}${DIAS.map((d,i)=>th('d'+d,DCORTO[d]+(P?'':' '+ddmm(addD(lun,i))),'c')).join('')}${th('base','Base clientes')}${th('cc',P?'Clientes con pedido en el período':'Clientes con pedido en la semana')}${th('sem',P?'Cobertura del período':'Cobertura semana','c')}${th('falta','Faltan para 70%')}${th('sinN','Clientes sin compra','c')}</tr></thead>
   <tbody>${sorted.map(r=>{ let fila=`<tr><td class="l cod">${r.cod}</td><td class="l">${esc(r.nom)}</td>${DIAS.map(d=>`<td class="c">${celda(r,d)}</td>`).join('')}
     <td>${fmtN(r.base)}</td><td><b>${fmtN(r.cc)}</b></td><td class="c"><span class="chip" style="background:${color(r.sem)}">${fmtP(r.sem)}</span></td><td><b>${r.falta?fmtN(r.falta):'✔ cumplido'}</b></td>
     <td class="c">${(()=>{const ab=ABIERTO&&ABIERTO.mk===mk&&ABIERTO.v===r.cod&&ABIERTO.d==='T';return `<button type="button" class="exp" data-mk="${mk}" data-v="${r.cod}" aria-expanded="${!!ab}">${ab?'▾':'▸'} Ver ${fmtN(r.sinN)}</button>`;})()}</td></tr>`;
@@ -233,8 +235,8 @@ function render(){
   const etq=ultimo?(dh?'hoy':DNOM[ultimo].toLowerCase()):'';
   const que=P?'del período':'de la semana';
   $('kpis').innerHTML=[
-    [`Cobertura Softys ${que}`,fmtP(S.tb?S.tc/S.tb:0),`${fmtN(S.tc)} de ${fmtN(S.tb)} ${P?'visitas':'clientes'} · faltan ${fmtN(S.tf)} para el 70%`],
-    [`Cobertura Clorox ${que}`,fmtP(C.tb?C.tc/C.tb:0),`${fmtN(C.tc)} de ${fmtN(C.tb)} ${P?'visitas':'clientes'} · faltan ${fmtN(C.tf)} para el 70%`],
+    [`Cobertura Softys ${que}`,fmtP(S.tb?S.tc/S.tb:0),`${fmtN(S.tc)} de ${fmtN(S.tb)} clientes · faltan ${fmtN(S.tf)} para el 70%`],
+    [`Cobertura Clorox ${que}`,fmtP(C.tb?C.tc/C.tb:0),`${fmtN(C.tc)} de ${fmtN(C.tb)} clientes · faltan ${fmtN(C.tf)} para el 70%`],
     [`Softys ${etq||'del día'}`,ultimo?fmtP(dCob(T.S,ultimo)):'—',ultimo?`Ruta del ${DNOM[ultimo].toLowerCase()}: ${fmtN(T.S.tot[ultimo].c)} de ${fmtN(T.S.tot[ultimo].b)}`:'Sin días del período en esta semana'],
     [`Clorox ${etq||'del día'}`,ultimo?fmtP(dCob(T.C,ultimo)):'—',ultimo?`Ruta del ${DNOM[ultimo].toLowerCase()}: ${fmtN(T.C.tot[ultimo].c)} de ${fmtN(T.C.tot[ultimo].b)}`:'Sin días del período en esta semana'],
     ['Vendedores en 70% o más',`${ok(S)} · ${ok(C)}`,`Softys · Clorox, ${que}`]
