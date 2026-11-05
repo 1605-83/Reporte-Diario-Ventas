@@ -272,7 +272,7 @@ let SEMS=[], SELLO='', VIVO=null, LISTA=false, FILES=[], CC=null;
 const dec=b=>new TextDecoder('windows-1252').decode(b);
 const bajar=(p,bin)=>fetch(RAW+p.split('/').map(encodeURIComponent).join('/')+'?t='+Date.now(),{cache:'no-store'})
   .then(r=>{if(!r.ok)throw new Error('No se pudo descargar '+p);return bin?r.arrayBuffer():r.json();});
-const hhmm=()=>new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Argentina/Buenos_Aires'});
+const hhmm=()=>new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'America/Argentina/Buenos_Aires'});
 function cabecera(){
   const m=FILES.length?FILES[FILES.length-1].match(/-(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})\d{2}-r/):null;
   const vivoHoy=VIVO&&iso(VIVO.dia)===HOY;
