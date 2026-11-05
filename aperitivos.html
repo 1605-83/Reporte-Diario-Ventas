@@ -52,6 +52,9 @@ select,input{font:inherit;font-size:.88rem;color:var(--ink);background:#fff;bord
 .tot{font-weight:900;background:#FAFAFA}
 .vacio{padding:30px;text-align:center;color:var(--ink2)}
 @media (max-width:760px){.th{display:none}.vrow{grid-template-columns:22px 1fr auto}.vrow .m{display:none}.det{padding-left:10px}}
+.excel{font:inherit;font-size:.88rem;font-weight:700;color:#fff;background:#1D6F42;border:0;border-radius:10px;padding:8px 14px;cursor:pointer}
+.excel:hover{background:#185C37}.excel:disabled{opacity:.6;cursor:wait}
+.excel:focus-visible{outline:3px solid #7FC4FF;outline-offset:2px}
 footer{margin-top:16px;font-size:.78rem;color:var(--ink2);text-align:center;line-height:1.5}
 </style>
 </head>
@@ -66,6 +69,7 @@ footer{margin-top:16px;font-size:.78rem;color:var(--ink2);text-align:center;line
       <select id="fVend" aria-label="Vendedor"><option value="">Todos los vendedores</option></select>
       <details class="multi" id="fCliBox"><summary id="fCliTxt">Todos los clientes</summary>
         <div class="pop"><input type="search" id="fCliQ" placeholder="Buscar código o nombre" aria-label="Buscar cliente" autocomplete="off"><button type="button" id="fCliLimpiar">Todos</button><div id="fCli" role="group" aria-label="Clientes"></div></div></details>
+      <button type="button" id="bExcel" class="excel" title="Descarga lo que se ve en pantalla, con los filtros elegidos">⬇ Descargar Excel</button>
     </div>
   </div>
   <div class="card kpis" id="kpis"></div>
@@ -131,6 +135,7 @@ function dibujar(){
     <div class="kpi"><div class="l">Por producto · unidades y bolsas</div><div class="v" style="font-size:1rem;line-height:1.5">${PROD.map((p,i)=>`${p[1]}: <b>${fmtN(tot[i])}</b> u · <b>${fmtN(tbol[i])}</b> bolsas`).join("<br>")}</div></div>`;
   const val={n:v=>v.n,u:v=>v.u,bt:v=>v.bt,imp:v=>v.imp,cli:v=>v.ncli,p0:v=>v.p[0],p1:v=>v.p[1],p2:v=>v.p[2],p3:v=>v.p[3]};
   L.sort((a,b)=>{ const A=val[sortK](a), B=val[sortK](b); return (A>B?1:A<B?-1:0)*sortD || a.c-b.c; });
+  ULT={L,tot,tbol,tu,tb,ti,tc,desde,hasta:$('fHasta').value||'',fd};
   document.querySelectorAll('.th span[data-k]').forEach(s=>{ s.textContent=s.textContent.replace(/ [▲▼]$/,'')+(s.dataset.k===sortK? (sortD>0?' ▲':' ▼') : ''); });
   const cel=n=>n? `<b>${fmtN(n)}</b>` : '<span class="cero">0</span>';
   const bolC=n=>`<span class="bol${n?'':' cero'}">${fmtN(n)} bolsas</span>`;   // bolsas del codigo, debajo de las unidades
@@ -174,6 +179,38 @@ document.addEventListener('click',e=>{ const b=$('fCliBox'); if(b.open && !b.con
     document.addEventListener('visibilitychange',()=>{ if(!document.hidden) enVivo(); });
   }catch(e){ $('meta').textContent='No se pudieron leer los datos: '+e.message; }
 })();
+// ---- Descargar Excel (pedido de Bruno, 05/11/2026): lo que se ve en pantalla, con los filtros elegidos.
+// Hoja "Vendedores" (en el orden de la pantalla, con total) y hoja "Clientes" (detalle de cada vendedor). Numeros como numeros ----
+let ULT=null, EXJ=null;
+const cargarExcelJS=()=>EXJ? Promise.resolve(EXJ) : new Promise((ok,mal)=>{ const s=document.createElement('script');
+  s.src='https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js'; s.onload=()=>ok(EXJ=window.ExcelJS); s.onerror=()=>mal(new Error('no se pudo bajar la librería de Excel')); document.head.appendChild(s); });
+async function descargarExcel(){
+  if(!ULT) return; const b=$('bExcel'), txt=b.textContent; b.disabled=true; b.textContent='Armando Excel…';
+  try{
+    const X=await cargarExcelJS(), wb=new X.Workbook(), U=ULT;
+    const filtro=`Pedidos cargados desde el ${dmy(U.desde)}${U.hasta? ' hasta el '+dmy(U.hasta) : ''}${U.fd? ', solo los '+$('fDia').selectedOptions[0].text.toLowerCase() : ''} · ${$('fVend').value? $('fVend').selectedOptions[0].text : 'todos los vendedores'} · ${$('fCliTxt').textContent.toLowerCase()} · ventas al ${vivoCorte||corteMes}`;
+    const hoja=(nom,cols,filas,totales)=>{ const ws=wb.addWorksheet(nom,{views:[{state:'frozen',ySplit:3}]});
+      ws.addRow(['Ventas Aperitivos Cepas']).font={bold:true,size:14}; ws.addRow([filtro]).font={italic:true,color:{argb:'FF6B7280'}};
+      const hr=ws.addRow(cols.map(c=>c[0])); hr.eachCell(c=>{ c.font={bold:true,color:{argb:'FFFFFFFF'}}; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF111318'}}; c.alignment={vertical:'middle',wrapText:true}; });
+      filas.forEach(f=>ws.addRow(f));
+      if(totales){ const tr=ws.addRow(totales); tr.eachCell(c=>{ c.font={bold:true}; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF2F3F5'}}; }); }
+      cols.forEach((c,i)=>{ const col=ws.getColumn(i+1); col.width=c[1]; if(c[2]) col.numFmt=c[2]; });
+      ws.autoFilter={from:{row:3,column:1},to:{row:3,column:cols.length}}; };
+    const N='#,##0', P='"$ "#,##0';
+    const cProd=PROD.flatMap(p=>[[p[1]+' (u)',12,N],[p[1]+' (bolsas)',12,N]]);
+    hoja('Vendedores',[['Código',9],['Vendedor',24],...cProd,['Unidades',11,N],['Bolsas',10,N],['Importe con IVA',16,P],['Clientes',10,N]],
+      U.L.map(v=>[v.c,v.n,...v.p.flatMap((u,i)=>[u,v.bol[i]]),v.u,v.bt,Math.round(v.imp),v.ncli]),
+      ['','Total',...U.tot.flatMap((u,i)=>[u,U.tbol[i]]),U.tu,U.tb,Math.round(U.ti),U.tc]);
+    const filasC=U.L.flatMap(v=>[...v.cli.values()].sort((a,b)=>b.p.reduce((s,u)=>s+u,0)-a.p.reduce((s,u)=>s+u,0))
+      .map(c=>[v.c,v.n,isNaN(+c.cli)? c.cli : +c.cli,titulo(c.rs),...c.p.flatMap((u,i)=>[u,c.bol[i]]),c.p.reduce((s,u)=>s+u,0),Math.round(c.imp),c.ult? new Date(c.ult+'T12:00:00Z') : '']));
+    hoja('Clientes',[['Cód. vendedor',10],['Vendedor',22],['Cliente',10],['Razón social',32],...cProd,['Unidades',11,N],['Importe con IVA',16,P],['Último pedido',13,'dd/mm/yyyy']],filasC);
+    const buf=await wb.xlsx.writeBuffer(), a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+    a.download=`aperitivos-cepas_${U.desde}${U.hasta? '_al_'+U.hasta : ''}.xlsx`; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },1000);
+  }catch(e){ alert('No se pudo armar el Excel: '+e.message); }
+  finally{ b.disabled=false; b.textContent=txt; }
+}
+$('bExcel').addEventListener('click',descargarExcel);
 // en vivo: lo cargado hoy sale de vivo/hoy.csv (robot en vivo, cada vez que la base de Gescom suma ventas)
 async function enVivo(){
   try{ const est=await (await fetch(RAW+'vivo/estado.json?t='+Date.now(),{cache:'no-store'})).json();
