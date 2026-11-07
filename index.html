@@ -214,6 +214,8 @@ let TIPO_F='comp'; try{ TIPO_F=localStorage.getItem('reporte-tipo-fecha')||'comp
 const NOMBRE_TIPO={comp:'fecha de comprobante', ent:'fecha de entrega', car:'fecha de carga'};
 const dmyIso=d=>/^\d{2}-\d{2}-\d{4}$/.test(d)? d.slice(6)+'-'+d.slice(3,5)+'-'+d.slice(0,2) : '';
 // rango: {d,h} en 'aaaa-mm-dd' = solo la venta entre esas fechas (por la fecha elegida en TIPO_F), dentro del mes
+// periodo de los objetivos de cada mes (Bruno, 07/11/2026: los de noviembre van del 03/11 al 30/11)
+const PERIODO_OBJ={'2026-11':{d:'2026-11-03',h:'2026-11-30'}};
 const habiles=(d,h)=>{ let n=0; for(let t=new Date(d+'T12:00:00');t<=new Date(h+'T12:00:00');t.setDate(t.getDate()+1)){ const wd=t.getDay(); if(wd>0&&wd<6&&!FERIADOS.has(t.toISOString().slice(0,10))) n++; } return n; };
 // txt: el CSV de un mes, o [{ym,txt}] con los CSV de varios meses cuando el desde-hasta pasa de un mes al otro
 // (cada renglon se toma solo del CSV de su mes, asi no se cuenta dos veces lo que aparece en los dos)
@@ -243,6 +245,7 @@ function procesar(txt, nombre, ymPedido, dia, rango){
   const imot=H.indexOf('MotivoDevolucion'), irs=H.indexOf('RazonSocial'), icod=H.indexOf('Codigo'), iart=H.indexOf('Articulo'), motivos={};   // rechazos por vendedor y motivo: {v:{motivo:{imp, comp:Set, cli:{cod:{imp,comp:Set,rs}}}}}
   const add=(o,k,x)=>{o[k]=(o[k]||0)+x;};
   const porDia={}, rechG={};
+  const PER0=dia? null : PERIODO_OBJ[ymPedido]||null;   // vista del mes: solo la venta del periodo del objetivo
   for(let n=0;n<R.length;n++){ const r=R[n], ymFila=RYM[n]||ymPedido;
     const v=parseInt(r[I.cv],10); if(isNaN(v)) continue;
     const car=icar>=0? (r[icar]||'').trim() : ''; if(car) cargas.add(car);
@@ -253,7 +256,8 @@ function procesar(txt, nombre, ymPedido, dia, rango){
       if(!/^\d{4}-\d{2}-\d{2}$/.test(fx)) continue;
       if(ymFila && fx.slice(0,7)!==ymFila) continue;
       if(!ymPedido || fx.slice(0,7)===ymPedido) fechas.add(fx);
-      if(rango && (fx<rango.d || fx>rango.h)) continue; }
+      if(rango && (fx<rango.d || fx>rango.h)) continue;
+      if(!rango && PER0 && (fx<PER0.d || fx>PER0.h)) continue; }
     const g=grupoDe(r[I.prov]);
     const imp=num(r[I.imp]), ne=num(r[I.neto]), co=num(r[I.costo]), ca=num(r[I.cant]), cli=String(r[I.cli]).trim();
     if(!nomCSV[v] && r[I.vn]) nomCSV[v]=titulo(r[I.vn]);
@@ -289,9 +293,10 @@ function procesar(txt, nombre, ymPedido, dia, rango){
   const [y,mo]=ym.split('-').map(Number);
   let dH=0; const nd=new Date(y,mo,0).getDate();
   for(let d=1;d<=nd;d++){ const wd=new Date(y,mo-1,d).getDay(), iso=ym+'-'+String(d).padStart(2,'0'); if(wd>0&&wd<6&&!FERIADOS.has(iso)) dH++; }
-  // desde-hasta: el objetivo es el del mes por los dias habiles del rango sobre los del mes
-  const hR=rango? habiles(rango.d,rango.h) : 0;
-  const fObj=dia? 1/dH : rango? hR/dH : 1;
+  const PER=PERIODO_OBJ[ym]||null; if(PER) dH=habiles(PER.d,PER.h);
+  // el objetivo no cambia al elegir un dia o un desde-hasta: siempre es el del mes entero (Bruno, 07/11/2026)
+  const hR=rango? habiles(rango.d, rango.h<hoy? rango.h : hoy) : 0;
+  const fObj=1;
   // si el rango pasa de un mes al otro (p. ej. del 01/10 al 02/11), el objetivo queda fijo: el del mes entero del "desde"
   // (pedido de Bruno, 02/11/2026: la venta de los primeros dias del mes siguiente suma, el objetivo no cambia)
   const OBJS=[], mesD=rango? rango.d.slice(0,7) : ym, cruza=!!rango && mesD!==rango.h.slice(0,7);
@@ -322,13 +327,13 @@ function procesar(txt, nombre, ymPedido, dia, rango){
   const rt=Math.abs(Object.entries(rech).filter(([v])=>VEND.has(+v)).reduce((a,[,x])=>a+x,0));   // solo los vendedores del reporte, como la venta
   equipo.TOTAL={venta:tv,obj:G.reduce((a,g)=>a+objE(g),0),base:BASES_EQ.TOTAL,ccc:vendedores.reduce((a,v)=>a+v.filas.TOTAL.ccc,0),margen:marg('*|*'),rech:rt,rechP:tv? rt/tv : null};
   // dias: con ventas facturadas en el mes (hasta hoy) y habiles del mes
-  let dT=fs.filter(d=>d.startsWith(ym)).length||1;
+  let dT=fs.filter(d=>d.startsWith(ym) && (!PER || (d>=PER.d && d<=PER.h))).length||1;
   if(ym<hoy.slice(0,7)) dT=dH;   // mes cerrado: ya pasaron todos los dias habiles (la tendencia es la venta real)
   const st=(nombre||'').match(/(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})\d{2}/);
   const corte= st? `${st[3]}/${st[2]}/${st[1]} ${st[4]}:${st[5]}` : ult.split('-').reverse().join('/');
   // dias de carga del mes (para el selector Dia), del mas nuevo al mas viejo
   const diasCarga=[...cargas].filter(d=>/^\d{2}-\d{2}-\d{4}$/.test(d) && d.slice(6)+'-'+d.slice(3,5)===ym).sort((a,b)=>(b.slice(6)+b.slice(3,5)+b.slice(0,2)).localeCompare(a.slice(6)+a.slice(3,5)+a.slice(0,2)));
-  return {vendedores,equipo,dT,dH,ym,mes:MESES[mo-1]+' '+y,corte,conObj:!!OBJ,objCat:(CFG.objCatPorMes||{})[cruza? mesD : ym]||null,dia:dia||'',rango:rango||null,hR,fObj:cruza? 1 : fObj,diasCarga,motivos,porDia,rechG};
+  return {vendedores,equipo,dT,dH,ym,mes:MESES[mo-1]+' '+y,corte,conObj:!!OBJ,objCat:(CFG.objCatPorMes||{})[cruza? mesD : ym]||null,dia:dia||'',rango:rango||null,hR,fObj,per:PER,diasCarga,motivos,porDia,rechG};
 }
 
 // ---- Dibujo ----
@@ -336,8 +341,9 @@ let D=null, abiertos=new Set(), sortK='c', sortD=1, rSortK='rech', rSortD=-1;
 const STORE='reporte-diario-dias';
 // dias por defecto: un dia o un rango arrancan con transcurridos = habiles (ideal 100% del objetivo del periodo, tendencia = venta)
 // cualquiera que abra el link puede cambiarlos, tambien con Desde-Hasta (pedido de Bruno, 03/11/2026); se recuerdan en su navegador
-function diasDef(){ if(D.dia) return {dT:1,dH:1}; if(D.rango){ const h=D.hR||1; return {dT:h,dH:h}; } return {dT:D.dT,dH:D.dH}; }
-const diasKey=()=>D.rango? D.rango.d+'_'+D.rango.h : D.dia? 'dia_'+D.dia : D.ym;
+// con el objetivo del mes entero: transcurridos = habiles del dia o del rango (hasta hoy), habiles = los del mes o del periodo del objetivo
+function diasDef(){ if(D.dia) return {dT:1,dH:D.dH}; if(D.rango) return {dT:D.hR||1,dH:D.dH}; return {dT:D.dT,dH:D.dH}; }
+const diasKey=()=>'m_'+(D.rango? D.rango.d+'_'+D.rango.h : D.dia? 'dia_'+D.dia : D.ym);
 function dias(){ const f=diasDef(); return {dT:+$('dT').value||f.dT, dH:+$('dH').value||f.dH}; }
 const ddmm=d=>d.slice(8)+'/'+d.slice(5,7);
 function chipA(a,ideal){ if(a==null) return '<span class="muted">—</span>'; /* rangos fijos (pedido de Bruno): 0 a 79% rojo, 80 a 99% amarillo, 100% o mas verde */ const c=a>=1?'#7CFF6B':a>=.8?'#FFE14D':'#FF6B6B'; return `<span class="chip" style="background:${c}">${fmtP(a)}</span>`; }
@@ -369,19 +375,19 @@ function render(){
   const rG=g=>Math.abs((D.rechG||{})[g]||0);
   // orden pedido por Bruno: objetivo, venta, tendencia, alcance, cobertura, margen, rechazos, vendedores (el corte va en el subtitulo)
   $('kpis').innerHTML=[
-    ['c2','Objetivo del mes',T.obj? fmt$(T.obj/(D.fObj||1)) : '—',D.dia? `Objetivo del día ${fmt$(T.obj)}` : D.rango? `Objetivo del período ${fmt$(T.obj)}` : `Con IVA · ${CFG.grupos.length} empresas`,
+    ['c2','Objetivo del mes',T.obj? fmt$(T.obj/(D.fObj||1)) : '—',D.per? `Del ${ddmm(D.per.d)} al ${ddmm(D.per.h)} · con IVA · ${CFG.grupos.length} empresas` : `Con IVA · ${CFG.grupos.length} empresas`,
       porG(g=>E[g].obj, g=>`${fmt$(E[g].obj)} · ${fmtP((E[g].obj||0)/(T.obj||1))} del total`)],
     ...(D.rango ? [
       ['c1','Venta del período (con IVA)',fmt$(T.venta),`Del ${ddmm(D.rango.d)} al ${ddmm(D.rango.h)} · por ${NOMBRE_TIPO[TIPO_F]}`, gVenta],
-      ['c3','Falta para el objetivo',fmt$(Math.max((T.obj||0)-T.venta,0)),`Objetivo del mes × ${D.hR} de ${D.dH} días hábiles`,
+      ['c3','Falta para el objetivo',fmt$(Math.max((T.obj||0)-T.venta,0)),`Objetivo del mes`,
         porG(g=>Math.max((E[g].obj||0)-E[g].venta,0), g=>`faltan ${fmt$(Math.max((E[g].obj||0)-E[g].venta,0))}`)],
-      ['c2','% Alcance del período',fmtP(T.alc||0),`Objetivo del período ${fmt$(T.obj)}`,
+      ['c2','% Alcance del período',fmtP(T.alc||0),`Sobre el objetivo del mes ${fmt$(T.obj)}`,
         porG(g=>XG[g].alc, g=>XG[g].alc==null? 'sin objetivo' : `${fmtP(XG[g].alc)} (${fmt$(E[g].venta)} de ${fmt$(E[g].obj)})`)]
     ] : D.dia ? [
       ['c1','Venta del día (con IVA)',fmt$(T.venta),`Cargada el ${D.dia.replace(/-/g,'/')}`, gVenta],
-      ['c3','Falta para el objetivo',fmt$(Math.max((T.obj||0)-T.venta,0)),`Objetivo del mes ÷ ${D.dH} días hábiles`,
+      ['c3','Falta para el objetivo',fmt$(Math.max((T.obj||0)-T.venta,0)),`Objetivo del mes`,
         porG(g=>Math.max((E[g].obj||0)-E[g].venta,0), g=>`faltan ${fmt$(Math.max((E[g].obj||0)-E[g].venta,0))}`)],
-      ['c2','% Alcance del día',fmtP(T.alc||0),`Objetivo del día ${fmt$(T.obj)}`,
+      ['c2','% Alcance del día',fmtP(T.alc||0),`Sobre el objetivo del mes ${fmt$(T.obj)}`,
         porG(g=>XG[g].alc, g=>XG[g].alc==null? 'sin objetivo' : `${fmtP(XG[g].alc)} (${fmt$(E[g].venta)} de ${fmt$(E[g].obj)})`)]
     ] : [
       ['c1','Venta del mes (con IVA)',fmt$(T.venta),`Objetivo ${fmt$(T.obj)}`, gVenta],
