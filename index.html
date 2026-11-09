@@ -94,10 +94,10 @@ tr.cat2 td:first-child{padding-left:104px}
 tr.det td{background:#fff;font-size:.96rem}
 tr.det.g-SOFTYS td{background:#DCEBFF}tr.det.g-AYUDIN td{background:#DDF5D8}tr.det.g-ILOLAY td{background:#FFF6C7}tr.det.g-GEORGALOS td{background:#FFE3CC}tr.det.g-RIOSMA td{background:#F1E1FF}tr.det.g-CEPAS td{background:#FFDDE6}tr.det.g-OTM td{background:#E8E8E8}
 tr.det td:first-child{padding-left:34px}
-.pbar{display:inline-flex;align-items:center;gap:6px;justify-content:flex-end;white-space:nowrap}
-.pbar .pb{display:inline-block;width:70px;height:10px;border-radius:5px;background:#E6E6E6;border:1px solid #BDBDBD;overflow:hidden}
-.pbar .pb i{display:block;height:100%}
-.pbar b{min-width:48px;text-align:right;font-weight:700}
+.pbar{position:relative;display:inline-block;width:110px;height:24px;background:#E6E6E6;border:1px solid #BDBDBD;border-radius:6px;overflow:hidden;vertical-align:middle}
+.pbar i{position:absolute;left:0;top:0;bottom:0}
+.pbar b{position:relative;display:block;text-align:center;line-height:22px;font-weight:700;color:#000}
+.pbar b.cl{color:#fff;text-shadow:0 1px 1px rgba(0,0,0,.35)}
 .chip{display:inline-block;min-width:58px;padding:2px 8px;border-radius:999px;border:1px solid #000;font-weight:700;color:#000;text-align:center}
 .muted{color:#6B7F7B}
 .tg{background:transparent;color:var(--ink);border:1px solid var(--ink);border-radius:5px;padding:1px 7px;margin-right:8px;font-weight:800;line-height:1.2}
@@ -363,7 +363,7 @@ function dias(){ const f=diasDef(); return {dT:+$('dT').value||f.dT, dH:+$('dH')
 const ddmm=d=>d.slice(8)+'/'+d.slice(5,7);
 function chipA(a,ideal){ if(a==null) return '<span class="muted">—</span>'; /* rangos fijos (pedido de Bruno): 0 a 79% rojo, 80 a 99% amarillo, 100% o mas verde */ const c=a>=1?'#2EBD4E':a>=.8?'#F2C200':'#E5484D'; return barra(a,c); }
 // barra de progreso para alcance y cobertura (formato 2, pedido de Bruno, 09/11/2026)
-function barra(v,c){ return `<span class="pbar"><span class="pb"><i style="width:${Math.max(0,Math.min(100,v*100))}%;background:${c}"></i></span><b>${fmtP(v)}</b></span>`; }
+function barra(v,c){ const osc=c!=="#F2C200"; return `<span class="pbar"><i style="width:${Math.max(0,Math.min(100,v*100))}%;background:${c}"></i><b${osc && v>=.5? " class=\"cl\"" : ""}>${fmtP(v)}</b></span>`; }   // formato C: la barra se llena con el numero adentro
 function calc(f){ const {dT,dH}=dias(); const tend=f.venta/dT*dH; return {...f, alc:f.obj? f.venta/f.obj:null, tend, alcT:f.obj? tend/f.obj:null, cob:f.base? f.ccc/f.base:null}; }
 const COLS=[['obj','Objetivo'],['venta','Venta'],['alc','% Alcance'],['tend','Tendencia $'],['cob','% Cobertura'],['base','Base'],['ccc','CCC'],['margen','% Margen'],['rechP','% Rechazos']];
 function celdas(f){ const {dT,dH}=dias(), ideal=dT/dH, x=calc(f);
