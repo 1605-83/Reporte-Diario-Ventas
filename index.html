@@ -94,6 +94,10 @@ tr.cat2 td:first-child{padding-left:104px}
 tr.det td{background:#fff;font-size:.96rem}
 tr.det.g-SOFTYS td{background:#DCEBFF}tr.det.g-AYUDIN td{background:#DDF5D8}tr.det.g-ILOLAY td{background:#FFF6C7}tr.det.g-GEORGALOS td{background:#FFE3CC}tr.det.g-RIOSMA td{background:#F1E1FF}tr.det.g-CEPAS td{background:#FFDDE6}tr.det.g-OTM td{background:#E8E8E8}
 tr.det td:first-child{padding-left:34px}
+.pbar{display:inline-flex;align-items:center;gap:6px;justify-content:flex-end;white-space:nowrap}
+.pbar .pb{display:inline-block;width:70px;height:10px;border-radius:5px;background:#E6E6E6;border:1px solid #BDBDBD;overflow:hidden}
+.pbar .pb i{display:block;height:100%}
+.pbar b{min-width:48px;text-align:right;font-weight:700}
 .chip{display:inline-block;min-width:58px;padding:2px 8px;border-radius:999px;border:1px solid #000;font-weight:700;color:#000;text-align:center}
 .muted{color:#6B7F7B}
 .tg{background:transparent;color:var(--ink);border:1px solid var(--ink);border-radius:5px;padding:1px 7px;margin-right:8px;font-weight:800;line-height:1.2}
@@ -357,12 +361,14 @@ function diasDef(){ if(D.dia) return {dT:1,dH:D.dH}; if(D.rango) return {dT:D.hR
 const diasKey=()=>'m_'+(D.rango? D.rango.d+'_'+D.rango.h : D.dia? 'dia_'+D.dia : D.ym);
 function dias(){ const f=diasDef(); return {dT:+$('dT').value||f.dT, dH:+$('dH').value||f.dH}; }
 const ddmm=d=>d.slice(8)+'/'+d.slice(5,7);
-function chipA(a,ideal){ if(a==null) return '<span class="muted">—</span>'; /* rangos fijos (pedido de Bruno): 0 a 79% rojo, 80 a 99% amarillo, 100% o mas verde */ const c=a>=1?'#7CFF6B':a>=.8?'#FFE14D':'#FF6B6B'; return `<span class="chip" style="background:${c}">${fmtP(a)}</span>`; }
+function chipA(a,ideal){ if(a==null) return '<span class="muted">—</span>'; /* rangos fijos (pedido de Bruno): 0 a 79% rojo, 80 a 99% amarillo, 100% o mas verde */ const c=a>=1?'#2EBD4E':a>=.8?'#F2C200':'#E5484D'; return barra(a,c); }
+// barra de progreso para alcance y cobertura (formato 2, pedido de Bruno, 09/11/2026)
+function barra(v,c){ return `<span class="pbar"><span class="pb"><i style="width:${Math.max(0,Math.min(100,v*100))}%;background:${c}"></i></span><b>${fmtP(v)}</b></span>`; }
 function calc(f){ const {dT,dH}=dias(); const tend=f.venta/dT*dH; return {...f, alc:f.obj? f.venta/f.obj:null, tend, alcT:f.obj? tend/f.obj:null, cob:f.base? f.ccc/f.base:null}; }
 const COLS=[['obj','Objetivo'],['venta','Venta'],['alc','% Alcance'],['tend','Tendencia $'],['cob','% Cobertura'],['base','Base'],['ccc','CCC'],['margen','% Margen'],['rechP','% Rechazos']];
 function celdas(f){ const {dT,dH}=dias(), ideal=dT/dH, x=calc(f);
   return [x.obj? fmt$(x.obj):'<span class="muted">—</span>', fmt$(x.venta), chipA(x.alc,ideal), fmt$(x.tend),
-    x.cob==null?'<span class="muted">—</span>':`<span class="chip" style="background:${x.cob>=.9?'#7CFF6B':x.cob>=.5?'#FFE14D':'#FF6B6B'}">${fmtP(x.cob)}</span>`, x.base? fmtN(x.base):'<span class="muted">—</span>', fmtN(x.ccc),
+    x.cob==null?'<span class="muted">—</span>':barra(x.cob, x.cob>=.9?'#2EBD4E':x.cob>=.5?'#F2C200':'#E5484D'), x.base? fmtN(x.base):'<span class="muted">—</span>', fmtN(x.ccc),
     x.margen==null?'<span class="muted">—</span>':fmtP(x.margen), x.rechP==null?'':fmtP(x.rechP)].map(c=>`<td>${c}</td>`).join(''); }
 
 function render(){
