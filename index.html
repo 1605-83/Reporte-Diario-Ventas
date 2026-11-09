@@ -110,6 +110,15 @@ tr.det td:first-child{padding-left:34px}
 .bar i{display:block;height:100%;background:var(--low)}
 #estado{margin-top:22px;padding:14px;border:1px dashed #fff;border-radius:8px;background:var(--panel);color:#000}
 #app{display:none}
+/* dias de venta (mismo formato que Softys y Ayudin, pedido de Bruno, 09/11/2026) */
+.days{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center;margin:20px 0 4px}
+.daysbig{font-size:3.2rem;font-weight:800;line-height:1;color:#fff}
+.daysbig small{font-size:1.2rem;font-weight:500}
+.track{display:flex;gap:4px;flex-wrap:wrap}
+.track span{flex:1 1 0;min-width:18px;height:30px;border:1px solid rgba(255,255,255,.7);border-radius:3px;font-size:.7rem;display:flex;align-items:flex-end;justify-content:center;padding-bottom:2px;color:#fff}
+.track span.done{background:#fff;color:#000;border-color:#fff}
+.dlabel{font-size:.85rem;color:#D7E7E4;margin-top:6px}
+@media (max-width:640px){.days{grid-template-columns:1fr}.daysbig{font-size:2.4rem}}
 </style>
 </head>
 <body>
@@ -135,6 +144,7 @@ tr.det td:first-child{padding-left:34px}
 </div>
 
 <div id="app">
+  <div class="days"><div class="daysbig" id="daysBig"></div><div><div class="track" id="track"></div><div class="dlabel" id="dlabel"></div></div></div>
   <section class="kpis" id="kpis"></section>
 
   <h2>Total equipo de ventas</h2>
@@ -294,6 +304,7 @@ function procesar(txt, nombre, ymPedido, dia, rango){
   let dH=0; const nd=new Date(y,mo,0).getDate();
   for(let d=1;d<=nd;d++){ const wd=new Date(y,mo-1,d).getDay(), iso=ym+'-'+String(d).padStart(2,'0'); if(wd>0&&wd<6&&!FERIADOS.has(iso)) dH++; }
   const PER=PERIODO_OBJ[ym]||null; if(PER) dH=habiles(PER.d,PER.h);
+  const DH_FIJO={'2026-11':20}; if(DH_FIJO[ym]) dH=DH_FIJO[ym];   // noviembre 2026: 20 dias de venta fijos (pedido de Bruno, 09/11/2026)
   // el objetivo no cambia al elegir un dia o un desde-hasta: siempre es el del mes entero (Bruno, 07/11/2026)
   const hR=rango? habiles(rango.d, rango.h<hoy? rango.h : hoy) : 0;
   const fObj=1;
@@ -327,7 +338,7 @@ function procesar(txt, nombre, ymPedido, dia, rango){
   const rt=Math.abs(Object.entries(rech).filter(([v])=>VEND.has(+v)).reduce((a,[,x])=>a+x,0));   // solo los vendedores del reporte, como la venta
   equipo.TOTAL={venta:tv,obj:G.reduce((a,g)=>a+objE(g),0),base:BASES_EQ.TOTAL,ccc:vendedores.reduce((a,v)=>a+v.filas.TOTAL.ccc,0),margen:marg('*|*'),rech:rt,rechP:tv? rt/tv : null};
   // dias: con ventas facturadas en el mes (hasta hoy) y habiles del mes
-  let dT=fs.filter(d=>d.startsWith(ym) && (!PER || (d>=PER.d && d<=PER.h))).length||1;
+  let dT=fs.filter(d=>d.startsWith(ym) && (!PER || DH_FIJO[ym] || (d>=PER.d && d<=PER.h))).length||1;
   if(ym<hoy.slice(0,7)) dT=dH;   // mes cerrado: ya pasaron todos los dias habiles (la tendencia es la venta real)
   const st=(nombre||'').match(/(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})\d{2}/);
   const corte= st? `${st[3]}/${st[2]}/${st[1]} ${st[4]}:${st[5]}` : ult.split('-').reverse().join('/');
@@ -356,6 +367,9 @@ function celdas(f){ const {dT,dH}=dias(), ideal=dT/dH, x=calc(f);
 
 function render(){
   const {dT,dH}=dias(), E=D.equipo, T=calc(E.TOTAL);
+  $('daysBig').innerHTML=`${dT}<small> de ${dH}</small>`;
+  $('track').innerHTML=Array.from({length:dH},(_,i)=>`<span class="${i<dT?'done':''}">${i+1}</span>`).join('');
+  $('dlabel').textContent=`Días de venta transcurridos: ${fmtP(dT/dH)} del mes, faltan ${Math.max(dH-dT,0)} días hábiles.`;
   // ---- mini graficos de barras de cada indicador (al pasar el mouse muestra el dato de cada barra) ----
   const KG=CFG.grupos, kIdeal=dT/dH, XG=Object.fromEntries(KG.map(g=>[g,calc(E[g])]));
   const CORTO={SOFTYS:'SOF',AYUDIN:'AYU',ILOLAY:'ILO',GEORGALOS:'GEO',RIOSMA:'RIO',CEPAS:'CEP',OTM:'OTM'};
