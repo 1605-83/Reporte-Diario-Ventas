@@ -39,7 +39,7 @@ button{font:inherit;cursor:pointer;background:var(--ink);color:#fff;border:0;bor
 .kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:16px}
 @media (max-width:1000px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 /* celular (WhatsApp): un cuadro por fila para que los graficos no se salgan */
-@media (max-width:640px){.kpis{grid-template-columns:minmax(0,1fr)}.ring{width:34px;height:34px}.track{flex-wrap:nowrap;gap:2px}.track span{min-width:0;font-size:.55rem;height:26px}}
+@media (max-width:640px){.kpis{grid-template-columns:minmax(0,1fr)}.ring{width:34px;height:34px}}
 .kpi{--kc:#fff;padding:8px 12px;border:2px solid var(--kc);border-radius:10px;box-shadow:0 0 0 1px var(--kc),0 0 14px -2px var(--kc);background:#000;color:#fff;min-width:0}
 .kpi .l{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--kc)}
 .kpi .v{font-size:clamp(1.05rem,1.7vw,1.35rem);font-weight:800;margin:2px 0 1px;overflow-wrap:anywhere}
@@ -138,7 +138,7 @@ tr.det td:first-child{padding-left:34px}
 .track span{flex:1 1 0;min-width:18px;height:30px;border:1px solid rgba(255,255,255,.7);border-radius:3px;font-size:.7rem;display:flex;align-items:flex-end;justify-content:center;padding-bottom:2px;color:#fff}
 .track span.done{background:#fff;color:#000;border-color:#fff}
 .dlabel{font-size:.85rem;color:#D7E7E4;margin-top:6px}
-@media (max-width:640px){.days{grid-template-columns:1fr}.daysbig{font-size:2.4rem}}
+@media (max-width:640px){.days{grid-template-columns:1fr}.daysbig{font-size:2.4rem}.track{flex-wrap:nowrap;gap:2px}.track span{min-width:0;font-size:.55rem;height:26px}}
 </style>
 </head>
 <body>
