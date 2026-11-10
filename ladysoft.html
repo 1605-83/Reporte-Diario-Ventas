@@ -44,7 +44,7 @@ tr:hover td{background:#FFF6F6}
 tbody tr.sel td{background:#FDECEC}
 .vrow{cursor:pointer;background:#FFF6F6}.vrow:hover td{background:#FDE7E7}.vrow td{border-bottom:1px solid #F1D5D5}
 .chev{color:#555;text-align:center}.chev span{display:inline-block;transition:transform .15s}.vrow.ab .chev span{transform:rotate(90deg)}
-.det>td{padding:4px 12px 14px 40px;background:#fff;white-space:normal}
+.det>td{padding:4px 12px 14px 40px;background:#fff;white-space:normal;max-width:0}.det>td>div{overflow-x:auto}
 .dt{min-width:760px}.dt th{background:#F3F4F6;color:var(--ink2);font-size:.74rem;text-transform:uppercase;cursor:default}
 .dt tr.dia td{background:var(--marca);color:#fff;font-weight:700;font-size:.85rem;padding:6px 10px}.dt tr.dia small{font-weight:400;color:#F3D6D6;margin-left:6px}
 button.mini{font:inherit;font-size:.78rem;margin-left:8px;padding:4px 10px;border:1px solid var(--line);background:#fff;border-radius:8px;cursor:pointer;color:var(--ink2)}
@@ -165,7 +165,7 @@ function dibujar(){
         <td>${x.nov?`<span class="est si">Compró ${dm(x.nov.f)} · ${nf(x.nov.u)} u.</span>`:'<span class="est no">Pendiente</span>'}</td></tr>`).join(''); }).join('')}</tbody></table>`; };
   $('tVend').tBodies[0].innerHTML=vs.map(o=>{ const ab=abiertos.has(String(o.v));
     return `<tr class="vrow${ab?' ab':''}" data-v="${o.v}" tabindex="0"><td class="chev"><span>▶</span></td><td><b><span class="cod">${o.v}</span>${esc(nomV(o.v))}</b></td><td class="r">${o.n}</td><td class="r">${o.si}</td><td class="r"><b>${o.n-o.si}</b></td><td>${pbar(o.n?o.si/o.n:0)}</td><td class="r">${o.sep}</td></tr>`
-      +(ab?`<tr class="det"><td colspan="7">${detalle(o.v)}</td></tr>`:''); }).join('')
+      +(ab?`<tr class="det"><td colspan="7"><div>${detalle(o.v)}</div></td></tr>`:''); }).join('')
     || '<tr><td colspan="7" class="vac">Ningún cliente con estos filtros.</td></tr>';
 }
 function marcaVivo(){
