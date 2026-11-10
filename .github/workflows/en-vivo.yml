@@ -56,6 +56,16 @@ jobs:
             else
               echo "La bajada fallo; se reintenta en la proxima vuelta"
             fi
+            # combos del mes (1137 y 1184) por vendedor y cliente, para los tableros de combos (pedido de Bruno, 10/11/2026)
+            if powershell -NoProfile -ExecutionPolicy Bypass -Command "& ./robot/combos.ps1 -Combos 1137,1184 -Salida ."; then
+              git add vivo/combos.json
+              if ! git diff --cached --quiet; then
+                git commit -q -m "Combos del mes por vendedor ($(TZ=ART3 date '+%d/%m/%Y %H:%M'))"
+                for n in 1 2 3; do git pull --rebase --autostash -q && git push -q && break; git rebase --abort 2>/dev/null; sleep 10; done
+              fi
+            else
+              echo "Los combos fallaron; se reintenta en la proxima vuelta"
+            fi
             git checkout -- . 2>/dev/null || true
             enHorario || { echo "Fuera de horario: se termina"; break; }
             # antes de llegar a las 6 horas de GitHub, se relanza y termina (la nueva corrida espera a que esta termine)

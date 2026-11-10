@@ -1,8 +1,7 @@
 name: Combos del mes por vendedor
 
 on:
-  schedule:
-    - cron: '7,22,37,52 10-20 * * 1-6'   # cada 15 minutos de 07:07 a 17:52 hora argentina, lunes a sabado
+  # 10/11/2026: el horario se saco; los combos los baja el robot en vivo (en-vivo.yml) cada 10 minutos
   workflow_dispatch:
 
 permissions:
@@ -22,7 +21,7 @@ jobs:
         shell: powershell
         env:
           GESCOM_LPE_CLAVE: ${{ secrets.GESCOM_LPE_CLAVE }}
-        run: .\robot\combos.ps1 -Combos 1137 -Salida .
+        run: .\robot\combos.ps1 -Combos 1137,1184 -Salida .
 
       - name: Subir combos.json
         shell: bash
