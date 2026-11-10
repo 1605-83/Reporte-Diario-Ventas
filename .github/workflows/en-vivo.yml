@@ -6,11 +6,11 @@ name: Venta del dia en vivo
 #
 # 10/11/2026: GitHub casi no respetaba el horario (*/15): habia dias sin ninguna corrida y los tableros quedaban
 # sin los pedidos de hoy. Ahora cada corrida queda prendida y revisa la base cada 10 minutos mientras sea
-# horario de trabajo (07:00 a 18:00 hora argentina, lunes a sabado). Antes de que GitHub la corte (6 horas)
+# horario de trabajo (07:00 a 18:00 hora argentina, lunes a viernes). Antes de que GitHub la corte (6 horas)
 # se relanza sola. El horario de abajo solo sirve para arrancarla si se apago.
 on:
   schedule:
-    - cron: '*/15 10-20 * * 1-6'   # 07:00 a 17:45 hora argentina, lunes a sabado
+    - cron: '*/15 10-20 * * 1-5'   # 07:00 a 17:45 hora argentina, lunes a viernes
   workflow_dispatch:               # boton "Run workflow" para correrlo a mano
 
 permissions:
@@ -37,9 +37,9 @@ jobs:
           git config user.name "robot-gescom"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           inicio=$(date +%s)
-          enHorario() {   # 07:00 a 17:59 hora argentina, lunes (1) a sabado (6)
+          enHorario() {   # 07:00 a 17:59 hora argentina, lunes (1) a viernes (5) (pedido de Bruno, 10/11/2026)
             local h d; h=$(TZ=ART3 date +%-H); d=$(TZ=ART3 date +%u)
-            [ "$d" -le 6 ] && [ "$h" -ge 7 ] && [ "$h" -lt 18 ]
+            [ "$d" -le 5 ] && [ "$h" -ge 7 ] && [ "$h" -lt 18 ]
           }
           vuelta=0
           while :; do
