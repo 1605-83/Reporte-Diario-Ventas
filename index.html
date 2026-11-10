@@ -43,6 +43,20 @@ button{font:inherit;cursor:pointer;background:var(--ink);color:#fff;border:0;bor
 .kpi .v{font-size:clamp(1.05rem,1.7vw,1.35rem);font-weight:800;margin:2px 0 1px;overflow-wrap:anywhere}
 .kpi .n{font-size:.72rem;color:#C9D4D2}
 .mini{margin-top:6px}
+.tor{display:flex;align-items:center;gap:10px;margin-top:6px}
+.pie{flex:none;position:relative;width:46px;height:46px;border-radius:50%;display:grid;place-items:center}
+.pie::after{content:"";position:absolute;inset:11px;border-radius:50%;background:#000}
+.pie.big{width:54px;height:54px}.pie.big::after{inset:8px}
+.pie b{position:relative;z-index:1;font-size:.62rem;font-weight:800}
+.pie i{position:absolute;inset:0;z-index:1}.pie i::before{content:"";position:absolute;left:50%;top:-2px;width:2px;height:12px;margin-left:-1px;background:#fff}
+.tlg{display:grid;grid-template-columns:repeat(4,auto);gap:1px 8px;font-size:.62rem;color:#C9D4D2;white-space:nowrap}
+.tlg .tp::before{content:"";display:inline-block;width:7px;height:7px;border-radius:2px;margin-right:3px;background:var(--c)}
+.ani{display:flex;justify-content:space-between;gap:2px;margin-top:6px}
+.ani>.tp{display:flex;flex-direction:column;align-items:center;font-size:.58rem;color:#C9D4D2}
+.ring{position:relative;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;margin-bottom:1px}
+.ring::after{content:"";position:absolute;inset:4px;border-radius:50%;background:#000}
+.ring b{position:relative;z-index:1;font-size:.52rem;font-weight:800;color:#fff}
+.tp{cursor:default;outline:none}.tp:focus .ring,.tp:hover .ring{box-shadow:0 0 0 2px #fff}
 .mplot{position:relative;display:flex;align-items:flex-end;gap:3px;height:46px;border-bottom:1px solid rgba(255,255,255,.35)}
 .mb{flex:1 1 0;min-width:2px;background:var(--kc);border-radius:3px 3px 0 0;transition:opacity .12s}
 .mplot:hover .mb{opacity:.35}.mplot .mb:hover,.mb:focus{opacity:1;outline:none}
@@ -388,40 +402,46 @@ function render(){
       + (etiq? `<div class="mlab">${items.map(i=>`<span>${esc(i.c||'')}</span>`).join('')}</div>` : '')
       + (refTxt? `<div class="mlab"><span style="text-align:left">${esc(refTxt)}</span></div>` : '') + '</div>'; };
   const porG=(f,tip)=>mini(KG.map(g=>({c:CORTO[g]||g.slice(0,3), col:COLOR_G[g], v:f(g), tip:`${NOMBRE_G[g]||g}: ${tip(g)}`})));
+  // ---- tortas y anillos chicos (pedido de Bruno, 09/11/2026): reemplazan a las barras de cada indicador ----
+  const pctR=v=>Math.round((v||0)*100)+'%';
+  const torta=(f,tip)=>{ const it=KG.map(g=>({g,v:Math.max(+f(g)||0,0)})), tot=it.reduce((a,x)=>a+x.v,0)||1; let ac=0;
+    const seg=it.filter(x=>x.v>0).map(x=>{ const a=ac; ac+=x.v/tot*100; return `${COLOR_G[x.g]} ${a}% ${ac}%`; }).join(',')||'#333 0 100%';
+    return `<div class="tor"><span class="pie" style="background:conic-gradient(${seg})"></span><div class="tlg">${it.map(x=>`<span class="tp" tabindex="0" data-tip="${esc((NOMBRE_G[x.g]||x.g)+': '+tip(x.g))}" style="--c:${COLOR_G[x.g]}">${CORTO[x.g]||x.g.slice(0,3)} ${pctR(x.v/tot)}</span>`).join('')}</div></div>`; };
+  const anillos=(f,tip)=>`<div class="ani">${KG.map(g=>{ const v=f(g); return `<span class="tp" tabindex="0" data-tip="${esc((NOMBRE_G[g]||g)+': '+tip(g))}"><span class="ring" style="background:conic-gradient(${COLOR_G[g]} 0 ${Math.max(0,Math.min(100,(v||0)*100))}%,#333 0)"><b>${v==null?'—':pctR(v)}</b></span>${CORTO[g]||g.slice(0,3)}</span>`; }).join('')}</div>`;
+  const anilloT=(v,ideal)=>`<div class="tor"><span class="pie big" style="background:conic-gradient(var(--kc) 0 ${Math.max(0,Math.min(100,(v||0)*100))}%,#333 0)"><i style="transform:rotate(${Math.min(ideal,1)*360}deg)"></i><b>${fmtP(v||0)}</b></span><div class="n">La línea blanca marca el ideal de hoy (${fmtP(ideal)})</div></div>`;
   const diasMes=Object.keys(D.porDia||{}).filter(d=>d.startsWith(D.ym)).sort();
-  const gVenta= D.dia || !diasMes.length ? porG(g=>E[g].venta, g=>fmt$(E[g].venta))
-    : mini(diasMes.map(d=>{ const [y,m,dd]=d.split('-'); return {c:dd, v:D.porDia[d], tip:`${DIAS_SEM[new Date(+y,+m-1,+dd).getDay()]} ${dd}/${m}: ${fmt$(D.porDia[d])}`}; }), null, 'Venta de cada día');
+  const gVenta= torta(g=>E[g].venta, g=>fmt$(E[g].venta));
   const vOrd=D.vendedores.map(v=>({v,x:calc(v.filas.TOTAL)})).sort((a,b)=>(b.x.alc||0)-(a.x.alc||0));
   const rG=g=>Math.abs((D.rechG||{})[g]||0);
   // orden pedido por Bruno: objetivo, venta, tendencia, alcance, cobertura, margen, rechazos, vendedores (el corte va en el subtitulo)
   $('kpis').innerHTML=[
     ['c2','Objetivo del mes',T.obj? fmt$(T.obj/(D.fObj||1)) : '—',D.per? `Del ${ddmm(D.per.d)} al ${ddmm(D.per.h)} · con IVA · ${CFG.grupos.length} empresas` : `Con IVA · ${CFG.grupos.length} empresas`,
-      porG(g=>E[g].obj, g=>`${fmt$(E[g].obj)} · ${fmtP((E[g].obj||0)/(T.obj||1))} del total`)],
+      torta(g=>E[g].obj, g=>`${fmt$(E[g].obj)} · ${fmtP((E[g].obj||0)/(T.obj||1))} del total`)],
     ...(D.rango ? [
       ['c1','Venta del período (con IVA)',fmt$(T.venta),`Del ${ddmm(D.rango.d)} al ${ddmm(D.rango.h)} · por ${NOMBRE_TIPO[TIPO_F]}`, gVenta],
       ['c3','Falta para el objetivo',fmt$(Math.max((T.obj||0)-T.venta,0)),`Objetivo del mes`,
-        porG(g=>Math.max((E[g].obj||0)-E[g].venta,0), g=>`faltan ${fmt$(Math.max((E[g].obj||0)-E[g].venta,0))}`)],
+        torta(g=>Math.max((E[g].obj||0)-E[g].venta,0), g=>`faltan ${fmt$(Math.max((E[g].obj||0)-E[g].venta,0))}`)],
       ['c2','% Alcance del período',fmtP(T.alc||0),`Sobre el objetivo del mes ${fmt$(T.obj)}`,
-        porG(g=>XG[g].alc, g=>XG[g].alc==null? 'sin objetivo' : `${fmtP(XG[g].alc)} (${fmt$(E[g].venta)} de ${fmt$(E[g].obj)})`)]
+        anilloT(T.alc, kIdeal)]
     ] : D.dia ? [
       ['c1','Venta del día (con IVA)',fmt$(T.venta),`Cargada el ${D.dia.replace(/-/g,'/')}`, gVenta],
       ['c3','Falta para el objetivo',fmt$(Math.max((T.obj||0)-T.venta,0)),`Objetivo del mes`,
-        porG(g=>Math.max((E[g].obj||0)-E[g].venta,0), g=>`faltan ${fmt$(Math.max((E[g].obj||0)-E[g].venta,0))}`)],
+        torta(g=>Math.max((E[g].obj||0)-E[g].venta,0), g=>`faltan ${fmt$(Math.max((E[g].obj||0)-E[g].venta,0))}`)],
       ['c2','% Alcance del día',fmtP(T.alc||0),`Sobre el objetivo del mes ${fmt$(T.obj)}`,
-        porG(g=>XG[g].alc, g=>XG[g].alc==null? 'sin objetivo' : `${fmtP(XG[g].alc)} (${fmt$(E[g].venta)} de ${fmt$(E[g].obj)})`)]
+        anilloT(T.alc, kIdeal)]
     ] : [
       ['c1','Venta del mes (con IVA)',fmt$(T.venta),`Objetivo ${fmt$(T.obj)}`, gVenta],
       ['c3','Tendencia al cierre',fmt$(T.tend),`Al ritmo actual, ${dT} de ${dH} días hábiles`,
-        porG(g=>XG[g].alcT, g=>`${fmt$(XG[g].tend)}${XG[g].alcT==null? '' : ' = '+fmtP(XG[g].alcT)+' del objetivo'}`)],
+        anillos(g=>XG[g].alcT, g=>`${fmt$(XG[g].tend)}${XG[g].alcT==null? '' : ' = '+fmtP(XG[g].alcT)+' del objetivo'}`)],
       ['c2','% Alcance',fmtP(T.alc||0),`Ideal hoy ${fmtP(kIdeal)} · ${dT} de ${dH} días hábiles`,
-        porG(g=>XG[g].alc, g=>XG[g].alc==null? 'sin objetivo' : `${fmtP(XG[g].alc)} (${fmt$(E[g].venta)} de ${fmt$(E[g].obj)})`)]
+        anilloT(T.alc, kIdeal)]
     ]),
     ['c4','Cobertura',fmtP(T.cob||0),`${fmtN(T.ccc)} clientes con compra de ${fmtN(T.base)}`,
-      porG(g=>XG[g].cob, g=>XG[g].cob==null? 'sin base' : `${fmtP(XG[g].cob)} · ${fmtN(E[g].ccc)} de ${fmtN(E[g].base)} clientes`)],
+      anillos(g=>XG[g].cob, g=>XG[g].cob==null? 'sin base' : `${fmtP(XG[g].cob)} · ${fmtN(E[g].ccc)} de ${fmtN(E[g].base)} clientes`)],
     ['c1','% Margen',T.margen==null?'—':fmtP(T.margen),'Sobre venta neta sin IVA',
-      porG(g=>E[g].margen, g=>E[g].margen==null? 'sin dato' : fmtP(E[g].margen))],
+      anillos(g=>E[g].margen, g=>E[g].margen==null? 'sin dato' : fmtP(E[g].margen))],
     ['c4','Rechazos',fmt$(E.TOTAL.rech),`${fmtP(E.TOTAL.rechP||0)} de la venta`,
-      porG(rG, g=>`${fmt$(rG(g))}${E[g].venta? ' · '+fmtP(rG(g)/E[g].venta)+' de su venta' : ''}`)],
+      torta(rG, g=>`${fmt$(rG(g))}${E[g].venta? ' · '+fmtP(rG(g)/E[g].venta)+' de su venta' : ''}`)],
     ['c3','Vendedores',fmtN(D.vendedores.length),'Del reporte de objetivos',
       mini(vOrd.map(o=>({v:o.x.alc, tip:`${o.v.c} · ${o.v.n}: ${o.x.alc==null? 'sin objetivo' : fmtP(o.x.alc)+' de alcance'}`})), null, 'Alcance de cada vendedor, de mayor a menor', false)]
   ].map(k=>`<div class="kpi ${k[0]}"><div class="l">${k[1]}</div><div class="v">${k[2]}</div><div class="n">${k[3]}</div>${k[4]||''}</div>`).join('');
@@ -724,9 +744,9 @@ $('tgAll').addEventListener('click',()=>{ const todos=D.vendedores.every(v=>abie
 const TIP=document.createElement('div'); TIP.id='tip'; TIP.setAttribute('role','tooltip'); document.body.appendChild(TIP);
 function verTip(el,x,y){ TIP.textContent=el.dataset.tip; TIP.style.display='block'; const w=TIP.offsetWidth, h=TIP.offsetHeight;
   TIP.style.left=Math.min(Math.max(8,x-w/2),innerWidth-w-8)+'px'; TIP.style.top=(y-h-12<8? y+18 : y-h-12)+'px'; }
-document.addEventListener('mousemove',e=>{ const el=e.target.closest&&e.target.closest('.mb'); if(el) verTip(el,e.clientX,e.clientY); else if(TIP.style.display!=='none' && document.activeElement?.className!=='mb') TIP.style.display='none'; });
-document.addEventListener('pointerdown',e=>{ const el=e.target.closest&&e.target.closest('.mb'); if(el) verTip(el,e.clientX,e.clientY); else TIP.style.display='none'; });
-document.addEventListener('focusin',e=>{ if(e.target.classList&&e.target.classList.contains('mb')){ const r=e.target.getBoundingClientRect(); verTip(e.target,r.left+r.width/2,r.top); } });
+document.addEventListener('mousemove',e=>{ const el=e.target.closest&&e.target.closest('.mb,.tp'); if(el) verTip(el,e.clientX,e.clientY); else if(TIP.style.display!=='none' && !document.activeElement?.matches?.('.mb,.tp')) TIP.style.display='none'; });
+document.addEventListener('pointerdown',e=>{ const el=e.target.closest&&e.target.closest('.mb,.tp'); if(el) verTip(el,e.clientX,e.clientY); else TIP.style.display='none'; });
+document.addEventListener('focusin',e=>{ if(e.target.matches&&e.target.matches('.mb,.tp')){ const r=e.target.getBoundingClientRect(); verTip(e.target,r.left+r.width/2,r.top); } });
 document.addEventListener('focusout',()=>{ TIP.style.display='none'; });
 $('fMes').addEventListener('change',e=>{ cargarMes(e.target.value).catch(err=>mostrarError(err.message+'.')); });
 $('fTipo').value=TIPO_F;
