@@ -407,7 +407,7 @@ function render(){
   const torta=(f,tip)=>{ const it=KG.map(g=>({g,v:Math.max(+f(g)||0,0)})), tot=it.reduce((a,x)=>a+x.v,0)||1; let ac=0;
     const seg=it.filter(x=>x.v>0).map(x=>{ const a=ac; ac+=x.v/tot*100; return `${COLOR_G[x.g]} ${a}% ${ac}%`; }).join(',')||'#333 0 100%';
     return `<div class="tor"><span class="pie" style="background:conic-gradient(${seg})"></span><div class="tlg">${it.map(x=>`<span class="tp" tabindex="0" data-tip="${esc((NOMBRE_G[x.g]||x.g)+': '+tip(x.g))}" style="--c:${COLOR_G[x.g]}">${CORTO[x.g]||x.g.slice(0,3)} ${pctR(x.v/tot)}</span>`).join('')}</div></div>`; };
-  const anillos=(f,tip)=>`<div class="ani">${KG.map(g=>{ const v=f(g); return `<span class="tp" tabindex="0" data-tip="${esc((NOMBRE_G[g]||g)+': '+tip(g))}"><span class="ring" style="background:conic-gradient(${COLOR_G[g]} 0 ${Math.max(0,Math.min(100,(v||0)*100))}%,#333 0)"><b>${v==null?'—':pctR(v)}</b></span>${CORTO[g]||g.slice(0,3)}</span>`; }).join('')}</div>`;
+  const anillos=(f,tip,ord)=>`<div class="ani">${(ord? [...KG].sort((a,b)=>(f(b)??-1)-(f(a)??-1)) : KG).map(g=>{ const v=f(g); return `<span class="tp" tabindex="0" data-tip="${esc((NOMBRE_G[g]||g)+': '+tip(g))}"><span class="ring" style="background:conic-gradient(${COLOR_G[g]} 0 ${Math.max(0,Math.min(100,(v||0)*100))}%,#333 0)"><b>${v==null?'—':pctR(v)}</b></span>${CORTO[g]||g.slice(0,3)}</span>`; }).join('')}</div>`;
   const anilloT=(v,ideal)=>`<div class="tor"><span class="pie big" style="background:conic-gradient(var(--kc) 0 ${Math.max(0,Math.min(100,(v||0)*100))}%,#333 0)"><i style="transform:rotate(${Math.min(ideal,1)*360}deg)"></i><b>${fmtP(v||0)}</b></span><div class="n">La línea blanca marca el ideal de hoy (${fmtP(ideal)})</div></div>`;
   const diasMes=Object.keys(D.porDia||{}).filter(d=>d.startsWith(D.ym)).sort();
   const gVenta= torta(g=>E[g].venta, g=>fmt$(E[g].venta));
@@ -428,10 +428,10 @@ function render(){
     ] : [
       ['c1','Venta del mes (con IVA)',fmt$(T.venta),`Objetivo ${fmt$(T.obj)}`, gVenta],
       ['c3','Tendencia al cierre',fmt$(T.tend),`Al ritmo actual, ${dT} de ${dH} días hábiles`,
-        anillos(g=>XG[g].alcT, g=>`${fmt$(XG[g].tend)}${XG[g].alcT==null? '' : ' = '+fmtP(XG[g].alcT)+' del objetivo'}`)],
+        anillos(g=>XG[g].alcT, g=>`${fmt$(XG[g].tend)}${XG[g].alcT==null? '' : ' = '+fmtP(XG[g].alcT)+' del objetivo'}`, true)],
     ]),
     ['c4','Cobertura',fmtP(T.cob||0),`${fmtN(T.ccc)} clientes con compra de ${fmtN(T.base)}`,
-      anillos(g=>XG[g].cob, g=>XG[g].cob==null? 'sin base' : `${fmtP(XG[g].cob)} · ${fmtN(E[g].ccc)} de ${fmtN(E[g].base)} clientes`)],
+      anillos(g=>XG[g].cob, g=>XG[g].cob==null? 'sin base' : `${fmtP(XG[g].cob)} · ${fmtN(E[g].ccc)} de ${fmtN(E[g].base)} clientes`, true)],
     ['c1','% Margen',T.margen==null?'—':fmtP(T.margen),'Sobre venta neta sin IVA',
       anillos(g=>E[g].margen, g=>E[g].margen==null? 'sin dato' : fmtP(E[g].margen))],
     ['c4','Rechazos',fmt$(E.TOTAL.rech),`${fmtP(E.TOTAL.rechP||0)} de la venta`,
