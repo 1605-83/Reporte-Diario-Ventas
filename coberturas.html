@@ -23,6 +23,7 @@ p.sub{margin:6px 0 0;font-size:.95rem;color:var(--head2)}
 @media (prefers-reduced-motion:reduce){.act .vivo{animation:none}}
 .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .controls label{font-size:.88rem;display:flex;align-items:center;gap:6px}
+.controls .tick{font-weight:700;cursor:pointer;padding:6px 10px;border:1px solid #fff;border-radius:6px}.controls .tick input{width:18px;height:18px;margin:0;accent-color:#FFD60A;cursor:pointer}
 select{font:inherit;color:#000;background:#fff;border:1px solid #fff;border-radius:6px;padding:6px 8px}
 select:disabled{opacity:1;color:#000;-webkit-text-fill-color:#000}
 :focus-visible{outline:3px solid #FFD60A;outline-offset:2px}
@@ -86,6 +87,7 @@ footer{margin-top:22px;font-size:.82rem;color:var(--head2);max-width:95ch}
     <p class="act" id="hAct"></p>
   </div>
   <div class="controls">
+    <label class="tick" title="Las listas de clientes sin compra muestran solo los que no compraron la marca en todo noviembre"><input type="checkbox" id="fNov"> Solo no compradores de noviembre</label>
     <label>Vendedor <select id="fv" aria-label="Vendedor"><option value="">Todos</option></select></label>
     <label>Semana <select id="sem" aria-label="Semana"></select></label>
   </div>
@@ -208,10 +210,16 @@ function calc(mk,sel){
     DIAS.forEach(d=>r['d'+d]=(r.dias[d].fut||r.dias[d].out)?-1:r.dias[d].cob); });
   return rs;
 }
+// clientes con pedido de la marca en noviembre (del 1/11 a hoy), con cualquier vendedor
+function noCompraNov(mk){ const s=new Set(); const hasta=HOY<'2026-11-30'?HOY:'2026-11-30';
+  Object.values(PED[mk]).forEach(o=>Object.keys(o).forEach(f=>{ if(f>='2026-11-01'&&f<=hasta) o[f].forEach(k=>s.add(k)); })); return s; }
 function tabla(mk,sel){
   const P=sel==='P', lun=P?null:sel;
   const FV=+($('fv').value||0);
   const rs=calc(mk,sel).filter(r=>!FV||r.cod===FV);
+  // tilde de arriba: las listas de clientes sin compra muestran solo los que no compraron la marca en todo noviembre (pedido de Bruno, 10/11/2026)
+  if($('fNov').checked){ const N=noCompraNov(mk), sinNov=c=>!N.has(cli(c[0]));
+    rs.forEach(r=>{ r.sinSem=r.sinSem.filter(sinNov); r.sinN=r.sinSem.length; DIAS.forEach(d=>{ const x=r.dias[d]; if(x.sin) x.sin=x.sin.filter(sinNov); }); }); }
   // dia tildado (al tocar un dia de un vendedor): la columna muestra a cuantos clientes se les vendio ese dia; sin dia, el total de la semana
   const DS=(!P&&ABIERTO&&ABIERTO.mk===mk&&ABIERTO.d!=="T")?ABIERTO.d:null;
   rs.forEach(r=>{ r.ccv=DS?((r.porDia||[]).find(x=>x.d===DS)||{n:0}).n:r.cc; });
@@ -219,7 +227,8 @@ function tabla(mk,sel){
   const th=(k,t,cls='')=>{const on=ORDEN.k===k;return `<th class="${cls} ord"${on?` aria-sort="${ORDEN.dir>0?'ascending':'descending'}"`:''}><button type="button" class="ordb" data-k="${k}" title="Ordenar de menor a mayor o de mayor a menor">${t} <span>${on?(ORDEN.dir>0?'▲':'▼'):'↕'}</span></button></th>`;};
   const celda=(r,d)=>{const x=r.dias[d]; if(x.out) return '<span class="fut">fuera del período</span>';
     if(!x.base) return `<span class="fut">${P?'—':'sin ruta'}</span>`; if(x.fut&&!P&&x.fecha===MANANA){ const ab=ABIERTO&&ABIERTO.mk===mk&&ABIERTO.v===r.cod&&ABIERTO.d===d;
-      return `<button type="button" class="dia manana" data-mk="${mk}" data-v="${r.cod}" data-d="${d}" aria-expanded="${ab}" title="Visita de mañana (${DNOM[d]} ${ddmm(x.fecha)}): ${x.sin.length} de ${x.base} clientes de la ruta todavía sin compra. Tocá para verlos."><b>${x.sin.length} sin compra</b><small>mañana · ${x.cc}/${x.base}</small></button>`; }
+      // mismo color y tamaño que los otros dias (pedido de Bruno, 10/11/2026)
+      return `<button type="button" class="dia" style="background:${color(x.cob)}" data-mk="${mk}" data-v="${r.cod}" data-d="${d}" aria-expanded="${ab}" title="Visita de mañana (${DNOM[d]} ${ddmm(x.fecha)}): ${x.cc} de ${x.base} clientes de la ruta ya compraron en la semana, ${x.sin.length} todavía sin compra. Tocá para verlos."><b>${fmtP(x.cob)}</b><small>${x.cc}/${x.base}</small></button>`; }
     if(x.fut) return `<span class="fut">— (${x.base})</span>`;
     if(x.per) return `<span class="dia" style="background:${color(x.cob)};cursor:default" title="${DNOM[d]}: ${x.cc} de ${x.base} visitas con pedido en el período"><b>${fmtP(x.cob)}</b><small>${fmtN(x.cc)}/${fmtN(x.base)}</small></span>`;
     const ab=ABIERTO&&ABIERTO.mk===mk&&ABIERTO.v===r.cod&&ABIERTO.d===d;
@@ -232,9 +241,9 @@ function tabla(mk,sel){
     <td>${fmtN(r.base)}</td><td><b>${fmtN(r.ccv)}</b></td><td class="c"><span class="chip" style="background:${color(r.sem)}">${fmtP(r.sem)}</span></td><td><b>${r.falta?fmtN(r.falta):'✔ cumplido'}</b></td>
     <td class="c">${(()=>{const ab=ABIERTO&&ABIERTO.mk===mk&&ABIERTO.v===r.cod&&ABIERTO.d==='T';return `<button type="button" class="exp" data-mk="${mk}" data-v="${r.cod}" aria-expanded="${!!ab}">${ab?'▾':'▸'} Ver ${fmtN(r.sinN)}</button>`;})()}</td></tr>`;
     if(ABIERTO&&ABIERTO.mk===mk&&ABIERTO.v===r.cod&&ABIERTO.d==='T'){
-      fila+=`<tr class="sub"><td colspan="12"><p class="subnote"><b>${esc(r.nom)}: ${fmtN(r.sinN)} clientes de su cartera sin pedido de ${mk==='S'?'Softys':'Clorox'} ${P?'en lo que va del período':'en la semana'}.</b></p>${r.sinN?`<div class="sublist"><table><thead><tr><th class="l">Cliente</th><th class="l">Razón social</th><th class="l">Dirección</th><th class="l">Localidad</th><th class="l">Ramo</th><th class="l">Días de visita</th></tr></thead><tbody>${r.sinSem.map(c=>`<tr><td class="l">${esc(c[0])}</td><td class="l">${esc(c[1])}</td><td class="l">${esc(c[2])}</td><td class="l">${esc(c[3])}</td><td class="l">${esc(c[4])}</td><td class="l">${esc(c[5])}</td></tr>`).join('')}</tbody></table></div>`:'<p class="subnote">Todos los clientes de su cartera tienen pedido.</p>'}</td></tr>`; }
+      fila+=`<tr class="sub"><td colspan="12"><p class="subnote"><b>${esc(r.nom)}: ${fmtN(r.sinN)} clientes de su cartera sin pedido de ${mk==='S'?'Softys':'Clorox'} ${P?'en lo que va del período':'en la semana'}${$('fNov').checked?' que tampoco compraron en noviembre':''}.</b></p>${r.sinN?`<div class="sublist"><table><thead><tr><th class="l">Cliente</th><th class="l">Razón social</th><th class="l">Dirección</th><th class="l">Localidad</th><th class="l">Ramo</th><th class="l">Días de visita</th></tr></thead><tbody>${r.sinSem.map(c=>`<tr><td class="l">${esc(c[0])}</td><td class="l">${esc(c[1])}</td><td class="l">${esc(c[2])}</td><td class="l">${esc(c[3])}</td><td class="l">${esc(c[4])}</td><td class="l">${esc(c[5])}</td></tr>`).join('')}</tbody></table></div>`:'<p class="subnote">Todos los clientes de su cartera tienen pedido.</p>'}</td></tr>`; }
     else if(!P&&ABIERTO&&ABIERTO.mk===mk&&ABIERTO.v===r.cod){ const x=r.dias[ABIERTO.d];
-      fila+=`<tr class="sub"><td colspan="12"><p class="subnote"><b>${esc(r.nom)} · ${DNOM[ABIERTO.d]} ${ddmm(x.fecha)}${x.fecha===MANANA&&x.fut?' (visita de mañana)':''}: ${fmtN(x.sin.length)} clientes de la ruta sin pedido de ${mk==='S'?'Softys':'Clorox'} en la semana${x.fecha===MANANA&&x.fut?' hasta hoy':''}.</b></p>${x.sin.length?`<div class="sublist"><table><thead><tr><th class="l">Cliente</th><th class="l">Razón social</th><th class="l">Dirección</th><th class="l">Localidad</th><th class="l">Ramo</th></tr></thead><tbody>${x.sin.map(c=>`<tr><td class="l">${esc(c[0])}</td><td class="l">${esc(c[1])}</td><td class="l">${esc(c[2])}</td><td class="l">${esc(c[3])}</td><td class="l">${esc(c[4])}</td></tr>`).join('')}</tbody></table></div>`:'<p class="subnote">Todos los clientes de la ruta tienen pedido.</p>'}</td></tr>`; }
+      fila+=`<tr class="sub"><td colspan="12"><p class="subnote"><b>${esc(r.nom)} · ${DNOM[ABIERTO.d]} ${ddmm(x.fecha)}${x.fecha===MANANA&&x.fut?' (visita de mañana)':''}: ${fmtN(x.sin.length)} clientes de la ruta sin pedido de ${mk==='S'?'Softys':'Clorox'} en la semana${x.fecha===MANANA&&x.fut?' hasta hoy':''}${$('fNov').checked?' que tampoco compraron en noviembre':''}.</b></p>${x.sin.length?`<div class="sublist"><table><thead><tr><th class="l">Cliente</th><th class="l">Razón social</th><th class="l">Dirección</th><th class="l">Localidad</th><th class="l">Ramo</th></tr></thead><tbody>${x.sin.map(c=>`<tr><td class="l">${esc(c[0])}</td><td class="l">${esc(c[1])}</td><td class="l">${esc(c[2])}</td><td class="l">${esc(c[3])}</td><td class="l">${esc(c[4])}</td></tr>`).join('')}</tbody></table></div>`:'<p class="subnote">Todos los clientes de la ruta tienen pedido.</p>'}</td></tr>`; }
     return fila; }).join('')}</tbody>
   <tfoot><tr><td class="l" colspan="2">Equipo (${rs.length} vendedores)</td>${DIAS.map(d=>{const t=tot[d];return `<td class="c">${t.out?'<span class="fut">fuera</span>':t.fut?'<span class="fut">—</span>':`<span class="chip" style="background:${color(t.b?t.c/t.b:0)}">${fmtP(t.b?t.c/t.b:0)}</span>`}</td>`;}).join('')}
     <td>${fmtN(tb)}</td><td>${fmtN(rs.reduce((a,r)=>a+r.ccv,0))}</td><td class="c"><span class="chip" style="background:${color(tb?tc/tb:0)}">${fmtP(tb?tc/tb:0)}</span></td><td>${tf?fmtN(tf):'✔ cumplido'}</td><td class="c">${fmtN(rs.reduce((a,r)=>a+r.sinN,0))}</td></tr></tfoot></table></div>`;
@@ -277,6 +286,8 @@ $('sem').addEventListener('change',()=>{ABIERTO=null;render();});
 $('fv').innerHTML+=Object.keys(VEND).map(Number).sort((a,b)=>a-b).map(v=>`<option value="${v}">${v} · ${esc(VEND[v])}</option>`).join('');
 if(st.fv&&VEND[st.fv]) $('fv').value=st.fv;
 $('fv').addEventListener('change',()=>{ st.fv=$('fv').value; save(); ABIERTO=null; if(LISTA) render(); });
+if(st.fNov) $('fNov').checked=true;
+$('fNov').addEventListener('change',()=>{ st.fNov=$('fNov').checked; save(); if(LISTA) render(); });
 
 // ---- En vivo (pedido de Bruno, 05/11/2026): ademas de los meses, se lee vivo/hoy.csv (pedidos cargados hoy, el robot
 // en vivo lo sube cada vez que la base de Gescom suma ventas). Cada 2 minutos se revisa si hay datos nuevos y, si hay,
