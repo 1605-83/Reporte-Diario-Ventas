@@ -404,7 +404,7 @@ function render(){
   const porG=(f,tip)=>mini(KG.map(g=>({c:CORTO[g]||g.slice(0,3), col:COLOR_G[g], v:f(g), tip:`${NOMBRE_G[g]||g}: ${tip(g)}`})));
   // ---- tortas y anillos chicos (pedido de Bruno, 09/11/2026): reemplazan a las barras de cada indicador ----
   const pctR=v=>Math.round((v||0)*100)+'%';
-  const torta=(f,tip)=>{ const it=KG.map(g=>({g,v:Math.max(+f(g)||0,0)})), tot=it.reduce((a,x)=>a+x.v,0)||1; let ac=0;
+  const torta=(f,tip)=>{ const it=KG.map(g=>({g,v:Math.max(+f(g)||0,0)})).sort((a,b)=>b.v-a.v), tot=it.reduce((a,x)=>a+x.v,0)||1; let ac=0;
     const seg=it.filter(x=>x.v>0).map(x=>{ const a=ac; ac+=x.v/tot*100; return `${COLOR_G[x.g]} ${a}% ${ac}%`; }).join(',')||'#333 0 100%';
     return `<div class="tor"><span class="pie" style="background:conic-gradient(${seg})"></span><div class="tlg">${it.map(x=>`<span class="tp" tabindex="0" data-tip="${esc((NOMBRE_G[x.g]||x.g)+': '+tip(x.g))}" style="--c:${COLOR_G[x.g]}">${CORTO[x.g]||x.g.slice(0,3)} ${pctR(x.v/tot)}</span>`).join('')}</div></div>`; };
   const anillos=(f,tip,ord)=>`<div class="ani">${(ord? [...KG].sort((a,b)=>(f(b)??-1)-(f(a)??-1)) : KG).map(g=>{ const v=f(g); return `<span class="tp" tabindex="0" data-tip="${esc((NOMBRE_G[g]||g)+': '+tip(g))}"><span class="ring" style="background:conic-gradient(${COLOR_G[g]} 0 ${Math.max(0,Math.min(100,(v||0)*100))}%,#333 0)"><b>${v==null?'—':pctR(v)}</b></span>${CORTO[g]||g.slice(0,3)}</span>`; }).join('')}</div>`;
@@ -433,7 +433,7 @@ function render(){
     ['c4','Cobertura',fmtP(T.cob||0),`${fmtN(T.ccc)} clientes con compra de ${fmtN(T.base)}`,
       anillos(g=>XG[g].cob, g=>XG[g].cob==null? 'sin base' : `${fmtP(XG[g].cob)} · ${fmtN(E[g].ccc)} de ${fmtN(E[g].base)} clientes`, true)],
     ['c1','% Margen',T.margen==null?'—':fmtP(T.margen),'Sobre venta neta sin IVA',
-      anillos(g=>E[g].margen, g=>E[g].margen==null? 'sin dato' : fmtP(E[g].margen))],
+      anillos(g=>E[g].margen, g=>E[g].margen==null? 'sin dato' : fmtP(E[g].margen), true)],
     ['c4','Rechazos',fmt$(E.TOTAL.rech),`${fmtP(E.TOTAL.rechP||0)} de la venta`,
       torta(rG, g=>`${fmt$(rG(g))}${E[g].venta? ' · '+fmtP(rG(g)/E[g].venta)+' de su venta' : ''}`)],
   ].map(k=>`<div class="kpi ${k[0]}"><div class="l">${k[1]}</div><div class="v">${k[2]}</div><div class="n">${k[3]}</div>${k[4]||''}</div>`).join('');
