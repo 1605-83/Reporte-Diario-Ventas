@@ -36,7 +36,7 @@ input[type=date]{color-scheme:light}
 button{font:inherit;cursor:pointer;background:var(--ink);color:#fff;border:0;border-radius:6px;padding:7px 12px}
 .xls{margin-left:auto;align-self:flex-end;background:#1D6F42;color:#fff;font-weight:700;padding:8px 14px;border:1px solid #2E9A5E}
 .xls:hover{background:#21804C}.xls:disabled{opacity:.5;cursor:wait}
-.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:16px}
+.kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:16px}
 @media (max-width:1000px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .kpi{--kc:#fff;padding:8px 12px;border:2px solid var(--kc);border-radius:10px;box-shadow:0 0 0 1px var(--kc),0 0 14px -2px var(--kc);background:#000;color:#fff;min-width:0}
 .kpi .l{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--kc)}
@@ -421,20 +421,14 @@ function render(){
       ['c1','Venta del período (con IVA)',fmt$(T.venta),`Del ${ddmm(D.rango.d)} al ${ddmm(D.rango.h)} · por ${NOMBRE_TIPO[TIPO_F]}`, gVenta],
       ['c3','Falta para el objetivo',fmt$(Math.max((T.obj||0)-T.venta,0)),`Objetivo del mes`,
         torta(g=>Math.max((E[g].obj||0)-E[g].venta,0), g=>`faltan ${fmt$(Math.max((E[g].obj||0)-E[g].venta,0))}`)],
-      ['c2','% Alcance del período',fmtP(T.alc||0),`Sobre el objetivo del mes ${fmt$(T.obj)}`,
-        anilloT(T.alc, kIdeal)]
     ] : D.dia ? [
       ['c1','Venta del día (con IVA)',fmt$(T.venta),`Cargada el ${D.dia.replace(/-/g,'/')}`, gVenta],
       ['c3','Falta para el objetivo',fmt$(Math.max((T.obj||0)-T.venta,0)),`Objetivo del mes`,
         torta(g=>Math.max((E[g].obj||0)-E[g].venta,0), g=>`faltan ${fmt$(Math.max((E[g].obj||0)-E[g].venta,0))}`)],
-      ['c2','% Alcance del día',fmtP(T.alc||0),`Sobre el objetivo del mes ${fmt$(T.obj)}`,
-        anilloT(T.alc, kIdeal)]
     ] : [
       ['c1','Venta del mes (con IVA)',fmt$(T.venta),`Objetivo ${fmt$(T.obj)}`, gVenta],
       ['c3','Tendencia al cierre',fmt$(T.tend),`Al ritmo actual, ${dT} de ${dH} días hábiles`,
         anillos(g=>XG[g].alcT, g=>`${fmt$(XG[g].tend)}${XG[g].alcT==null? '' : ' = '+fmtP(XG[g].alcT)+' del objetivo'}`)],
-      ['c2','% Alcance',fmtP(T.alc||0),`Ideal hoy ${fmtP(kIdeal)} · ${dT} de ${dH} días hábiles`,
-        anilloT(T.alc, kIdeal)]
     ]),
     ['c4','Cobertura',fmtP(T.cob||0),`${fmtN(T.ccc)} clientes con compra de ${fmtN(T.base)}`,
       anillos(g=>XG[g].cob, g=>XG[g].cob==null? 'sin base' : `${fmtP(XG[g].cob)} · ${fmtN(E[g].ccc)} de ${fmtN(E[g].base)} clientes`)],
@@ -442,8 +436,6 @@ function render(){
       anillos(g=>E[g].margen, g=>E[g].margen==null? 'sin dato' : fmtP(E[g].margen))],
     ['c4','Rechazos',fmt$(E.TOTAL.rech),`${fmtP(E.TOTAL.rechP||0)} de la venta`,
       torta(rG, g=>`${fmt$(rG(g))}${E[g].venta? ' · '+fmtP(rG(g)/E[g].venta)+' de su venta' : ''}`)],
-    ['c3','Vendedores',fmtN(D.vendedores.length),'Del reporte de objetivos',
-      mini(vOrd.map(o=>({v:o.x.alc, tip:`${o.v.c} · ${o.v.n}: ${o.x.alc==null? 'sin objetivo' : fmtP(o.x.alc)+' de alcance'}`})), null, 'Alcance de cada vendedor, de mayor a menor', false)]
   ].map(k=>`<div class="kpi ${k[0]}"><div class="l">${k[1]}</div><div class="v">${k[2]}</div><div class="n">${k[3]}</div>${k[4]||''}</div>`).join('');
 
   const head=first=>`<tr><th class="l">${first}</th>${COLS.map(c=>`<th>${c[1]}</th>`).join('')}</tr>`;
