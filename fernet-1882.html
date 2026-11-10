@@ -42,7 +42,12 @@ td{padding:8px 10px;border-bottom:1px solid #EDEDED;white-space:nowrap}
 tr:hover td{background:#FFF6F6}
 .r{text-align:right}.c{text-align:center}
 tbody tr.sel td{background:#FDECEC}
-#tVend tbody tr{cursor:pointer}
+.vrow{cursor:pointer;background:#FFF6F6}.vrow:hover td{background:#FDE7E7}.vrow td{border-bottom:1px solid #F1D5D5}
+.chev{color:#555;text-align:center}.chev span{display:inline-block;transition:transform .15s}.vrow.ab .chev span{transform:rotate(90deg)}
+.det>td{padding:4px 12px 14px 40px;background:#fff;white-space:normal}
+.dt{min-width:760px}.dt th{background:#F3F4F6;color:var(--ink2);font-size:.74rem;text-transform:uppercase;cursor:default}
+.dt tr.dia td{background:#7A1E1E;color:#fff;font-weight:700;font-size:.85rem;padding:6px 10px}.dt tr.dia small{font-weight:400;color:#F3D6D6;margin-left:6px}
+button.mini{font:inherit;font-size:.78rem;margin-left:8px;padding:4px 10px;border:1px solid var(--line);background:#fff;border-radius:8px;cursor:pointer;color:var(--ink2)}
 .cod{display:inline-block;min-width:2.3em;margin-right:6px;padding:1px 7px;border-radius:6px;background:#F7E6E6;color:var(--marca);font-size:.85em;font-weight:700;text-align:center}
 .pbar{position:relative;display:inline-block;width:84px;height:24px;background:#E6E6E6;border:1px solid #BDBDBD;border-radius:6px;overflow:hidden;vertical-align:middle}
 .pbar i{position:absolute;left:0;top:0;bottom:0}
@@ -72,13 +77,8 @@ tbody tr.sel td{background:#FDECEC}
   </div>
   <div class="card kpis" id="kpis"></div>
 
-  <h2>Por vendedor <small>tocá un vendedor para ver solo sus clientes</small></h2>
-  <div class="tw"><table id="tVend"><thead><tr><th>Vendedor</th><th class="r">Clientes</th><th class="r">Ya compraron</th><th class="r">Pendientes</th><th>Recuperados</th><th class="r">Cepas oct (cajas 9 L)</th></tr></thead><tbody></tbody></table></div>
-
-  <h2>Clientes <small id="cuenta"></small></h2>
-  <div class="tw"><table id="tCli"><thead><tr>
-    <th data-k="v">Vendedor</th><th data-k="dia" class="c">Día</th><th data-k="c">Cliente</th><th data-k="dir">Dirección</th><th data-k="loc">Localidad</th><th data-k="seg">Segmento</th><th data-k="vol" class="r">Cepas oct (cajas 9 L)</th><th data-k="nov">1882 x750 en noviembre</th>
-  </tr></thead><tbody></tbody></table></div>
+  <h2>Por vendedor <small id="cuenta"></small> <button class="mini" id="abrir" type="button">Abrir todos</button><button class="mini" id="cerrar" type="button">Cerrar todos</button></h2>
+  <div class="tw"><table id="tVend"><thead><tr><th style="width:28px"></th><th>Vendedor</th><th class="r">Clientes</th><th class="r">Ya compraron</th><th class="r">Pendientes</th><th>Recuperados</th><th class="r">Cepas oct (cajas 9 L)</th></tr></thead><tbody></tbody></table></div>
   <p class="pie">Cepas oct = volumen de Cepas que compró el cliente en octubre, en cajas de 9 litros (dato del listado). El seguimiento de noviembre se lee de las ventas del Reporte diario (Gescom) y se actualiza solo cada 2 minutos. Los clientes sin vendedor tienen en el listado un código que en nuestra cartera corresponde a otro cliente.</p>
 </div>
 <script>
@@ -181,7 +181,7 @@ const nf=(v,d=0)=>v.toLocaleString('es-AR',{minimumFractionDigits:d,maximumFract
 const norm=s=>String(s).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
 const C=CLI.map(r=>({c:r[0],n:r[1],dir:r[2],loc:r[3],seg:r[4],dia:r[5],v:r[6],vol:r[7]}));
 const SET=new Set(C.map(x=>String(x.c)));
-let MES=[], VIVO=[], HOY='', vivoCorte='', corteMes='', sortK='v', sortD=1;
+let MES=[], VIVO=[], HOY='', vivoCorte='', corteMes='', cerrados=new Set();
 const nomV=v=>v? (VEND[v]||('Vendedor '+v)) : 'Sin vendedor asignado';
 
 function parseCSV(t){
@@ -227,21 +227,19 @@ function dibujar(){
     <div class="kpi"><div class="l">Volumen Cepas octubre</div><div class="v">${nf(vol,1)}</div><div class="n">cajas de 9 L de estos clientes</div></div>`;
   // por vendedor (sin el filtro de vendedor, para poder elegir)
   const g={}; for(const x of todos){ const o=g[x.v]||(g[x.v]={v:x.v,n:0,si:0,vol:0}); o.n++; if(x.nov) o.si++; o.vol+=x.vol; }
-  const vs=Object.values(g).sort((a,b)=>(b.n-b.si)-(a.n-a.si)||b.n-a.n);
-  $('tVend').tBodies[0].innerHTML=vs.map(o=>`<tr data-v="${o.v}" class="${String(o.v)===fv?'sel':''}"><td>${o.v?`<span class="cod">${o.v}</span>`:''}${esc(nomV(o.v))}</td><td class="r">${o.n}</td><td class="r">${o.si}</td><td class="r"><b>${o.n-o.si}</b></td><td>${pbar(o.n?o.si/o.n:0)}</td><td class="r">${nf(o.vol,1)}</td></tr>`).join('')
-    || '<tr><td colspan="6" class="vac">Ningún cliente con estos filtros.</td></tr>';
-  const val=(x,k)=>k==='v'? nomV(x.v)+' '+(ORD[x.dia]||9) : k==='dia'? (ORD[x.dia]||9) : k==='nov'? (x.nov?1:0) : x[k];
-  cli.sort((a,b)=>{ const A=val(a,sortK), Bv=val(b,sortK); return (typeof A==='number'&&typeof Bv==='number'? A-Bv : String(A).localeCompare(String(Bv),'es'))*sortD || b.vol-a.vol; });
-  $('cuenta').textContent=`${n} ${n===1?'cliente':'clientes'}`;
-  $('tCli').tBodies[0].innerHTML=cli.map(x=>`<tr>
-    <td>${x.v?`<span class="cod">${x.v}</span>${esc(nomV(x.v))}`:'<span class="vac">Sin vendedor</span>'}</td>
-    <td class="c">${esc(DIA[x.dia]||'')}</td>
-    <td><span class="cod">${x.c}</span>${esc(x.n)}</td>
-    <td>${esc(x.dir)}</td><td>${esc(x.loc)}</td><td>${esc(x.seg)}</td>
-    <td class="r">${nf(x.vol,2)}</td>
-    <td>${x.nov?`<span class="est si">Compró ${dm(x.nov.f)} · ${nf(x.nov.u)} u.</span>`:'<span class="est no">Pendiente</span>'}${OCT_GESCOM[x.c]?`<span class="nota">En Gescom figura compra el ${OCT_GESCOM[x.c]}</span>`:''}</td></tr>`).join('')
-    || '<tr><td colspan="8" class="vac">Ningún cliente con estos filtros.</td></tr>';
-  document.querySelectorAll('#tCli th').forEach(th=>th.textContent=th.textContent.replace(/ [▲▼]$/,'')+(th.dataset.k===sortK?(sortD>0?' ▲':' ▼'):''));
+  const vs=Object.values(g).filter(o=>!fv||String(o.v)===fv).sort((a,b)=>(!a.v)-(!b.v)||(b.n-b.si)-(a.n-a.si)||b.n-a.n);
+  $('cuenta').textContent=`${n} ${n===1?'cliente':'clientes'} · tocá un vendedor para abrir o cerrar sus clientes`;
+  // clientes de cada vendedor, por dia de visita de lunes a viernes (pendientes primero, despues por volumen de Cepas)
+  const detalle=v=>{ const cs=cli.filter(x=>x.v===v), dias=[...new Set(cs.map(x=>x.dia))].sort((a,b)=>(ORD[a]||9)-(ORD[b]||9));
+    return `<table class="dt"><thead><tr><th>Cliente</th><th>Dirección</th><th>Localidad</th><th>Segmento</th><th class="r">Cepas oct (cajas 9 L)</th><th>1882 x750 en noviembre</th></tr></thead><tbody>${dias.map(d=>{
+      const ds=cs.filter(x=>x.dia===d).sort((a,b)=>(!!a.nov)-(!!b.nov)||b.vol-a.vol), p=ds.filter(x=>!x.nov).length;
+      return `<tr class="dia"><td colspan="6">${esc(DIA[d]||'Sin día de visita')} <small>${ds.length} ${ds.length===1?'cliente':'clientes'} · ${p} ${p===1?'pendiente':'pendientes'}</small></td></tr>`+ds.map(x=>`<tr>
+        <td><span class="cod">${x.c}</span>${esc(x.n)}</td><td>${esc(x.dir)}</td><td>${esc(x.loc)}</td><td>${esc(x.seg)}</td><td class="r">${nf(x.vol,2)}</td>
+        <td>${x.nov?`<span class="est si">Compró ${dm(x.nov.f)} · ${nf(x.nov.u)} u.</span>`:'<span class="est no">Pendiente</span>'}${OCT_GESCOM[x.c]?`<span class="nota">En Gescom figura compra el ${OCT_GESCOM[x.c]}</span>`:''}</td></tr>`).join(''); }).join('')}</tbody></table>`; };
+  $('tVend').tBodies[0].innerHTML=vs.map(o=>{ const ab=!cerrados.has(String(o.v));
+    return `<tr class="vrow${ab?' ab':''}" data-v="${o.v}" tabindex="0"><td class="chev"><span>▶</span></td><td><b>${o.v?`<span class="cod">${o.v}</span>`:''}${esc(nomV(o.v))}</b></td><td class="r">${o.n}</td><td class="r">${o.si}</td><td class="r"><b>${o.n-o.si}</b></td><td>${pbar(o.n?o.si/o.n:0)}</td><td class="r">${nf(o.vol,1)}</td></tr>`
+      +(ab?`<tr class="det"><td colspan="7">${detalle(o.v)}</td></tr>`:''); }).join('')
+    || '<tr><td colspan="7" class="vac">Ningún cliente con estos filtros.</td></tr>';
 }
 function marcaVivo(){
   const ok=!!(corteMes||vivoCorte); $('vivo').classList.toggle('off',!ok);
@@ -260,15 +258,17 @@ async function enVivo(){
   marcaVivo();
 }
 function excel(){
-  const {cli}=filas(), sep=';';
+  const {cli}=filas(), sep=';'; cli.sort((a,b)=>(!a.v)-(!b.v)||nomV(a.v).localeCompare(nomV(b.v),'es')||(ORD[a.dia]||9)-(ORD[b.dia]||9)||(!!a.nov)-(!!b.nov)||b.vol-a.vol);
   const L=[['Vendedor','Día','Código','Cliente','Dirección','Localidad','Segmento','Cepas oct (cajas 9 L)','1882 x750 noviembre']].concat(cli.map(x=>[x.v?x.v+' '+nomV(x.v):'Sin vendedor',DIA[x.dia]||'',x.c,x.n,x.dir,x.loc,x.seg,nf(x.vol,2),x.nov?`Compró ${dm(x.nov.f)} (${nf(x.nov.u)} u.)`:'Pendiente']));
   const csv='﻿'+L.map(r=>r.map(v=>{ v=String(v); return /[;"\n]/.test(v)? '"'+v.replace(/"/g,'""')+'"' : v; }).join(sep)).join('\r\n');
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})); a.download='No compradores Fernet 1882 x750 octubre.csv'; a.click();
 }
 $('fVend').innerHTML+=[...new Set(C.map(x=>x.v))].sort((a,b)=>(a||999)-(b||999)).map(v=>`<option value="${v}">${v?v+' · '+esc(nomV(v)):'Sin vendedor asignado'}</option>`).join('');
 ['fVend','fDia','fEst'].forEach(id=>$(id).addEventListener('change',dibujar)); $('q').addEventListener('input',dibujar); $('dl').addEventListener('click',excel);
-$('tVend').addEventListener('click',e=>{ const tr=e.target.closest('tr[data-v]'); if(!tr) return; const v=tr.dataset.v; $('fVend').value= $('fVend').value===v? '' : v; dibujar(); $('tCli').scrollIntoView({behavior:'smooth',block:'start'}); });
-document.querySelector('#tCli thead').addEventListener('click',e=>{ const k=e.target.dataset.k; if(!k) return; if(sortK===k) sortD=-sortD; else { sortK=k; sortD= k==='vol'? -1 : 1; } dibujar(); });
+$('tVend').addEventListener('click',e=>{ const tr=e.target.closest('tr.vrow'); if(!tr) return; const v=tr.dataset.v; cerrados.has(v)? cerrados.delete(v) : cerrados.add(v); dibujar(); });
+document.addEventListener('keydown',e=>{ const tr=e.target.closest&&e.target.closest('tr.vrow'); if(tr&&(e.key==='Enter'||e.key===' ')){ e.preventDefault(); tr.click(); } });
+$('abrir').addEventListener('click',()=>{ cerrados.clear(); dibujar(); });
+$('cerrar').addEventListener('click',()=>{ C.forEach(x=>cerrados.add(String(x.v))); dibujar(); });
 dibujar();
 (async function(){
   try{
