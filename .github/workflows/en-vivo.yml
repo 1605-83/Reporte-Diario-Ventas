@@ -1,8 +1,13 @@
 name: Venta del dia en vivo
 
 # La base de Gescom suma ventas nuevas cada hora en punto, de 7 a 17 (lunes a sabado).
-# Este robot revisa cada 15 minutos y, solo si la base cambio, sube vivo/hoy.csv con lo cargado hoy
-# (pedido de Bruno, 20/10/2026). La pagina Venta del dia lo lee sola, sin recargar.
+# Este robot sube vivo/hoy.csv con lo cargado hoy (pedido de Bruno, 20/10/2026); lo leen Venta del dia,
+# Aperitivos, Seguimiento de coberturas y otros tableros, sin recargar.
+#
+# 10/11/2026: GitHub casi no respetaba el horario (*/15): habia dias sin ninguna corrida y los tableros quedaban
+# sin los pedidos de hoy. Ahora cada corrida queda prendida y revisa la base cada 10 minutos mientras sea
+# horario de trabajo (07:00 a 18:00 hora argentina, lunes a sabado). Antes de que GitHub la corte (6 horas)
+# se relanza sola. El horario de abajo solo sirve para arrancarla si se apago.
 on:
   schedule:
     - cron: '*/15 10-20 * * 1-6'   # 07:00 a 17:45 hora argentina, lunes a sabado
@@ -10,6 +15,7 @@ on:
 
 permissions:
   contents: write
+  actions: write                   # para relanzarse sola
 
 concurrency:
   group: en-vivo
@@ -18,25 +24,44 @@ concurrency:
 jobs:
   en-vivo:
     runs-on: windows-latest
-    timeout-minutes: 10
+    timeout-minutes: 355
     steps:
       - uses: actions/checkout@v4
 
-      - name: Bajar los pedidos de hoy de la base de Gescom
-        shell: powershell
+      - name: Bajar los pedidos de hoy cada 10 minutos (horario de trabajo)
+        shell: bash
         env:
           GESCOM_LPE_CLAVE: ${{ secrets.GESCOM_LPE_CLAVE }}
-        run: .\robot\actualizar.ps1 -Salida . -SoloHoy
-
-      - name: Subir la venta del dia
-        shell: bash
+          GH_TOKEN: ${{ github.token }}
         run: |
           git config user.name "robot-gescom"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add vivo/
-          if git diff --cached --quiet; then
-            echo "Sin cambios: no se sube nada"
-          else
-            git commit -m "Venta del dia en vivo ($(TZ=ART3 date '+%d/%m/%Y %H:%M'))"
-            for n in 1 2 3; do git pull --rebase -q && git push && break; sleep 10; done
-          fi
+          inicio=$(date +%s)
+          enHorario() {   # 07:00 a 17:59 hora argentina, lunes (1) a sabado (6)
+            local h d; h=$(TZ=ART3 date +%-H); d=$(TZ=ART3 date +%u)
+            [ "$d" -le 6 ] && [ "$h" -ge 7 ] && [ "$h" -lt 18 ]
+          }
+          vuelta=0
+          while :; do
+            vuelta=$((vuelta+1))
+            echo "== Vuelta $vuelta ($(TZ=ART3 date '+%d/%m/%Y %H:%M')) =="
+            if powershell -NoProfile -ExecutionPolicy Bypass -File robot/actualizar.ps1 -Salida . -SoloHoy; then
+              git add vivo/
+              if git diff --cached --quiet; then
+                echo "Sin cambios: no se sube nada"
+              else
+                git commit -q -m "Venta del dia en vivo ($(TZ=ART3 date '+%d/%m/%Y %H:%M'))"
+                for n in 1 2 3; do git pull --rebase --autostash -q && git push -q && break; sleep 10; done
+              fi
+            else
+              echo "La bajada fallo; se reintenta en la proxima vuelta"
+            fi
+            git checkout -- . 2>/dev/null || true
+            enHorario || { echo "Fuera de horario: se termina"; break; }
+            # antes de llegar a las 6 horas de GitHub, se relanza y termina (la nueva corrida espera a que esta termine)
+            if [ $(( $(date +%s) - inicio )) -gt $(( 5*3600 + 30*60 )) ]; then
+              gh workflow run en-vivo.yml -R "$GITHUB_REPOSITORY" --ref main && echo "Relanzada" || echo "No se pudo relanzar"
+              break
+            fi
+            sleep 600
+          done
