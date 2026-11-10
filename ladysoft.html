@@ -65,6 +65,7 @@ button.mini{font:inherit;font-size:.78rem;margin-left:8px;padding:4px 10px;borde
 .promo .b .t{font-size:.78rem;font-weight:700;color:var(--marca);text-transform:uppercase}
 .promo .b .p{font-size:1.5rem;font-weight:900;color:var(--marca);line-height:1.1;margin:4px 0}
 .promo .b .d{font-size:.84rem}
+.tick{display:inline-flex;align-items:center;gap:7px;font-size:.9rem;font-weight:500;padding:7px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;cursor:pointer;user-select:none}.tick input{width:18px;height:18px;accent-color:var(--marca);margin:0;padding:0}
 .cods{font-size:.76rem;color:var(--ink2);margin-top:8px}
 @media (max-width:640px){.head{padding:14px}.head h1{font-size:1.15rem}.kpi{padding:12px 14px}.kpi .v{font-size:1.3rem}td,th{padding:7px 8px}}
 </style>
@@ -79,7 +80,7 @@ button.mini{font:inherit;font-size:.78rem;margin-left:8px;padding:4px 10px;borde
     <div class="ctrl">
       <select id="fVend" aria-label="Vendedor"><option value="">Todos los vendedores</option></select>
       <select id="fDia" aria-label="Día de visita"><option value="">Todos los días</option><option value="L">Lunes</option><option value="M">Martes</option><option value="X">Miércoles</option><option value="J">Jueves</option><option value="V">Viernes</option></select>
-      <select id="fEst" aria-label="Estado"><option value="">No compraron en octubre (todos)</option><option value="no">Aún no compraron en noviembre</option><option value="si">Ya compraron en noviembre</option></select>
+      <label class="tick"><input type="checkbox" id="cOct" checked> No compraron en octubre</label><label class="tick"><input type="checkbox" id="cNov"> No compraron en noviembre</label>
       <input type="search" id="q" placeholder="Buscar cliente, código o dirección" aria-label="Buscar">
       <button class="dl" id="dl" type="button">⬇ Excel</button>
     </div>
@@ -108,7 +109,7 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const nf=(v,d=0)=>v.toLocaleString('es-AR',{minimumFractionDigits:d,maximumFractionDigits:d});
 const norm=s=>String(s).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
-let C=[], VEND={}, OCT=new Set(), SEP={}, MES=[], VIVO=[], HOY='', vivoCorte='', corteMes='', abiertos=new Set(), listo=false;
+let C=[], VEND={}, OCT=new Set(), OCTU={}, SEP={}, MES=[], VIVO=[], HOY='', vivoCorte='', corteMes='', abiertos=new Set(), listo=false;
 const nomV=v=>VEND[v]||('Vendedor '+v);
 $('cods').textContent='Códigos: '+Object.keys(CODS).map(c=>c.slice(3)).join(' · ');
 
@@ -139,18 +140,20 @@ function pbar(v){ const p=Math.max(0,Math.min(1,v)), col=p>=.7?'#2EBD4E':p>=.4?'
 const dm=iso=>iso? iso.slice(8,10)+'/'+iso.slice(5,7) : '';
 
 function filas(){
-  const fv=$('fVend').value, fd=$('fDia').value, fe=$('fEst').value, q=norm($('q').value.trim()).split(/\s+/).filter(Boolean), K=compras();
-  const base=C.filter(x=>!OCT.has(x.c)).map(x=>({...x, nov:K[x.c]||null, sep:SEP[x.c]||null}));
-  const enFiltro=base.filter(x=>(!fd||x.dia===fd) && (!fe||(fe==='si')===!!x.nov) && q.every(w=>norm(x.c+' '+x.n+' '+x.dir+' '+x.loc+' '+nomV(x.v)).includes(w)));
+  const fv=$('fVend').value, fd=$('fDia').value, cO=$('cOct').checked, cN=$('cNov').checked, q=norm($('q').value.trim()).split(/\s+/).filter(Boolean), K=compras();
+  // tildes: sin compra en octubre y/o sin compra en noviembre (ninguno tildado = toda la cartera)
+  const base=C.filter(x=>(!cO||!OCT.has(x.c)) && (!cN||!K[x.c])).map(x=>({...x, nov:K[x.c]||null, sep:SEP[x.c]||null, oct:OCTU[x.c]||null}));
+  const enFiltro=base.filter(x=>(!fd||x.dia===fd) && q.every(w=>norm(x.c+' '+x.n+' '+x.dir+' '+x.loc+' '+nomV(x.v)).includes(w)));
   return {todos:enFiltro, cli:enFiltro.filter(x=>!fv||String(x.v)===fv), base};
 }
+const titulo=()=>{ const o=$('cOct').checked, v=$('cNov').checked; return o&&v? 'No compraron en octubre ni noviembre' : o? 'No compraron en octubre' : v? 'No compraron en noviembre' : 'Clientes de la cartera'; };
 function dibujar(){
   if(!listo) return;
   const {todos,cli}=filas(), fv=$('fVend').value;
   const n=cli.length, si=cli.filter(x=>x.nov).length, u=cli.reduce((s,x)=>s+(x.nov?x.nov.u:0),0), sp=cli.filter(x=>x.sep).length;
   const univ=C.filter(x=>!fv||String(x.v)===fv).length;
   $('kpis').innerHTML=`
-    <div class="kpi"><div class="l">No compraron en octubre</div><div class="v">${nf(n)}</div><div class="n">de ${nf(univ)} clientes de la cartera (${univ?nf(n/univ*100):0}%)</div></div>
+    <div class="kpi"><div class="l">${titulo()}</div><div class="v">${nf(n)}</div><div class="n">de ${nf(univ)} clientes de la cartera (${univ?nf(n/univ*100):0}%)</div></div>
     <div class="kpi"><div class="l">Ya compraron en noviembre</div><div class="v" style="color:#7CFF6B">${nf(si)}</div><div class="n">${n?nf(si/n*100):0}% recuperados · ${nf(u)} u.</div></div>
     <div class="kpi"><div class="l">Pendientes</div><div class="v" style="color:#FF8A8A">${nf(n-si)}</div><div class="n">sin Ladysoft en octubre ni noviembre</div></div>
     <div class="kpi"><div class="l">Compraban en septiembre</div><div class="v">${nf(sp)}</div><div class="n">dejaron de comprar en octubre</div></div>`;
@@ -158,10 +161,10 @@ function dibujar(){
   const vs=Object.values(g).filter(o=>!fv||String(o.v)===fv).sort((a,b)=>(b.n-b.si)-(a.n-a.si)||b.n-a.n);
   $('cuenta').textContent=`${nf(n)} ${n===1?'cliente':'clientes'} · tocá un vendedor para ver sus clientes por día`;
   const detalle=v=>{ const cs=cli.filter(x=>x.v===v), dias=[...new Set(cs.map(x=>x.dia))].sort((a,b)=>(ORD[a]||9)-(ORD[b]||9));
-    return `<table class="dt"><thead><tr><th>Cliente</th><th>Dirección</th><th>Localidad</th><th>Segmento</th><th class="r">Compró en sep</th><th>Ladysoft en noviembre</th></tr></thead><tbody>${dias.map(d=>{
+    return `<table class="dt"><thead><tr><th>Cliente</th><th>Dirección</th><th>Localidad</th><th>Segmento</th><th class="r">Compró en sep</th><th class="r">Compró en oct</th><th>Ladysoft en noviembre</th></tr></thead><tbody>${dias.map(d=>{
       const ds=cs.filter(x=>x.dia===d).sort((a,b)=>(!!a.nov)-(!!b.nov)||((b.sep?b.sep.u:0)-(a.sep?a.sep.u:0))||a.n.localeCompare(b.n,'es')), p=ds.filter(x=>!x.nov).length;
-      return `<tr class="dia"><td colspan="6">${esc(DIA[d]||'Sin día de visita')} <small>${ds.length} ${ds.length===1?'cliente':'clientes'} · ${p} ${p===1?'pendiente':'pendientes'}</small></td></tr>`+ds.map(x=>`<tr>
-        <td><span class="cod">${x.c}</span>${esc(x.n)}</td><td>${esc(x.dir)}</td><td>${esc(x.loc)}</td><td>${esc(x.seg)}</td><td class="r">${x.sep?nf(x.sep.u)+' u.':''}</td>
+      return `<tr class="dia"><td colspan="7">${esc(DIA[d]||'Sin día de visita')} <small>${ds.length} ${ds.length===1?'cliente':'clientes'} · ${p} ${p===1?'pendiente':'pendientes'}</small></td></tr>`+ds.map(x=>`<tr>
+        <td><span class="cod">${x.c}</span>${esc(x.n)}</td><td>${esc(x.dir)}</td><td>${esc(x.loc)}</td><td>${esc(x.seg)}</td><td class="r">${x.sep?nf(x.sep.u)+' u.':''}</td><td class="r">${x.oct?nf(x.oct.u)+' u.':''}</td>
         <td>${x.nov?`<span class="est si">Compró ${dm(x.nov.f)} · ${nf(x.nov.u)} u.</span>`:'<span class="est no">Pendiente</span>'}</td></tr>`).join(''); }).join('')}</tbody></table>`; };
   $('tVend').tBodies[0].innerHTML=vs.map(o=>{ const ab=abiertos.has(String(o.v));
     return `<tr class="vrow${ab?' ab':''}" data-v="${o.v}" tabindex="0"><td class="chev"><span>▶</span></td><td><b><span class="cod">${o.v}</span>${esc(nomV(o.v))}</b></td><td class="r">${o.n}</td><td class="r">${o.si}</td><td class="r"><b>${o.n-o.si}</b></td><td>${pbar(o.n?o.si/o.n:0)}</td><td class="r">${o.sep}</td></tr>`
@@ -186,11 +189,11 @@ async function enVivo(){
 }
 function excel(){
   const {cli}=filas(), sep=';'; cli.sort((a,b)=>nomV(a.v).localeCompare(nomV(b.v),'es')||(ORD[a.dia]||9)-(ORD[b.dia]||9)||(!!a.nov)-(!!b.nov)||a.n.localeCompare(b.n,'es'));
-  const L=[['Vendedor','Día','Código','Cliente','Dirección','Localidad','Segmento','Compró en sep (u.)','Ladysoft noviembre']].concat(cli.map(x=>[x.v+' '+nomV(x.v),DIA[x.dia]||'',x.c,x.n,x.dir,x.loc,x.seg,x.sep?x.sep.u:'',x.nov?`Compró ${dm(x.nov.f)} (${nf(x.nov.u)} u.)`:'Pendiente']));
+  const L=[['Vendedor','Día','Código','Cliente','Dirección','Localidad','Segmento','Compró en sep (u.)','Compró en oct (u.)','Ladysoft noviembre']].concat(cli.map(x=>[x.v+' '+nomV(x.v),DIA[x.dia]||'',x.c,x.n,x.dir,x.loc,x.seg,x.sep?x.sep.u:'',x.oct?x.oct.u:'',x.nov?`Compró ${dm(x.nov.f)} (${nf(x.nov.u)} u.)`:'Pendiente']));
   const csv='﻿'+L.map(r=>r.map(v=>{ v=String(v); return /[;"\n]/.test(v)? '"'+v.replace(/"/g,'""')+'"' : v; }).join(sep)).join('\r\n');
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})); a.download='No compradores Ladysoft octubre-noviembre.csv'; a.click();
 }
-['fVend','fDia','fEst'].forEach(id=>$(id).addEventListener('change',dibujar)); $('q').addEventListener('input',dibujar); $('dl').addEventListener('click',excel);
+['fVend','fDia','cOct','cNov'].forEach(id=>$(id).addEventListener('change',dibujar)); $('q').addEventListener('input',dibujar); $('dl').addEventListener('click',excel);
 $('tVend').addEventListener('click',e=>{ const tr=e.target.closest('tr.vrow'); if(!tr) return; const v=tr.dataset.v; abiertos.has(v)? abiertos.delete(v) : abiertos.add(v); dibujar(); });
 document.addEventListener('keydown',e=>{ const tr=e.target.closest&&e.target.closest('tr.vrow'); if(tr&&(e.key==='Enter'||e.key===' ')){ e.preventDefault(); tr.click(); } });
 $('abrir').addEventListener('click',()=>{ C.forEach(x=>abiertos.add(String(x.v))); dibujar(); });
@@ -219,7 +222,7 @@ $('cerrar').addEventListener('click',()=>{ abiertos.clear(); dibujar(); });
     const ult={}; for(const p of arch){ const mm=p.match(/ventas-(\d{4}-\d{2})-/); if(mm && (!ult[mm[1]]||p>ult[mm[1]])) ult[mm[1]]=p; }
     const baja=async ym=>{ if(!ult[ym]) return []; const r=await fetch(RAW+ult[ym].split('/').map(encodeURIComponent).join('/'),{cache:'no-store'}); return r.ok? leer(new TextDecoder('windows-1252').decode(await r.arrayBuffer())) : []; };
     const [S9,S10,S11]=await Promise.all(['2026-09','2026-10','2026-11'].map(baja));
-    OCT=new Set(Object.keys(suma(S10,'2026-10-01','2026-10-31'))); SEP=suma(S9,'2026-09-01','2026-09-30'); MES=S11;
+    OCTU=suma(S10,'2026-10-01','2026-10-31'); OCT=new Set(Object.keys(OCTU)); SEP=suma(S9,'2026-09-01','2026-09-30'); MES=S11;
     const u=ult['2026-11']||'', st=u.match(/-(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})\d{2}/); corteMes= st? `${st[3]}/${st[2]} ${st[4]}:${st[5]}` : '';
     listo=true; dibujar(); await enVivo();
     setInterval(enVivo, 2*60e3);
