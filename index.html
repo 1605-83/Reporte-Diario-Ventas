@@ -558,7 +558,8 @@ function arrancar(txt,nombre,ym,dia,rango){
     // el almanaque deja elegir cualquier fecha de los meses cargados en el repo (el rango puede pasar de un mes al otro)
     const yms=MESES_REPO.map(x=>x.ym).sort(), ymMax=yms[yms.length-1]||D.ym, [zy,zm]=ymMax.split('-').map(Number);
     for(const id of ['fDesde','fHasta']){ $(id).min=(yms[0]||D.ym)+'-01'; $(id).max=yms.length? ymMax+'-'+String(new Date(zy,zm,0).getDate()).padStart(2,'0') : finMes; }
-    $('fDesde').value=D.rango? D.rango.d : ''; $('fHasta').value=D.rango? D.rango.h : ''; $('fLimpiar').hidden=!D.rango;
+    // sin desde-hasta elegido se muestra el periodo del objetivo (03/11 al 30/11), que es lo que suma la vista del mes (pedido de Bruno, 10/11/2026)
+    $('fDesde').value=D.rango? D.rango.d : (!D.dia && D.per? D.per.d : ''); $('fHasta').value=D.rango? D.rango.h : (!D.dia && D.per? D.per.h : ''); $('fLimpiar').hidden=!D.rango;
     const hoyDmy=new Date(Date.now()-3*3600e3).toISOString().slice(0,10).split('-').reverse().join('-');
     $('fDia').innerHTML='<option value="">Mes completo</option>'+D.diasCarga.map(d=>{ const [dd,mm,yy]=d.split('-'); const ds=DIAS_SEM[new Date(+yy,+mm-1,+dd).getDay()];
       return `<option value="${d}">${d===hoyDmy?'Hoy · ':''}${ds} ${dd}/${mm}</option>`; }).join('');
@@ -632,6 +633,7 @@ const cambioRango=()=>{ if(!D) return; let d=$('fDesde').value, h=$('fHasta').va
   if(!d && !h) return cargarMes(D.ym).catch(err=>mostrarError(err.message+'.'));
   const finDe=x=>{ const [y,m]=x.split('-').map(Number); return x.slice(0,7)+'-'+String(new Date(y,m,0).getDate()).padStart(2,'0'); };
   d=d||h.slice(0,7)+'-01'; h=h||finDe(d); if(d>h) [d,h]=[h,d];
+  if(D.per && d===D.per.d && h===D.per.h) return cargarMes(D.ym).catch(err=>mostrarError(err.message+'.'));   // es el periodo del objetivo: vista del mes
   cargarMes(D.ym,'',{d,h}).catch(err=>mostrarError(err.message+'.')); };
 $('fDesde').addEventListener('change',cambioRango);
 $('fHasta').addEventListener('change',cambioRango);
