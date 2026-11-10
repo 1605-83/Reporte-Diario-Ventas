@@ -56,6 +56,8 @@ button.mini{font:inherit;font-size:.78rem;margin-left:8px;padding:4px 10px;borde
 .est.no{background:#FDECEC;color:#B42318}.est.si{background:#E3F6E8;color:#17803A}
 .nota{display:block;font-size:.72rem;color:var(--ink2);font-weight:400;margin-top:2px}
 .vac{color:var(--ink2);font-style:italic}
+.tick{display:inline-flex;align-items:center;gap:7px;font-size:.9rem;font-weight:500;padding:7px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;cursor:pointer;user-select:none}.tick input{width:18px;height:18px;accent-color:var(--marca);margin:0;padding:0}
+.tick.fija,.tick.fija input{cursor:default}
 .pie{font-size:.78rem;color:var(--ink2);margin:14px 4px}
 @media (max-width:640px){.head{padding:14px}.head h1{font-size:1.15rem}.kpi{padding:12px 14px}.kpi .v{font-size:1.3rem}td,th{padding:7px 8px}}
 </style>
@@ -64,13 +66,13 @@ button.mini{font:inherit;font-size:.78rem;margin-left:8px;padding:4px 10px;borde
 <div class="wrap">
   <div class="card head">
     <div>
-      <h1>Fernet 1882 x750 · No compradores de octubre <span class="vivo off" id="vivo"><i></i><span id="vivoTx">Cargando…</span></span></h1>
+      <h1>Fernet 1882 x750 · No compradores de octubre y noviembre <span class="vivo off" id="vivo"><i></i><span id="vivoTx">Cargando…</span></span></h1>
       <div class="meta" id="meta">Clientes que compraron Cepas en octubre y no llevaron Fernet 1882 x750 (listado Lago Puelo). Se marca en verde quien ya lo compró en noviembre.</div>
     </div>
     <div class="ctrl">
       <select id="fVend" aria-label="Vendedor"><option value="">Todos los vendedores</option></select>
       <select id="fDia" aria-label="Día de visita"><option value="">Todos los días</option><option value="L">Lunes</option><option value="M">Martes</option><option value="X">Miércoles</option><option value="J">Jueves</option><option value="V">Viernes</option></select>
-      <select id="fEst" aria-label="Estado"><option value="">No compraron en octubre (todos)</option><option value="no">Aún no compraron en noviembre</option><option value="si">Ya compraron en noviembre</option></select>
+      <label class="tick fija" title="El listado es de clientes que no compraron 1882 x750 en octubre"><input type="checkbox" id="cOct" checked disabled> No compraron en octubre</label><label class="tick"><input type="checkbox" id="cNov"> No compraron en noviembre</label>
       <input type="search" id="q" placeholder="Buscar cliente, código o dirección" aria-label="Buscar">
       <button class="dl" id="dl" type="button">⬇ Excel</button>
     </div>
@@ -212,16 +214,16 @@ function pbar(v){ const p=Math.max(0,Math.min(1,v)), col=p>=.7?'#2EBD4E':p>=.4?'
 const dm=iso=>iso? iso.slice(8,10)+'/'+iso.slice(5,7) : '';
 
 function filas(){
-  const fv=$('fVend').value, fd=$('fDia').value, fe=$('fEst').value, q=norm($('q').value.trim()).split(/\s+/).filter(Boolean), K=compras();
+  const fv=$('fVend').value, fd=$('fDia').value, cN=$('cNov').checked, q=norm($('q').value.trim()).split(/\s+/).filter(Boolean), K=compras();
   const base=C.map(x=>({...x, nov:K[x.c]||null}));
-  const enFiltro=base.filter(x=>(!fd||x.dia===fd) && (!fe||(fe==='si')===!!x.nov) && q.every(w=>norm(x.c+' '+x.n+' '+x.dir+' '+x.loc+' '+nomV(x.v)).includes(w)));
+  const enFiltro=base.filter(x=>(!fd||x.dia===fd) && (!cN||!x.nov) && q.every(w=>norm(x.c+' '+x.n+' '+x.dir+' '+x.loc+' '+nomV(x.v)).includes(w)));
   return {todos:enFiltro, cli:enFiltro.filter(x=>!fv||String(x.v)===fv), base};
 }
 function dibujar(){
   const {todos,cli}=filas(), fv=$('fVend').value;
   const n=cli.length, si=cli.filter(x=>x.nov).length, vol=cli.reduce((s,x)=>s+x.vol,0), u=cli.reduce((s,x)=>s+(x.nov?x.nov.u:0),0);
   $('kpis').innerHTML=`
-    <div class="kpi"><div class="l">No compradores en octubre</div><div class="v">${nf(n)}</div><div class="n">clientes con Cepas y sin 1882 x750</div></div>
+    <div class="kpi"><div class="l">${$('cNov').checked?'No compraron en octubre ni noviembre':'No compraron en octubre'}</div><div class="v">${nf(n)}</div><div class="n">clientes con Cepas y sin 1882 x750</div></div>
     <div class="kpi"><div class="l">Ya compraron en noviembre</div><div class="v" style="color:#7CFF6B">${nf(si)}</div><div class="n">${n?nf(si/n*100):0}% recuperados · ${nf(u)} u.</div></div>
     <div class="kpi"><div class="l">Pendientes</div><div class="v" style="color:#FF8A8A">${nf(n-si)}</div><div class="n">todavía sin 1882 x750</div></div>
     <div class="kpi"><div class="l">Volumen Cepas octubre</div><div class="v">${nf(vol,1)}</div><div class="n">cajas de 9 L de estos clientes</div></div>`;
@@ -264,7 +266,7 @@ function excel(){
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})); a.download='No compradores Fernet 1882 x750 octubre.csv'; a.click();
 }
 $('fVend').innerHTML+=[...new Set(C.map(x=>x.v))].sort((a,b)=>(a||999)-(b||999)).map(v=>`<option value="${v}">${v?v+' · '+esc(nomV(v)):'Sin vendedor asignado'}</option>`).join('');
-['fVend','fDia','fEst'].forEach(id=>$(id).addEventListener('change',dibujar)); $('q').addEventListener('input',dibujar); $('dl').addEventListener('click',excel);
+['fVend','fDia','cNov'].forEach(id=>$(id).addEventListener('change',dibujar)); $('q').addEventListener('input',dibujar); $('dl').addEventListener('click',excel);
 $('tVend').addEventListener('click',e=>{ const tr=e.target.closest('tr.vrow'); if(!tr) return; const v=tr.dataset.v; abiertos.has(v)? abiertos.delete(v) : abiertos.add(v); dibujar(); });
 document.addEventListener('keydown',e=>{ const tr=e.target.closest&&e.target.closest('tr.vrow'); if(tr&&(e.key==='Enter'||e.key===' ')){ e.preventDefault(); tr.click(); } });
 $('abrir').addEventListener('click',()=>{ C.forEach(x=>abiertos.add(String(x.v))); dibujar(); });
