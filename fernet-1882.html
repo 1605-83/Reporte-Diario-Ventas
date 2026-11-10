@@ -181,7 +181,7 @@ const nf=(v,d=0)=>v.toLocaleString('es-AR',{minimumFractionDigits:d,maximumFract
 const norm=s=>String(s).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
 const C=CLI.map(r=>({c:r[0],n:r[1],dir:r[2],loc:r[3],seg:r[4],dia:r[5],v:r[6],vol:r[7]}));
 const SET=new Set(C.map(x=>String(x.c)));
-let MES=[], VIVO=[], HOY='', vivoCorte='', corteMes='', cerrados=new Set();
+let MES=[], VIVO=[], HOY='', vivoCorte='', corteMes='', abiertos=new Set();
 const nomV=v=>v? (VEND[v]||('Vendedor '+v)) : 'Sin vendedor asignado';
 
 function parseCSV(t){
@@ -228,7 +228,7 @@ function dibujar(){
   // por vendedor (sin el filtro de vendedor, para poder elegir)
   const g={}; for(const x of todos){ const o=g[x.v]||(g[x.v]={v:x.v,n:0,si:0,vol:0}); o.n++; if(x.nov) o.si++; o.vol+=x.vol; }
   const vs=Object.values(g).filter(o=>!fv||String(o.v)===fv).sort((a,b)=>(!a.v)-(!b.v)||(b.n-b.si)-(a.n-a.si)||b.n-a.n);
-  $('cuenta').textContent=`${n} ${n===1?'cliente':'clientes'} · tocá un vendedor para abrir o cerrar sus clientes`;
+  $('cuenta').textContent=`${n} ${n===1?'cliente':'clientes'} · tocá un vendedor para ver sus clientes por día`;
   // clientes de cada vendedor, por dia de visita de lunes a viernes (pendientes primero, despues por volumen de Cepas)
   const detalle=v=>{ const cs=cli.filter(x=>x.v===v), dias=[...new Set(cs.map(x=>x.dia))].sort((a,b)=>(ORD[a]||9)-(ORD[b]||9));
     return `<table class="dt"><thead><tr><th>Cliente</th><th>Dirección</th><th>Localidad</th><th>Segmento</th><th class="r">Cepas oct (cajas 9 L)</th><th>1882 x750 en noviembre</th></tr></thead><tbody>${dias.map(d=>{
@@ -236,7 +236,7 @@ function dibujar(){
       return `<tr class="dia"><td colspan="6">${esc(DIA[d]||'Sin día de visita')} <small>${ds.length} ${ds.length===1?'cliente':'clientes'} · ${p} ${p===1?'pendiente':'pendientes'}</small></td></tr>`+ds.map(x=>`<tr>
         <td><span class="cod">${x.c}</span>${esc(x.n)}</td><td>${esc(x.dir)}</td><td>${esc(x.loc)}</td><td>${esc(x.seg)}</td><td class="r">${nf(x.vol,2)}</td>
         <td>${x.nov?`<span class="est si">Compró ${dm(x.nov.f)} · ${nf(x.nov.u)} u.</span>`:'<span class="est no">Pendiente</span>'}${OCT_GESCOM[x.c]?`<span class="nota">En Gescom figura compra el ${OCT_GESCOM[x.c]}</span>`:''}</td></tr>`).join(''); }).join('')}</tbody></table>`; };
-  $('tVend').tBodies[0].innerHTML=vs.map(o=>{ const ab=!cerrados.has(String(o.v));
+  $('tVend').tBodies[0].innerHTML=vs.map(o=>{ const ab=abiertos.has(String(o.v));
     return `<tr class="vrow${ab?' ab':''}" data-v="${o.v}" tabindex="0"><td class="chev"><span>▶</span></td><td><b>${o.v?`<span class="cod">${o.v}</span>`:''}${esc(nomV(o.v))}</b></td><td class="r">${o.n}</td><td class="r">${o.si}</td><td class="r"><b>${o.n-o.si}</b></td><td>${pbar(o.n?o.si/o.n:0)}</td><td class="r">${nf(o.vol,1)}</td></tr>`
       +(ab?`<tr class="det"><td colspan="7">${detalle(o.v)}</td></tr>`:''); }).join('')
     || '<tr><td colspan="7" class="vac">Ningún cliente con estos filtros.</td></tr>';
@@ -265,10 +265,10 @@ function excel(){
 }
 $('fVend').innerHTML+=[...new Set(C.map(x=>x.v))].sort((a,b)=>(a||999)-(b||999)).map(v=>`<option value="${v}">${v?v+' · '+esc(nomV(v)):'Sin vendedor asignado'}</option>`).join('');
 ['fVend','fDia','fEst'].forEach(id=>$(id).addEventListener('change',dibujar)); $('q').addEventListener('input',dibujar); $('dl').addEventListener('click',excel);
-$('tVend').addEventListener('click',e=>{ const tr=e.target.closest('tr.vrow'); if(!tr) return; const v=tr.dataset.v; cerrados.has(v)? cerrados.delete(v) : cerrados.add(v); dibujar(); });
+$('tVend').addEventListener('click',e=>{ const tr=e.target.closest('tr.vrow'); if(!tr) return; const v=tr.dataset.v; abiertos.has(v)? abiertos.delete(v) : abiertos.add(v); dibujar(); });
 document.addEventListener('keydown',e=>{ const tr=e.target.closest&&e.target.closest('tr.vrow'); if(tr&&(e.key==='Enter'||e.key===' ')){ e.preventDefault(); tr.click(); } });
-$('abrir').addEventListener('click',()=>{ cerrados.clear(); dibujar(); });
-$('cerrar').addEventListener('click',()=>{ C.forEach(x=>cerrados.add(String(x.v))); dibujar(); });
+$('abrir').addEventListener('click',()=>{ C.forEach(x=>abiertos.add(String(x.v))); dibujar(); });
+$('cerrar').addEventListener('click',()=>{ abiertos.clear(); dibujar(); });
 dibujar();
 (async function(){
   try{
