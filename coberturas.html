@@ -60,6 +60,10 @@ th.ord{padding:0}
 .dia{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;flex-direction:column;align-items:center;min-width:60px;padding:2px 4px;border:1px solid #000;border-radius:8px;color:#000;line-height:1.15}
 .dia b{font-size:.92rem}.dia small{font-size:.72rem}
 .dia.hoy{outline:3px solid #6A2BC2;outline-offset:1px}
+.dia.manana{background:#E5484D!important;color:#fff;border-color:#8B0000;outline:3px solid #fff;outline-offset:1px;animation:aviso 1.6s infinite}
+.dia.manana small{font-weight:700}
+@keyframes aviso{0%,100%{box-shadow:0 0 0 0 rgba(229,72,77,.7)}50%{box-shadow:0 0 0 6px rgba(229,72,77,0)}}
+@media (prefers-reduced-motion:reduce){.dia.manana{animation:none}}
 .dia[aria-expanded="true"]{box-shadow:inset 0 0 0 2px #000}
 .fut{color:#888;font-size:.8rem}
 .chip{display:inline-block;min-width:62px;text-align:center;padding:2px 8px;border-radius:999px;border:1px solid #000;font-weight:800;color:#000}
@@ -82,6 +86,7 @@ footer{margin-top:22px;font-size:.82rem;color:var(--head2);max-width:95ch}
     <p class="act" id="hAct"></p>
   </div>
   <div class="controls">
+    <label>Vendedor <select id="fv" aria-label="Vendedor"><option value="">Todos</option></select></label>
     <label>Semana <select id="sem" aria-label="Semana"></select></label>
   </div>
 </header>
@@ -127,6 +132,8 @@ const HOY=new Date(Date.now()-3*3600e3).toISOString().slice(0,10);
 const addD=(iso,n)=>{const d=new Date(iso+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);};
 const lunesDe=iso=>{const d=new Date(iso+'T12:00:00Z');const w=(d.getUTCDay()+6)%7;return addD(iso,-w);};
 const ddmm=iso=>iso.slice(8)+'/'+iso.slice(5,7);
+// proximo dia de visita (el dia habil siguiente a hoy): se pinta de rojo con los clientes de esa ruta que todavia no compraron (pedido de Bruno, 10/11/2026)
+const MANANA=(()=>{ let f=addD(HOY,1); while([0,6].includes(new Date(f+'T12:00:00Z').getUTCDay())) f=addD(f,1); return f; })();
 let st={}; try{st=JSON.parse(localStorage.getItem('cob-diaria-v1')||'{}')||{};}catch(e){}
 const save=()=>{try{localStorage.setItem('cob-diaria-v1',JSON.stringify(st));}catch(e){}};
 
@@ -203,14 +210,17 @@ function calc(mk,sel){
 }
 function tabla(mk,sel){
   const P=sel==='P', lun=P?null:sel;
-  const rs=calc(mk,sel);
+  const FV=+($('fv').value||0);
+  const rs=calc(mk,sel).filter(r=>!FV||r.cod===FV);
   // dia tildado (al tocar un dia de un vendedor): la columna muestra a cuantos clientes se les vendio ese dia; sin dia, el total de la semana
   const DS=(!P&&ABIERTO&&ABIERTO.mk===mk&&ABIERTO.d!=="T")?ABIERTO.d:null;
   rs.forEach(r=>{ r.ccv=DS?((r.porDia||[]).find(x=>x.d===DS)||{n:0}).n:r.cc; });
   const sorted=[...rs].sort((a,b)=>{const x=a[ORDEN.k],y=b[ORDEN.k];const d=typeof x==='string'?x.localeCompare(y,'es'):x-y;return ORDEN.dir*d||(b.cc-a.cc);});
   const th=(k,t,cls='')=>{const on=ORDEN.k===k;return `<th class="${cls} ord"${on?` aria-sort="${ORDEN.dir>0?'ascending':'descending'}"`:''}><button type="button" class="ordb" data-k="${k}" title="Ordenar de menor a mayor o de mayor a menor">${t} <span>${on?(ORDEN.dir>0?'▲':'▼'):'↕'}</span></button></th>`;};
   const celda=(r,d)=>{const x=r.dias[d]; if(x.out) return '<span class="fut">fuera del período</span>';
-    if(!x.base) return `<span class="fut">${P?'—':'sin ruta'}</span>`; if(x.fut) return `<span class="fut">— (${x.base})</span>`;
+    if(!x.base) return `<span class="fut">${P?'—':'sin ruta'}</span>`; if(x.fut&&!P&&x.fecha===MANANA){ const ab=ABIERTO&&ABIERTO.mk===mk&&ABIERTO.v===r.cod&&ABIERTO.d===d;
+      return `<button type="button" class="dia manana" data-mk="${mk}" data-v="${r.cod}" data-d="${d}" aria-expanded="${ab}" title="Visita de mañana (${DNOM[d]} ${ddmm(x.fecha)}): ${x.sin.length} de ${x.base} clientes de la ruta todavía sin compra. Tocá para verlos."><b>${x.sin.length} sin compra</b><small>mañana · ${x.cc}/${x.base}</small></button>`; }
+    if(x.fut) return `<span class="fut">— (${x.base})</span>`;
     if(x.per) return `<span class="dia" style="background:${color(x.cob)};cursor:default" title="${DNOM[d]}: ${x.cc} de ${x.base} visitas con pedido en el período"><b>${fmtP(x.cob)}</b><small>${fmtN(x.cc)}/${fmtN(x.base)}</small></span>`;
     const ab=ABIERTO&&ABIERTO.mk===mk&&ABIERTO.v===r.cod&&ABIERTO.d===d;
     return `<button type="button" class="dia${x.fecha===HOY?' hoy':''}" style="background:${color(x.cob)}" data-mk="${mk}" data-v="${r.cod}" data-d="${d}" aria-expanded="${ab}" title="${DNOM[d]} ${ddmm(x.fecha)}: ${x.cc} de ${x.base} clientes"><b>${fmtP(x.cob)}</b><small>${x.cc}/${x.base}</small></button>`;};
@@ -224,7 +234,7 @@ function tabla(mk,sel){
     if(ABIERTO&&ABIERTO.mk===mk&&ABIERTO.v===r.cod&&ABIERTO.d==='T'){
       fila+=`<tr class="sub"><td colspan="12"><p class="subnote"><b>${esc(r.nom)}: ${fmtN(r.sinN)} clientes de su cartera sin pedido de ${mk==='S'?'Softys':'Clorox'} ${P?'en lo que va del período':'en la semana'}.</b></p>${r.sinN?`<div class="sublist"><table><thead><tr><th class="l">Cliente</th><th class="l">Razón social</th><th class="l">Dirección</th><th class="l">Localidad</th><th class="l">Ramo</th><th class="l">Días de visita</th></tr></thead><tbody>${r.sinSem.map(c=>`<tr><td class="l">${esc(c[0])}</td><td class="l">${esc(c[1])}</td><td class="l">${esc(c[2])}</td><td class="l">${esc(c[3])}</td><td class="l">${esc(c[4])}</td><td class="l">${esc(c[5])}</td></tr>`).join('')}</tbody></table></div>`:'<p class="subnote">Todos los clientes de su cartera tienen pedido.</p>'}</td></tr>`; }
     else if(!P&&ABIERTO&&ABIERTO.mk===mk&&ABIERTO.v===r.cod){ const x=r.dias[ABIERTO.d];
-      fila+=`<tr class="sub"><td colspan="12"><p class="subnote"><b>${esc(r.nom)} · ${DNOM[ABIERTO.d]} ${ddmm(x.fecha)}: ${fmtN(x.sin.length)} clientes de la ruta sin pedido de ${mk==='S'?'Softys':'Clorox'} en la semana.</b></p>${x.sin.length?`<div class="sublist"><table><thead><tr><th class="l">Cliente</th><th class="l">Razón social</th><th class="l">Dirección</th><th class="l">Localidad</th><th class="l">Ramo</th></tr></thead><tbody>${x.sin.map(c=>`<tr><td class="l">${esc(c[0])}</td><td class="l">${esc(c[1])}</td><td class="l">${esc(c[2])}</td><td class="l">${esc(c[3])}</td><td class="l">${esc(c[4])}</td></tr>`).join('')}</tbody></table></div>`:'<p class="subnote">Todos los clientes de la ruta tienen pedido.</p>'}</td></tr>`; }
+      fila+=`<tr class="sub"><td colspan="12"><p class="subnote"><b>${esc(r.nom)} · ${DNOM[ABIERTO.d]} ${ddmm(x.fecha)}${x.fecha===MANANA&&x.fut?' (visita de mañana)':''}: ${fmtN(x.sin.length)} clientes de la ruta sin pedido de ${mk==='S'?'Softys':'Clorox'} en la semana${x.fecha===MANANA&&x.fut?' hasta hoy':''}.</b></p>${x.sin.length?`<div class="sublist"><table><thead><tr><th class="l">Cliente</th><th class="l">Razón social</th><th class="l">Dirección</th><th class="l">Localidad</th><th class="l">Ramo</th></tr></thead><tbody>${x.sin.map(c=>`<tr><td class="l">${esc(c[0])}</td><td class="l">${esc(c[1])}</td><td class="l">${esc(c[2])}</td><td class="l">${esc(c[3])}</td><td class="l">${esc(c[4])}</td></tr>`).join('')}</tbody></table></div>`:'<p class="subnote">Todos los clientes de la ruta tienen pedido.</p>'}</td></tr>`; }
     return fila; }).join('')}</tbody>
   <tfoot><tr><td class="l" colspan="2">Equipo (${rs.length} vendedores)</td>${DIAS.map(d=>{const t=tot[d];return `<td class="c">${t.out?'<span class="fut">fuera</span>':t.fut?'<span class="fut">—</span>':`<span class="chip" style="background:${color(t.b?t.c/t.b:0)}">${fmtP(t.b?t.c/t.b:0)}</span>`}</td>`;}).join('')}
     <td>${fmtN(tb)}</td><td>${fmtN(rs.reduce((a,r)=>a+r.ccv,0))}</td><td class="c"><span class="chip" style="background:${color(tb?tc/tb:0)}">${fmtP(tb?tc/tb:0)}</span></td><td>${tf?fmtN(tf):'✔ cumplido'}</td><td class="c">${fmtN(rs.reduce((a,r)=>a+r.sinN,0))}</td></tr></tfoot></table></div>`;
@@ -264,6 +274,9 @@ document.addEventListener('click',e=>{
     ABIERTO=(ABIERTO&&ABIERTO.mk===x.mk&&ABIERTO.v===x.v&&ABIERTO.d===x.d)?null:x; render();}
 });
 $('sem').addEventListener('change',()=>{ABIERTO=null;render();});
+$('fv').innerHTML+=Object.keys(VEND).map(Number).sort((a,b)=>a-b).map(v=>`<option value="${v}">${v} · ${esc(VEND[v])}</option>`).join('');
+if(st.fv&&VEND[st.fv]) $('fv').value=st.fv;
+$('fv').addEventListener('change',()=>{ st.fv=$('fv').value; save(); ABIERTO=null; if(LISTA) render(); });
 
 // ---- En vivo (pedido de Bruno, 05/11/2026): ademas de los meses, se lee vivo/hoy.csv (pedidos cargados hoy, el robot
 // en vivo lo sube cada vez que la base de Gescom suma ventas). Cada 2 minutos se revisa si hay datos nuevos y, si hay,
