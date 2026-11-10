@@ -377,7 +377,7 @@ function dias(){ const f=diasDef(); return {dT:+$('dT').value||f.dT, dH:+$('dH')
 const ddmm=d=>d.slice(8)+'/'+d.slice(5,7);
 function chipA(a,ideal){ if(a==null) return '<span class="muted">—</span>'; /* rangos fijos (pedido de Bruno): 0 a 79% rojo, 80 a 99% amarillo, 100% o mas verde */ const c=a>=1?'#2EBD4E':a>=.8?'#F2C200':'#E5484D'; return barra(a,c); }
 // barra de progreso para alcance y cobertura (formato 2, pedido de Bruno, 09/11/2026)
-function barra(v,c){ const osc=c!=="#F2C200"; return `<span class="pbar"><i style="width:${Math.max(0,Math.min(100,v*100))}%;background:${c}"></i><b${osc && v>=.5? " class=\"cl\"" : ""}>${fmtP(v)}</b></span>`; }   // formato C: la barra se llena con el numero adentro
+function barra(v,c){ const osc=c!=="#F2C200"; return `<span class="pbar"><i style="width:${Math.max(0,Math.min(100,v*100))}%;background:${c}"></i><b${osc && v>=.62? " class=\"cl\"" : ""}>${fmtP(v)}</b></span>`; }   // formato C: la barra se llena con el numero adentro
 function calc(f){ const {dT,dH}=dias(); const tend=f.venta/dT*dH; return {...f, alc:f.obj? f.venta/f.obj:null, tend, alcT:f.obj? tend/f.obj:null, cob:f.base? f.ccc/f.base:null}; }
 const COLS=[['obj','Objetivo'],['venta','Venta'],['alc','% Alcance'],['tend','Tendencia $'],['cob','% Cobertura'],['base','Base'],['ccc','CCC'],['margen','% Margen'],['rechP','% Rechazos']];
 function celdas(f){ const {dT,dH}=dias(), ideal=dT/dH, x=calc(f);
