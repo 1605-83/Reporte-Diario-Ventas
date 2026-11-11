@@ -1,4 +1,6 @@
-# Sondeo (solo lectura): nombre exacto del proveedor LAS TRES NINAS en Gescom (pedido de Bruno, 21/10/2026: sumarlo a OTM)
+# Sondeo (solo lectura, solo conteos y nombres de columnas): desde cuando hay ventas en la base y si la ficha del
+# cliente trae fecha de ultima compra (pedido de Bruno, 11/11/2026: no compradores de los ultimos 6 meses).
+# No imprime datos de clientes (el registro de Actions es publico).
 $ErrorActionPreference = 'Stop'
 $clave = $env:GESCOM_LPE_CLAVE
 if (-not $clave) { throw 'Falta la variable de entorno GESCOM_LPE_CLAVE' }
@@ -13,7 +15,8 @@ function Sql([string]$sql) {
   $j.filas
 }
 function Ver($titulo, $sql) { "===== $titulo"; try { Sql $sql | ConvertTo-Json -Depth 5 -Compress } catch { "FALLO: $_" } }
-$P = "(UPPER(p.nombre) LIKE '%NI%AS%' OR UPPER(p.nombre) LIKE '%TRES%' OR p.nombre LIKE '%3%' OR UPPER(p.nombre) LIKE '%NENAS%')"
-Ver 'proveedores parecidos' "SELECT p.codigo, p.nombre FROM proveedores p WHERE $P ORDER BY p.nombre"
-Ver 'articulos con TRES NI o 3 NI en la descripcion' "SELECT a.codigo, a.descripcion, a.proveedor, p.nombre AS prov FROM articulos a LEFT JOIN proveedores p ON p.codigo = a.proveedor WHERE UPPER(a.descripcion) LIKE '%TRES NI%' OR UPPER(a.descripcion) LIKE '%3 NI%' LIMIT 40"
-Ver 'venta de octubre de esos proveedores' "SELECT p.codigo, p.nombre, COUNT(*) AS renglones, ROUND(SUM(i.total),2) AS total FROM ventas v JOIN venta_items i ON i.venta_id = v.id JOIN articulos a ON a.codigo = i.articulo JOIN proveedores p ON p.codigo = a.proveedor WHERE $P AND v.fecha >= '2026-10-01' GROUP BY p.codigo, p.nombre"
+Ver 'tablas' "SELECT name FROM sqlite_master WHERE type IN ('table','view') ORDER BY name"
+Ver 'columnas de clientes' "SELECT name, type FROM pragma_table_info('clientes')"
+Ver 'columnas de ventas' "SELECT name, type FROM pragma_table_info('ventas')"
+Ver 'ventas por mes' "SELECT substr(v.fecha,1,7) AS mes, COUNT(*) AS comprobantes, COUNT(DISTINCT v.cliente) AS clientes FROM ventas v GROUP BY 1 ORDER BY 1"
+Ver 'primera y ultima venta' "SELECT MIN(v.fecha) AS desde, MAX(v.fecha) AS hasta FROM ventas v"
