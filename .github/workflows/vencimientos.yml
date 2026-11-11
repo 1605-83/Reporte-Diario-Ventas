@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  actions: write                   # para encender el robot en vivo
 
 concurrency:
   group: vencimientos
@@ -36,4 +37,16 @@ jobs:
             git commit -m "Vencimientos actualizados desde Gescom ($(TZ=ART3 date '+%d/%m/%Y %H:%M'))"
             # los otros robots suben seguido: si se adelantaron, primero se trae lo suyo
             for n in 1 2 3; do git pull --rebase -q && git push && break; sleep 10; done
+          fi
+
+      - name: Encender el robot en vivo si esta apagado (pedido de Bruno, 11/11/2026)
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          h=$(TZ=ART3 date +%-H); d=$(TZ=ART3 date +%u)
+          if [ "$d" -le 5 ] && [ "$h" -ge 7 ] && [ "$h" -lt 18 ]; then
+            n=$(gh run list -R "$GITHUB_REPOSITORY" -w en-vivo.yml -L 5 --json status --jq "[.[]|select(.status!=\"completed\")]|length")
+            if [ "$n" = "0" ]; then gh workflow run en-vivo.yml -R "$GITHUB_REPOSITORY" --ref main && echo "Robot en vivo lanzado"; else echo "Robot en vivo ya corriendo"; fi
           fi
