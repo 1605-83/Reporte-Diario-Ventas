@@ -15,8 +15,8 @@ function Sql([string]$sql) {
   $j.filas
 }
 function Ver($titulo, $sql) { "===== $titulo"; try { Sql $sql | ConvertTo-Json -Depth 5 -Compress } catch { "FALLO: $_" } }
-Ver 'tablas' "SELECT name FROM sqlite_master WHERE type IN ('table','view') ORDER BY name"
-Ver 'columnas de clientes' "SELECT name, type FROM pragma_table_info('clientes')"
-Ver 'columnas de ventas' "SELECT name, type FROM pragma_table_info('ventas')"
-Ver 'ventas por mes' "SELECT substr(v.fecha,1,7) AS mes, COUNT(*) AS comprobantes, COUNT(DISTINCT v.cliente) AS clientes FROM ventas v GROUP BY 1 ORDER BY 1"
-Ver 'primera y ultima venta' "SELECT MIN(v.fecha) AS desde, MAX(v.fecha) AS hasta FROM ventas v"
+foreach ($t in 'ctacte_clientes','reparto_ventas','mostrador_ventas','repartos') {
+  Ver "columnas de $t" "SELECT name FROM pragma_table_info('$t')"
+}
+Ver 'ctacte por mes' "SELECT substr(fecha,1,7) AS mes, COUNT(*) AS movs, COUNT(DISTINCT cliente) AS clientes FROM ctacte_clientes GROUP BY 1 ORDER BY 1"
+Ver 'reparto_ventas por mes' "SELECT substr(fecha,1,7) AS mes, COUNT(*) AS n FROM reparto_ventas GROUP BY 1 ORDER BY 1"
