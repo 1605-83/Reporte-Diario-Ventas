@@ -64,10 +64,12 @@ tr.sub td{background:#fff;padding:0 10px 14px;white-space:normal;text-align:left
 .sublist th{position:sticky;top:0;z-index:1}
 footer{margin-top:22px;font-size:.82rem;color:var(--head2);max-width:100ch}
 #loadMsg{margin:18px 0 0;font-weight:700}
-tbody tr.vrow{cursor:pointer}
+.sublist td{padding:6px 8px;white-space:nowrap;border-bottom:1px solid var(--line)}
 tbody tr.sel td{background:#FFF4CC}
-.cliq{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin:30px 0 8px}
-.cliq h2{margin:0;font-size:1.25rem;font-weight:900}
+.barra{display:flex;flex-wrap:wrap;gap:12px 22px;align-items:center;margin:26px 0 0;padding:12px 16px;background:#fff;color:#000;border:2px solid #000;border-radius:10px;box-shadow:4px 4px 0 #000}
+.barra label{display:flex;align-items:center;gap:8px;font-weight:800;font-size:.95rem}
+.barra select,.barra input{border:2px solid #000;font-size:.95rem;padding:7px 10px;min-width:230px}
+.barra .x{all:unset;cursor:pointer;font-size:.85rem;font-weight:700;text-decoration:underline}
 .aviso{margin:18px 0 0;padding:10px 14px;border:2px solid #000;border-radius:8px;background:#FFE14D;color:#000;font-size:.9rem;box-shadow:4px 4px 0 #000}
 </style>
 </head>
@@ -80,7 +82,6 @@ tbody tr.sel td{background:#FFF4CC}
     <p class="act" id="hAct"></p>
   </div>
   <div class="controls">
-    <label>Vendedor <select id="fVend" aria-label="Vendedor"><option value="">Todos</option></select></label>
     <button type="button" id="bExcel" class="excel" title="Descarga la lista de clientes que se ve en pantalla">⬇ Descargar Excel</button>
   </div>
 </header>
@@ -89,13 +90,12 @@ tbody tr.sel td{background:#FFF4CC}
 <div id="app" hidden>
   <p class="aviso" id="aviso" hidden></p>
   <section class="kpis" id="kpis"></section>
-  <p class="hint">Tocá un vendedor para ver sus clientes abajo (tocalo de nuevo para ver todos). Tocá el título de una columna para ordenar: ▲ de menor a mayor · ▼ de mayor a menor.</p>
-  <div class="tbl" id="tbl"></div>
-  <div class="cliq">
-    <h2 id="tCli">Clientes sin compra</h2>
-    <label class="controls" style="font-size:.88rem">Buscar <input type="search" id="qCli" placeholder="cliente, código, localidad…" aria-label="Buscar cliente"></label>
+  <div class="barra">
+    <label>Vendedor <select id="fVend" aria-label="Vendedor"><option value="">Todos</option></select></label>
+    <label>Buscar cliente <input type="search" id="qCli" placeholder="código, razón social, localidad…" aria-label="Buscar cliente"></label>
   </div>
-  <div class="tbl" id="tblC"></div>
+  <p class="hint">Elegí un vendedor o tocá «Ver clientes» en su fila: la lista de sus clientes sin compra se abre ahí mismo, debajo del vendedor. Tocá el título de una columna para ordenar: ▲ de menor a mayor · ▼ de mayor a menor.</p>
+  <div class="tbl" id="tbl"></div>
   <footer>
     Sin compra = el cliente no tiene ningún pedido de venta cargado en el período (por fecha de carga, con o sin factura), de ninguna empresa: Softys, Clorox, Ilolay, Georgalos, Cepas, Ledesma y todas las demás.
     Se toman los clientes activos de la cartera de cada vendedor en Gescom.
@@ -212,24 +212,31 @@ function render(){
     ['% del universo sin compra',fmtP(U?S/U:0),'sin compra ÷ universo'],
     [fv?'Vendedor':'Mayor % sin compra',peor?esc(peor.nom):'—',peor?`${fmtP(peor.pct)} · ${fmtN(peor.sin)} de ${fmtN(peor.uni)}`:'']
   ].map(k=>`<div class="kpi"><div class="l">${k[0]}</div><div class="v" style="${String(k[1]).length>10?'font-size:1.25rem;white-space:normal':''}">${k[1]}</div><div class="n">${k[2]}</div></div>`).join('');
-  $('tbl').innerHTML=`<table><thead><tr>${thOrd('Código','cod',ORDEN,'l','o')}${thOrd('Vendedor','nom',ORDEN,'l','o')}${thOrd('Universo de clientes','uni',ORDEN,'','o')}${thOrd('Sin ninguna compra','sin',ORDEN,'','o')}${thOrd('% sin compra','pct',ORDEN,'','o')}</tr></thead><tbody>`
-    +rs.map(r=>`<tr class="vrow${fv&&String(r.cod)===fv?' sel':''}" data-v="${r.cod}" tabindex="0" title="Ver los clientes de ${esc(r.nom)}"><td class="l cod">${r.cod}</td><td class="l">${esc(r.nom)}</td><td>${fmtN(r.uni)}</td><td><b>${fmtN(r.sin)}</b></td><td><span class="chip" style="background:${semaf(r.pct)}">${fmtP(r.pct)}</span></td></tr>`).join('')
-    +`</tbody><tfoot><tr><td class="l" colspan="2">${fv?'Total':`Equipo (${rs.length} vendedores)`}</td><td>${fmtN(U)}</td><td>${fmtN(S)}</td><td>${fmtP(U?S/U:0)}</td></tr></tfoot></table>`;
+  // con buscador: cada vendedor muestra solo los clientes que coinciden, y se abren los que tienen coincidencias
   const q=norm($('qCli').value.trim());
-  let C=rs.flatMap(r=>r.C); if(q) C=C.filter(c=>norm([c.cod,c.rs,c.dir,c.loc,c.ramo,c.vn].join(' ')).includes(q));
-  C.sort((a,b)=>cmp(ORDC.k,ORDC.dir)(a,b)||(+a.cod||0)-(+b.cod||0));
-  $('tCli').textContent=`Clientes sin compra${fv?' · '+VEND[fv]:''} (${fmtN(C.length)})`;
-  $('tblC').innerHTML=`<table><thead><tr>${thOrd('Vendedor','v',ORDC,'l','c')}${thOrd('Cliente','cod',ORDC,'l','c')}${thOrd('Razón social','rs',ORDC,'l','c')}${thOrd('Dirección','dir',ORDC,'l','c')}${thOrd('Localidad','loc',ORDC,'l','c')}${thOrd('Ramo','ramo',ORDC,'l','c')}${thOrd('Días de visita','dias',ORDC,'c','c')}</tr></thead><tbody>`
-    +(C.length?C.map(c=>`<tr><td class="l">${c.v} · ${esc(c.vn)}</td><td class="l cod">${esc(c.cod)}</td><td class="l">${esc(titulo(c.rs))}</td><td class="l">${esc(c.dir)}</td><td class="l">${esc(c.loc)}</td><td class="l">${esc(c.ramo)}</td><td class="c">${esc(c.dias)}</td></tr>`).join('')
-      :`<tr><td class="l" colspan="7">No hay clientes sin compra${q?' con esa búsqueda':''}.</td></tr>`)+`</tbody></table>`;
-  ULT={rs,C,fv};
+  const filtra=C=>q?C.filter(c=>norm([c.cod,c.rs,c.dir,c.loc,c.ramo].join(' ')).includes(q)):C;
+  const abierto=r=>fv||ABIERTOS.has(r.cod)||(q&&filtra(r.C).length>0);
+  const lista=r=>{ const C=filtra(r.C).slice().sort((a,b)=>cmp(ORDC.k,ORDC.dir)(a,b)||(+a.cod||0)-(+b.cod||0));
+    return `<tr class="sub"><td colspan="6"><div class="subbar"><b>${esc(r.nom)} · ${fmtN(C.length)} cliente${C.length===1?'':'s'} sin ninguna compra del ${dmy(DESDE)} al ${dmy(HOY)}${q?' (con la búsqueda)':''}</b></div>
+      <div class="sublist"><table><thead><tr>${thOrd('Cliente','cod',ORDC,'l','c')}${thOrd('Razón social','rs',ORDC,'l','c')}${thOrd('Dirección','dir',ORDC,'l','c')}${thOrd('Localidad','loc',ORDC,'l','c')}${thOrd('Ramo','ramo',ORDC,'l','c')}${thOrd('Días de visita','dias',ORDC,'c','c')}</tr></thead><tbody>`
+      +(C.length?C.map(c=>`<tr><td class="l cod">${esc(c.cod)}</td><td class="l">${esc(titulo(c.rs))}</td><td class="l">${esc(c.dir)}</td><td class="l">${esc(c.loc)}</td><td class="l">${esc(c.ramo)}</td><td class="c">${esc(c.dias)}</td></tr>`).join('')
+        :`<tr><td class="l" colspan="6">No hay clientes sin compra${q?' con esa búsqueda':''}.</td></tr>`)+`</tbody></table></div></td></tr>`; };
+  $('tbl').innerHTML=`<table><thead><tr>${thOrd('Código','cod',ORDEN,'l','o')}${thOrd('Vendedor','nom',ORDEN,'l','o')}${thOrd('Universo de clientes','uni',ORDEN,'','o')}${thOrd('Sin ninguna compra','sin',ORDEN,'','o')}${thOrd('% sin compra','pct',ORDEN,'','o')}<th class="c">Clientes</th></tr></thead><tbody>`
+    +rs.map(r=>{ const ab=abierto(r);
+      return `<tr class="vrow${ab?' sel':''}" data-v="${r.cod}"><td class="l cod">${r.cod}</td><td class="l">${esc(r.nom)}</td><td>${fmtN(r.uni)}</td><td><b>${fmtN(r.sin)}</b></td><td><span class="chip" style="background:${semaf(r.pct)}">${fmtP(r.pct)}</span></td>`
+        +`<td class="c"><button type="button" class="exp" data-v="${r.cod}" aria-expanded="${ab}">${ab?'Ocultar ▲':'Ver clientes ▼'}</button></td></tr>`+(ab?lista(r):''); }).join('')
+    +`</tbody><tfoot><tr><td class="l" colspan="2">${fv?'Total':`Equipo (${rs.length} vendedores)`}</td><td>${fmtN(U)}</td><td>${fmtN(S)}</td><td>${fmtP(U?S/U:0)}</td><td></td></tr></tfoot></table>`;
+  ULT={rs,C:rs.flatMap(r=>filtra(r.C)),fv};
 }
+let ABIERTOS=new Set();
 $('fVend').addEventListener('change',()=>{ st.fv=$('fVend').value; save(); render(); });
 $('qCli').addEventListener('input',render);
 $('tbl').addEventListener('click',e=>{ const b=e.target.closest('[data-o]'); if(b){ ORDEN=toggle(ORDEN,b.dataset.o); st.orden=ORDEN; save(); render(); return; }
-  const tr=e.target.closest('tr.vrow'); if(tr){ const v=tr.dataset.v; $('fVend').value=$('fVend').value===v?'':v; st.fv=$('fVend').value; save(); render(); if($('fVend').value) $('tCli').scrollIntoView({behavior:'smooth',block:'start'}); } });
-$('tbl').addEventListener('keydown',e=>{ if(e.key==='Enter'&&e.target.matches('tr.vrow')) e.target.click(); });
-$('tblC').addEventListener('click',e=>{ const b=e.target.closest('[data-c]'); if(b){ ORDC=toggle(ORDC,b.dataset.c); st.ordc=ORDC; save(); render(); } });
+  const c=e.target.closest('[data-c]'); if(c){ ORDC=toggle(ORDC,c.dataset.c); st.ordc=ORDC; save(); render(); return; }
+  const x=e.target.closest('button.exp'); if(x){ const v=+x.dataset.v;
+    if($('fVend').value){ $('fVend').value=''; st.fv=''; save(); ABIERTOS.clear(); }   // con un vendedor elegido, "Ocultar" vuelve a todos
+    else ABIERTOS.has(v)?ABIERTOS.delete(v):ABIERTOS.add(v);
+    render(); } });
 // se vuelve a cargar si cambia el día
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&new Date(Date.now()-3*3600e3).toISOString().slice(0,10)!==HOY) location.reload(); });
 
