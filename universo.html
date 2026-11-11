@@ -37,7 +37,7 @@ select,input[type=search]{font:inherit;color:#000;background:#fff;border:1px sol
 .kpi .n{font-size:.8rem;margin-top:6px}
 .hint{font-size:.85rem;color:var(--head2);margin:26px 0 6px}
 .tbl{overflow-x:auto;border:1px solid #000;border-radius:8px;background:#fff;color:#000}
-table{border-collapse:collapse;width:100%;min-width:1000px;font-size:.88rem}
+table{border-collapse:collapse;width:100%;min-width:700px;font-size:.88rem}
 th,td{padding:7px 6px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
 th{background:#000;color:#fff;font-weight:600;font-size:.8rem}
 th.l,td.l{text-align:left}
@@ -86,7 +86,7 @@ footer{margin-top:22px;font-size:.82rem;color:var(--head2);max-width:100ch}
 <p id="loadMsg">Buscando carteras y ventas…</p>
 <div id="app" hidden>
   <section class="kpis" id="kpis"></section>
-  <p class="hint">Universo = todos los clientes activos de la cartera del vendedor en Gescom. Los días muestran cuántos clientes tiene en la ruta de cada día (un cliente con dos días de visita cuenta en los dos). Tocá «Ver clientes» para ver la lista con la última compra. Tocá el título de una columna para ordenar: ▲ de menor a mayor · ▼ de mayor a menor.</p>
+  <p class="hint">Universo = todos los clientes activos de la cartera del vendedor en Gescom. Los días muestran cuántos clientes tiene en la ruta de cada día (un cliente con dos días de visita cuenta en los dos). Tocá el título de una columna para ordenar: ▲ de menor a mayor · ▼ de mayor a menor.</p>
   <div class="tbl" id="tbl"></div>
   <footer>
     Compra = pedido de venta cargado en el período (por fecha de carga, con o sin factura), de cualquiera de las empresas del Reporte diario (Softys, Clorox, Ilolay, Georgalos, Cepas, Ledesma y demás). Importe sin IVA, neto de devoluciones.
@@ -146,7 +146,7 @@ function procesar(txt, soloHoy){
 }
 let VIVO_OK=false;
 
-let ORDEN=(st.orden&&st.orden.k)?st.orden:{k:'cob',dir:-1};
+let ORDEN=(st.orden&&['cod','nom','uni','dL','dM','dX','dJ','dV'].includes(st.orden.k))?st.orden:{k:'uni',dir:-1};
 let ORDC=(st.ordc&&st.ordc.k)?st.ordc:{k:'ult',dir:1};
 let ABIERTO=null, FILTRO_C=st.fc||'sin', BUSCA='';
 const rango=p=>p==='H'?[HOY,HOY]:p==='S'?[lunesDe(HOY),HOY]:p==='M'?[YM+'-01',HOY]:[YMA+'-01',finMes(YMA)];
@@ -189,11 +189,11 @@ function render(){
   const va={cod:r=>r.cod,nom:r=>r.nom,uni:r=>r.uni,con:r=>r.con,sin:r=>r.sin,cob:r=>r.cob,imp:r=>r.imp,nunca:r=>r.nunca}; DIAS.forEach(x=>va['d'+x]=r=>r['d'+x]);
   rs.sort((a,b)=>cmp(ORDEN,va[ORDEN.k]||va.cob)(a,b)||a.cod-b.cod);
   const th=(k,t,cls)=>thO(ORDEN,k,t,cls,'v');
-  let html=`<table><thead><tr>${th('cod','Código','l')}${th('nom','Vendedor','l')}${th('uni','Universo de clientes')}${DIAS.map(x=>th('d'+x,'Ruta '+DCORTO[x])).join('')}${th('con','Con compra '+per)}${th('cob','Cobertura','c')}${th('sin','Sin compra '+per)}${th('nunca','Sin compra en 2 meses')}${th('imp','Importe sin IVA')}<th class="c">Clientes</th></tr></thead><tbody>`;
-  rs.forEach(r=>{ const ab=ABIERTO===r.cod;
-    html+=`<tr><td class="l cod">${r.cod}</td><td class="l">${esc(r.nom)}</td><td><b>${fmtN(r.uni)}</b></td>${DIAS.map(x=>`<td>${fmtN(r['d'+x])}</td>`).join('')}<td><b>${fmtN(r.con)}</b></td><td class="c"><span class="chip" style="background:${color(r.cob)}">${fmtP(r.cob)}</span></td><td>${fmtN(r.sin)}</td><td>${fmtN(r.nunca)}</td><td>${fmt$(r.imp)}</td><td class="c"><button type="button" class="exp" data-v="${r.cod}" aria-expanded="${ab}">${ab?'▾ Cerrar':'▸ Ver clientes'}</button></td></tr>`;
-    if(ab) html+=`<tr class="sub"><td colspan="15">${subLista(r,per)}</td></tr>`; });
-  html+=`</tbody><tfoot><tr><td class="l" colspan="2">Equipo (${rs.length} vendedores)</td><td>${fmtN(T.uni)}</td>${DIAS.map(x=>`<td>${fmtN(T['d'+x])}</td>`).join('')}<td>${fmtN(T.con)}</td><td class="c"><span class="chip" style="background:${color(T.uni?T.con/T.uni:0)}">${fmtP(T.uni?T.con/T.uni:0)}</span></td><td>${fmtN(T.uni-T.con)}</td><td>${fmtN(T.nunca)}</td><td>${fmt$(T.imp)}</td><td></td></tr></tfoot></table>`;
+  let html=`<table><thead><tr>${th('cod','Código','l')}${th('nom','Vendedor','l')}${th('uni','Universo de clientes')}${DIAS.map(x=>th('d'+x,'Ruta '+DCORTO[x])).join('')}</tr></thead><tbody>`;
+  // 11/11/2026: Bruno pidio sacar las columnas de compra, cobertura, sin compra, importe y la lista de clientes
+  rs.forEach(r=>{
+    html+=`<tr><td class="l cod">${r.cod}</td><td class="l">${esc(r.nom)}</td><td><b>${fmtN(r.uni)}</b></td>${DIAS.map(x=>`<td>${fmtN(r['d'+x])}</td>`).join('')}</tr>`; });
+  html+=`</tbody><tfoot><tr><td class="l" colspan="2">Equipo (${rs.length} vendedores)</td><td>${fmtN(T.uni)}</td>${DIAS.map(x=>`<td>${fmtN(T['d'+x])}</td>`).join('')}</tr></tfoot></table>`;
   $('tbl').innerHTML=html;
   const q=$('qCli'); if(q&&document.activeElement!==q&&BUSCA){ q.value=BUSCA; }
 }
