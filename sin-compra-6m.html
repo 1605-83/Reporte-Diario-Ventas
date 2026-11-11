@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Clientes sin compra</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;800;900&display=swap" rel="stylesheet">
+<style>
+/* Clientes que no compraron nada en los ultimos 6 meses, por vendedor (pedido de Bruno, 11/11/2026). No va en el indice de reportes. */
+:root{ --bg:#3A1F2B; --head:#fff; --head2:#BFE3EA; --ink:#000; --line:#DCE6E9; --ok:#5BE36B; --mid:#FFE14D; --low:#FF7A7A; color-scheme:dark; }
+@media (prefers-color-scheme: light){ :root:not([data-theme="dark"]){ --bg:#3A1F2B; } }
+:root[data-theme="light"]{ --bg:#3A1F2B; }
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--head);font-family:"Archivo",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;font-variant-numeric:tabular-nums;line-height:1.4}
+.wrap{max-width:1320px;margin:0 auto;padding:28px 16px 48px}
+header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px;border-bottom:3px solid #fff;padding-bottom:14px}
+h1{font-size:clamp(1.6rem,3.4vw,2.5rem);font-weight:900;margin:0;letter-spacing:-.02em;line-height:1.05}
+p.sub{margin:6px 0 0;font-size:.95rem;color:var(--head2)}
+.act{margin:4px 0 0;font-size:.8rem;color:var(--head2)}
+.act .vivo{display:inline-block;padding:1px 8px;margin-right:4px;border-radius:10px;background:#16A34A;color:#fff;font-weight:700;animation:lat 2s ease-in-out infinite}
+@keyframes lat{50%{opacity:.6}}
+@media (prefers-reduced-motion:reduce){.act .vivo{animation:none}}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.controls label{font-size:.88rem;display:flex;align-items:center;gap:6px}
+select,input[type=search]{font:inherit;color:#000;background:#fff;border:1px solid #fff;border-radius:6px;padding:6px 8px}
+.excel{font:inherit;font-size:.88rem;font-weight:700;color:#fff;background:#1D6F42;border:1px solid #fff;border-radius:6px;padding:6px 12px;cursor:pointer}
+.excel:hover{background:#185C37}.excel:disabled{opacity:.6;cursor:wait}
+:focus-visible{outline:3px solid #FFD60A;outline-offset:2px}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:22px}
+@media (max-width:1000px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:600px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{padding:14px 16px;border:2px solid #000;border-radius:10px;box-shadow:5px 5px 0 #000;background:#fff;color:#000;min-width:0}
+.kpi .l{font-size:.9rem;font-weight:700;line-height:1.2;min-height:2.4em}
+.kpi .v{font-size:clamp(1.3rem,2.4vw,2.1rem);font-weight:900;line-height:1.1;white-space:nowrap}
+.kpi .n{font-size:.8rem;margin-top:6px}
+.hint{font-size:.85rem;color:var(--head2);margin:26px 0 6px}
+.tbl{overflow-x:auto;border:1px solid #000;border-radius:8px;background:#fff;color:#000}
+table{border-collapse:collapse;width:100%;min-width:700px;font-size:.88rem}
+th,td{padding:7px 6px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th{background:#000;color:#fff;font-weight:600;font-size:.8rem}
+th.l,td.l{text-align:left}
+th.c,td.c{text-align:center}
+tbody tr:hover{background:#EEF7F9}
+tfoot td{font-weight:800;border-top:2px solid #000;border-bottom:0;background:#fff}
+th.ord{padding:0}
+.ordb{all:unset;box-sizing:border-box;display:block;width:100%;padding:7px 6px;cursor:pointer;color:#fff;font-weight:600;font-size:.8rem;line-height:1.2;text-align:inherit;white-space:normal}
+.ordb span{opacity:.75;font-size:.75rem}
+.ordb:hover{background:#222}
+.cod{font-weight:800}
+.exp{font:inherit;font-size:.78rem;font-weight:700;background:#fff;color:#000;border:1px solid #000;border-radius:999px;padding:3px 10px;white-space:nowrap;cursor:pointer}
+.exp[aria-expanded="true"]{background:#000;color:#fff}
+.chip{display:inline-block;min-width:62px;text-align:center;padding:2px 8px;border-radius:999px;border:1px solid #000;font-weight:800;color:#000}
+.si{font-weight:800;color:#0B7A33}.no{font-weight:800;color:#B42318}
+.gris{color:#777}
+tr.sub,tr.sub td{color:#000}
+tr.sub td{background:#fff;padding:0 10px 14px;white-space:normal;text-align:left}
+.subbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:.85rem}
+.subbar b{margin-right:6px}
+.subbar select,.subbar input{border:1px solid #000;font-size:.85rem;padding:4px 6px}
+.sublist{border:1px solid var(--line);border-radius:6px;max-height:420px;overflow:auto;margin-top:8px;background:#fff}
+.sublist table{min-width:0;font-size:.85rem}
+.sublist th{position:sticky;top:0;z-index:1}
+footer{margin-top:22px;font-size:.82rem;color:var(--head2);max-width:100ch}
+#loadMsg{margin:18px 0 0;font-weight:700}
+tbody tr.vrow{cursor:pointer}
+tbody tr.sel td{background:#FFF4CC}
+.cliq{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin:30px 0 8px}
+.cliq h2{margin:0;font-size:1.25rem;font-weight:900}
+.aviso{margin:18px 0 0;padding:10px 14px;border:2px solid #000;border-radius:8px;background:#FFE14D;color:#000;font-size:.9rem;box-shadow:4px 4px 0 #000}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div>
+    <h1>Clientes sin compra · últimos 6 meses</h1>
+    <p class="sub" id="sub">Clientes de la cartera de cada vendedor que no compraron absolutamente nada</p>
+    <p class="act" id="hAct"></p>
+  </div>
+  <div class="controls">
+    <label>Vendedor <select id="fVend" aria-label="Vendedor"><option value="">Todos</option></select></label>
+    <button type="button" id="bExcel" class="excel" title="Descarga la lista de clientes que se ve en pantalla">⬇ Descargar Excel</button>
+  </div>
+</header>
+
+<p id="loadMsg">Buscando carteras y ventas… (son varios meses, puede tardar unos segundos)</p>
+<div id="app" hidden>
+  <p class="aviso" id="aviso" hidden></p>
+  <section class="kpis" id="kpis"></section>
+  <p class="hint">Tocá un vendedor para ver sus clientes abajo (tocalo de nuevo para ver todos). Tocá el título de una columna para ordenar: ▲ de menor a mayor · ▼ de mayor a menor.</p>
+  <div class="tbl" id="tbl"></div>
+  <div class="cliq">
+    <h2 id="tCli">Clientes sin compra</h2>
+    <label class="controls" style="font-size:.88rem">Buscar <input type="search" id="qCli" placeholder="cliente, código, localidad…" aria-label="Buscar cliente"></label>
+  </div>
+  <div class="tbl" id="tblC"></div>
+  <footer>
+    Sin compra = el cliente no tiene ningún pedido de venta cargado en el período (por fecha de carga, con o sin factura), de ninguna empresa: Softys, Clorox, Ilolay, Georgalos, Cepas, Ledesma y todas las demás.
+    Se toman los clientes activos de la cartera de cada vendedor en Gescom.
+    <span id="fuente"></span>
+  </footer>
+</div>
+</div>
+
+<script>
+const REPO='1605-83/Reporte-Diario-Ventas', RAW='https://raw.githubusercontent.com/'+REPO+'/main/';
+const VEND={2:'Fernanda Cejas',4:'Nadia Diaz',5:'Eliana Huber',6:'Nieves Alegre',7:'Myrian Lertora',24:'Cecilia Gauchez',
+  26:'Sabrina Pereira',27:'Samanta Dogliotti',28:'Teo Paniagua',29:'Camila Navarrete',30:'Oriana Sorgini',51:'Ezequiel Valente',
+  52:'Nicole Sosa',53:'Verona Abati',54:'Leonel Caruzo',56:'Ezequiel Ferreira',61:'Nailah Guzman',62:'Nahuel Martinez',
+  63:'Daniel Martin',64:'Karina Fernandez',73:'Florencia Cubilla',74:'Romina Baez',75:'Julieta Yegros'};
+const DIAS=['L','M','X','J','V'], DCORTO={L:'Lun',M:'Mar',X:'Mié',J:'Jue',V:'Vie'};
+const $=id=>document.getElementById(id);
+const fmtN=n=>Math.round(n).toLocaleString('es-AR');
+const fmt$=n=>'$ '+Math.round(n).toLocaleString('es-AR');
+const fmtP=n=>(n*100).toLocaleString('es-AR',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const cli=s=>String(s||'').trim().replace(/^0+(?=\d)/,'');
+const norm=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+const titulo=s=>{ s=(s||'').trim(); if(!(s===s.toUpperCase() && /[A-ZÁÉÍÓÚÑ]/.test(s))) return s; return s.toLowerCase().replace(/(^|[^a-záéíóúñü])([a-záéíóúñü])/g,(m,a,b)=>a+b.toUpperCase()); };
+const color=c=>c>=0.7?'var(--ok)':c>=0.4?'var(--mid)':'var(--low)';
+const HOY=new Date(Date.now()-3*3600e3).toISOString().slice(0,10);
+const addD=(iso,n)=>{const d=new Date(iso+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);};
+const lunesDe=iso=>{const d=new Date(iso+'T12:00:00Z');const w=(d.getUTCDay()+6)%7;return addD(iso,-w);};
+const dmy=s=>s? s.slice(8)+'/'+s.slice(5,7)+'/'+s.slice(0,4) : '';
+const YM=HOY.slice(0,7);
+const YMA=(()=>{const [y,m]=YM.split('-').map(Number);return m===1?(y-1)+'-12':y+'-'+String(m-1).padStart(2,'0');})();
+const finMes=ym=>{const [y,m]=ym.split('-').map(Number);return ym+'-'+String(new Date(y,m,0).getDate()).padStart(2,'0');};
+const MESN=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+let st={}; try{st=JSON.parse(localStorage.getItem('sincompra6m-v1')||'{}')||{};}catch(e){}
+const save=()=>{try{localStorage.setItem('sincompra6m-v1',JSON.stringify(st));}catch(e){}};
+
+function parseCSV(txt){const rows=[];let row=[],f='',q=false;for(let i=0;i<txt.length;i++){const ch=txt[i];
+  if(q){if(ch==='"'){if(txt[i+1]==='"'){f+='"';i++;}else q=false;}else f+=ch;}
+  else if(ch==='"')q=true;else if(ch===';'){row.push(f);f='';}else if(ch==='\n'){row.push(f.replace(/\r$/,''));rows.push(row);row=[];f='';}else f+=ch;}
+  if(f!==''||row.length){row.push(f.replace(/\r$/,''));rows.push(row);}return rows;}
+const num=s=>{s=String(s||'').trim();return s?parseFloat(s.replace(/\./g,'').replace(',','.'))||0:0;};
+const iso=s=>{s=String(s||'').trim();let m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return m[0];
+  m=s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/);return m?m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0'):'';};
+const empCorta=p=>{p=String(p||'').toUpperCase();
+  if(/SOFTYS/.test(p))return'Softys'; if(/AYUDIN/.test(p))return'Clorox'; if(/ILOLAY/.test(p))return'Ilolay'; if(/GEORGALOS|GENERAL CEREALS/.test(p))return'Georgalos';
+  if(/CEPAS/.test(p))return'Cepas'; if(/LEDESMA/.test(p))return'Ledesma'; return titulo(p.replace(/\s+(S\.?A\.?S?|S\.?R\.?L\.?)\.?$/,'').split(/\s+/).slice(0,2).join(' '));};
+
+// ---- Período: 6 meses para atrás desde hoy; si la base todavía no tiene tanta historia, desde la primera venta guardada ----
+const SEIS=(()=>{const d=new Date(HOY+'T12:00:00Z');d.setUTCMonth(d.getUTCMonth()-6);return d.toISOString().slice(0,10);})();
+let DESDE=SEIS, PRIMERA='', ULTC={}, CART={}, VIVO=null, FILES=[], CC=null, ULT=null;
+const dec=b=>new TextDecoder('windows-1252').decode(b);
+const bajar=(p,bin)=>fetch(RAW+p.split('/').map(encodeURIComponent).join('/')+'?t='+Date.now(),{cache:'no-store'})
+  .then(r=>{if(!r.ok)throw new Error('No se pudo descargar '+p);return bin?r.arrayBuffer():r.json();});
+// ULTC[cliente] = fecha de la última compra (pedido de venta de cualquier empresa)
+function procesar(txt){
+  const R=parseCSV(txt).filter(r=>r.length>5); if(!R.length) return; const H=R.shift().map(h=>h.trim());
+  const ix=n=>{const i=H.indexOf(n);if(i<0)throw new Error('Falta la columna '+n);return i;};
+  const I={cli:ix('Cliente'),fca:ix('FechaCarga'),fco:ix('FechaComprobante'),tipo:ix('TipoDeVenta'),cant:ix('CantBase')};
+  R.forEach(r=>{ const f=iso(r[I.fca])||iso(r[I.fco]); if(!f||f>HOY) return;
+    if(!PRIMERA||f<PRIMERA) PRIMERA=f;
+    if(!/^Venta/i.test(r[I.tipo]||'')||num(r[I.cant])<=0) return;
+    const c=cli(r[I.cli]); if(!ULTC[c]||f>ULTC[c]) ULTC[c]=f; });
+}
+const meses=(a,b)=>Math.round((new Date(b+'T12:00:00Z')-new Date(a+'T12:00:00Z'))/864e5/30.44*10)/10;
+async function cargar(){
+  const [aj,cc,ev]=await Promise.all([
+    fetch('archivos.json?t='+Date.now(),{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('No se pudo leer la lista de archivos');return r.json();}),
+    fetch('carteras.json?t='+Date.now(),{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('No se pudieron leer las carteras');return r.json();}),
+    bajar('vivo/estado.json').catch(()=>null)]);
+  const ult={}; (aj.archivos||[]).forEach(p=>{const mm=p.match(/^meses\/ventas-(\d{4}-\d{2})-/); if(mm&&mm[1]>=SEIS.slice(0,7)&&(!ult[mm[1]]||p>ult[mm[1]])) ult[mm[1]]=p;});
+  const files=Object.values(ult).sort(); if(!files.length) throw new Error('No hay archivos de ventas');
+  const hayVivo=ev&&iso(ev.dia)===HOY&&(ev.renglones||0)>0;
+  const [bufs,vivo]=await Promise.all([Promise.all(files.map(f=>bajar(f,true))), hayVivo?bajar('vivo/hoy.csv',true).catch(()=>null):null]);
+  ULTC={}; PRIMERA='';
+  bufs.forEach(b=>procesar(dec(b))); if(vivo) procesar(dec(vivo));
+  DESDE=PRIMERA&&PRIMERA>SEIS?PRIMERA:SEIS;
+  CART={}; Object.keys(VEND).forEach(v=>CART[v]=(cc.v&&cc.v[v])||[]);
+  VIVO=hayVivo&&vivo?ev:null; FILES=files; CC=cc;
+  $('fVend').innerHTML='<option value="">Todos</option>'+Object.keys(VEND).map(Number).sort((a,b)=>a-b).map(v=>`<option value="${v}">${v} · ${esc(VEND[v])}</option>`).join('');
+  if(st.fv&&VEND[st.fv]) $('fVend').value=st.fv;
+  const m=files[files.length-1].match(/-(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})\d{2}-r/);
+  $('hAct').textContent=(VIVO?`Ventas con pedidos de hoy al ${VIVO.corte}`:(m?`Ventas al ${m[3]}/${m[2]}/${m[1]} ${m[4]}:${m[5]}`:''))+` · carteras al ${cc.fecha||''}`;
+  $('sub').textContent=`Clientes de la cartera que no compraron absolutamente nada del ${dmy(DESDE)} al ${dmy(HOY)}`;
+  const av=$('aviso');
+  if(DESDE>SEIS){ av.hidden=false; av.innerHTML=`<b>Ojo:</b> la base de Gescom tiene ventas recién desde el ${dmy(PRIMERA)}, así que por ahora se miran ${meses(DESDE,HOY).toLocaleString('es-AR')} meses y no 6. El período se agranda solo cada día hasta llegar a los 6 meses completos.`; }
+  else av.hidden=true;
+  $('fuente').textContent='Archivos: '+files.map(f=>f.split('/').pop()).join(', ')+(VIVO?', vivo/hoy.csv (pedidos de hoy)':'')+'.';
+  $('loadMsg').hidden=true; $('app').hidden=false; render();
+}
+cargar().catch(e=>{ $('loadMsg').textContent='No se pudieron cargar los datos: '+e.message; });
+
+// ---- Cálculo ----
+function calc(){
+  return Object.keys(VEND).map(Number).map(v=>{
+    const lst=CART[v]||[]; const sin=[];
+    lst.forEach(c=>{ const k=cli(c[0]); const u=ULTC[k]||''; if(!u||u<DESDE) sin.push({v,vn:VEND[v],cod:k,rs:c[1]||'',dir:c[2]||'',loc:c[3]||'',ramo:c[4]||'',dias:c[5]||''}); });
+    return {cod:v, nom:VEND[v], uni:lst.length, sin:sin.length, pct:lst.length?sin.length/lst.length:0, C:sin};
+  });
+}
+const TXT=['nom','v','cod','rs','dir','loc','ramo','dias'];
+let ORDEN=(st.orden&&['cod','nom','uni','sin','pct'].includes(st.orden.k))?st.orden:{k:'sin',dir:-1};
+let ORDC=(st.ordc&&TXT.includes(st.ordc.k))?st.ordc:{k:'v',dir:1};
+const cmp=(k,dir)=>(a,b)=>{const x=a[k],y=b[k]; const r=(typeof x==='number'&&typeof y==='number')?x-y:String(x).localeCompare(String(y),'es',{numeric:true}); return r*dir;};
+const thOrd=(lbl,k,o,cls,data)=>`<th class="ord ${cls||''}" aria-sort="${o.k===k?(o.dir>0?'ascending':'descending'):'none'}"><button type="button" class="ordb" data-${data}="${k}">${lbl} <span>${o.k===k?(o.dir>0?'▲':'▼'):'↕'}</span></button></th>`;
+const toggle=(o,k)=>o.k===k?{k,dir:-o.dir}:{k,dir:TXT.includes(k)?1:-1};
+const semaf=p=>p>=0.3?'var(--low)':p>=0.15?'var(--mid)':'var(--ok)';
+
+function render(){
+  const fv=$('fVend').value, rs=calc().filter(r=>!fv||String(r.cod)===fv).sort(cmp(ORDEN.k,ORDEN.dir));
+  const U=rs.reduce((a,r)=>a+r.uni,0), S=rs.reduce((a,r)=>a+r.sin,0);
+  const peor=rs.slice().sort((a,b)=>b.pct-a.pct)[0];
+  $('kpis').innerHTML=[
+    ['Universo de clientes',fmtN(U),fv?esc(VEND[fv]):`${rs.length} vendedores`],
+    ['Sin ninguna compra',fmtN(S),`del ${dmy(DESDE)} al ${dmy(HOY)}`],
+    ['% del universo sin compra',fmtP(U?S/U:0),'sin compra ÷ universo'],
+    [fv?'Vendedor':'Mayor % sin compra',peor?esc(peor.nom):'—',peor?`${fmtP(peor.pct)} · ${fmtN(peor.sin)} de ${fmtN(peor.uni)}`:'']
+  ].map(k=>`<div class="kpi"><div class="l">${k[0]}</div><div class="v" style="${String(k[1]).length>10?'font-size:1.25rem;white-space:normal':''}">${k[1]}</div><div class="n">${k[2]}</div></div>`).join('');
+  $('tbl').innerHTML=`<table><thead><tr>${thOrd('Código','cod',ORDEN,'l','o')}${thOrd('Vendedor','nom',ORDEN,'l','o')}${thOrd('Universo de clientes','uni',ORDEN,'','o')}${thOrd('Sin ninguna compra','sin',ORDEN,'','o')}${thOrd('% sin compra','pct',ORDEN,'','o')}</tr></thead><tbody>`
+    +rs.map(r=>`<tr class="vrow${fv&&String(r.cod)===fv?' sel':''}" data-v="${r.cod}" tabindex="0" title="Ver los clientes de ${esc(r.nom)}"><td class="l cod">${r.cod}</td><td class="l">${esc(r.nom)}</td><td>${fmtN(r.uni)}</td><td><b>${fmtN(r.sin)}</b></td><td><span class="chip" style="background:${semaf(r.pct)}">${fmtP(r.pct)}</span></td></tr>`).join('')
+    +`</tbody><tfoot><tr><td class="l" colspan="2">${fv?'Total':`Equipo (${rs.length} vendedores)`}</td><td>${fmtN(U)}</td><td>${fmtN(S)}</td><td>${fmtP(U?S/U:0)}</td></tr></tfoot></table>`;
+  const q=norm($('qCli').value.trim());
+  let C=rs.flatMap(r=>r.C); if(q) C=C.filter(c=>norm([c.cod,c.rs,c.dir,c.loc,c.ramo,c.vn].join(' ')).includes(q));
+  C.sort((a,b)=>cmp(ORDC.k,ORDC.dir)(a,b)||(+a.cod||0)-(+b.cod||0));
+  $('tCli').textContent=`Clientes sin compra${fv?' · '+VEND[fv]:''} (${fmtN(C.length)})`;
+  $('tblC').innerHTML=`<table><thead><tr>${thOrd('Vendedor','v',ORDC,'l','c')}${thOrd('Cliente','cod',ORDC,'l','c')}${thOrd('Razón social','rs',ORDC,'l','c')}${thOrd('Dirección','dir',ORDC,'l','c')}${thOrd('Localidad','loc',ORDC,'l','c')}${thOrd('Ramo','ramo',ORDC,'l','c')}${thOrd('Días de visita','dias',ORDC,'c','c')}</tr></thead><tbody>`
+    +(C.length?C.map(c=>`<tr><td class="l">${c.v} · ${esc(c.vn)}</td><td class="l cod">${esc(c.cod)}</td><td class="l">${esc(titulo(c.rs))}</td><td class="l">${esc(c.dir)}</td><td class="l">${esc(c.loc)}</td><td class="l">${esc(c.ramo)}</td><td class="c">${esc(c.dias)}</td></tr>`).join('')
+      :`<tr><td class="l" colspan="7">No hay clientes sin compra${q?' con esa búsqueda':''}.</td></tr>`)+`</tbody></table>`;
+  ULT={rs,C,fv};
+}
+$('fVend').addEventListener('change',()=>{ st.fv=$('fVend').value; save(); render(); });
+$('qCli').addEventListener('input',render);
+$('tbl').addEventListener('click',e=>{ const b=e.target.closest('[data-o]'); if(b){ ORDEN=toggle(ORDEN,b.dataset.o); st.orden=ORDEN; save(); render(); return; }
+  const tr=e.target.closest('tr.vrow'); if(tr){ const v=tr.dataset.v; $('fVend').value=$('fVend').value===v?'':v; st.fv=$('fVend').value; save(); render(); if($('fVend').value) $('tCli').scrollIntoView({behavior:'smooth',block:'start'}); } });
+$('tbl').addEventListener('keydown',e=>{ if(e.key==='Enter'&&e.target.matches('tr.vrow')) e.target.click(); });
+$('tblC').addEventListener('click',e=>{ const b=e.target.closest('[data-c]'); if(b){ ORDC=toggle(ORDC,b.dataset.c); st.ordc=ORDC; save(); render(); } });
+// se vuelve a cargar si cambia el día
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&new Date(Date.now()-3*3600e3).toISOString().slice(0,10)!==HOY) location.reload(); });
+
+// ---- Descargar Excel: hoja "Vendedores" y hoja "Clientes" (lo que se ve en pantalla) ----
+let EXJ=null;
+const cargarExcelJS=()=>EXJ? Promise.resolve(EXJ) : new Promise((ok,mal)=>{ const s=document.createElement('script');
+  s.src='https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js'; s.onload=()=>ok(EXJ=window.ExcelJS); s.onerror=()=>mal(new Error('no se pudo bajar la librería de Excel')); document.head.appendChild(s); });
+$('bExcel').addEventListener('click',async()=>{
+  if(!ULT) return; const b=$('bExcel'), txt=b.textContent; b.disabled=true; b.textContent='Armando Excel…';
+  try{
+    const X=await cargarExcelJS(), wb=new X.Workbook(), U=ULT;
+    const filtro=`Sin ninguna compra del ${dmy(DESDE)} al ${dmy(HOY)} · ${U.fv?U.fv+' · '+VEND[U.fv]:'todos los vendedores'} · carteras al ${(CC&&CC.fecha)||''}`;
+    const hoja=(nom,cols,filas,tot)=>{ const ws=wb.addWorksheet(nom,{views:[{state:'frozen',ySplit:3}]});
+      ws.addRow(['Clientes sin compra · últimos 6 meses']).font={bold:true,size:14}; ws.addRow([filtro]).font={italic:true,color:{argb:'FF6B7280'}};
+      const hr=ws.addRow(cols.map(c=>c[0])); hr.eachCell(c=>{ c.font={bold:true,color:{argb:'FFFFFFFF'}}; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF3A1F2B'}}; c.alignment={vertical:'middle',wrapText:true}; });
+      filas.forEach(f=>ws.addRow(f));
+      if(tot){ ws.addRow(tot).eachCell(c=>{ c.font={bold:true}; }); }
+      cols.forEach((c,i)=>{ const col=ws.getColumn(i+1); col.width=c[1]; if(c[2]) col.numFmt=c[2]; });
+      ws.autoFilter={from:{row:3,column:1},to:{row:3,column:cols.length}}; };
+    const S=U.rs.reduce((a,r)=>a+r.sin,0), T=U.rs.reduce((a,r)=>a+r.uni,0);
+    hoja('Vendedores',[['Código',9],['Vendedor',22],['Universo de clientes',12,'#,##0'],['Sin ninguna compra',12,'#,##0'],['% sin compra',11,'0.0%']],
+      U.rs.map(r=>[r.cod,r.nom,r.uni,r.sin,r.pct]),['','Equipo',T,S,T?S/T:0]);
+    hoja('Clientes',[['Cód. vendedor',10],['Vendedor',20],['Cliente',10],['Razón social',34],['Dirección',30],['Localidad',18],['Ramo',16],['Días de visita',10]],
+      U.C.map(c=>[c.v,c.vn,isNaN(+c.cod)?c.cod:+c.cod,titulo(c.rs),c.dir,c.loc,c.ramo,c.dias]));
+    const buf=await wb.xlsx.writeBuffer(), a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+    a.download=`clientes-sin-compra_${DESDE}_al_${HOY}${U.fv?'_vend'+U.fv:''}.xlsx`; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },1000);
+  }catch(e){ alert('No se pudo armar el Excel: '+e.message); }
+  finally{ b.disabled=false; b.textContent=txt; }
+});
+</script>
+</body>
+</html>
