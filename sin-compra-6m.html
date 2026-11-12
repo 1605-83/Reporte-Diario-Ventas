@@ -69,7 +69,7 @@ tbody tr.sel td{background:#FFF4CC}
 .barra{display:flex;flex-wrap:wrap;gap:12px 22px;align-items:center;margin:26px 0 0;padding:12px 16px;background:#fff;color:#000;border:2px solid #000;border-radius:10px;box-shadow:4px 4px 0 #000}
 .barra label{display:flex;align-items:center;gap:8px;font-weight:800;font-size:.95rem}
 .barra select,.barra input{border:2px solid #000;font-size:.95rem;padding:7px 10px;min-width:230px}
-.barra .x{all:unset;cursor:pointer;font-size:.85rem;font-weight:700;text-decoration:underline}
+.tit2{margin:34px 0 0;font-size:1.5rem;font-weight:900;border-top:3px solid #fff;padding-top:18px}
 .aviso{margin:18px 0 0;padding:10px 14px;border:2px solid #000;border-radius:8px;background:#FFE14D;color:#000;font-size:.9rem;box-shadow:4px 4px 0 #000}
 </style>
 </head>
@@ -96,6 +96,9 @@ tbody tr.sel td{background:#FFF4CC}
   </div>
   <p class="hint">Elegí un vendedor o tocá «Ver clientes» en su fila: la lista de sus clientes sin compra se abre ahí mismo, debajo del vendedor. Tocá el título de una columna para ordenar: ▲ de menor a mayor · ▼ de mayor a menor.</p>
   <div class="tbl" id="tbl"></div>
+  <h2 class="tit2">Universo de clientes por vendedor</h2>
+  <p class="hint" style="margin-top:4px">Universo = todos los clientes activos de la cartera del vendedor en Gescom. Los días muestran cuántos clientes tiene en la ruta de cada día (un cliente con dos días de visita cuenta en los dos). Tocá el título de una columna para ordenar.</p>
+  <div class="tbl" id="tblU"></div>
   <footer>
     Sin compra = el cliente no tiene ningún pedido de venta cargado en el período (por fecha de carga, con o sin factura), de ninguna empresa: Softys, Clorox, Ilolay, Georgalos, Cepas, Ledesma y todas las demás.
     Se toman los clientes activos de la cartera de cada vendedor en Gescom.
@@ -200,6 +203,7 @@ let ORDC=(st.ordc&&TXT.includes(st.ordc.k))?st.ordc:{k:'v',dir:1};
 const cmp=(k,dir)=>(a,b)=>{const x=a[k],y=b[k]; const r=(typeof x==='number'&&typeof y==='number')?x-y:String(x).localeCompare(String(y),'es',{numeric:true}); return r*dir;};
 const thOrd=(lbl,k,o,cls,data)=>`<th class="ord ${cls||''}" aria-sort="${o.k===k?(o.dir>0?'ascending':'descending'):'none'}"><button type="button" class="ordb" data-${data}="${k}">${lbl} <span>${o.k===k?(o.dir>0?'▲':'▼'):'↕'}</span></button></th>`;
 const toggle=(o,k)=>o.k===k?{k,dir:-o.dir}:{k,dir:TXT.includes(k)?1:-1};
+let ORDU=(st.ordu&&["cod","nom","uni","dL","dM","dX","dJ","dV"].includes(st.ordu.k))?st.ordu:{k:"uni",dir:-1};
 const semaf=p=>p>=0.3?'var(--low)':p>=0.15?'var(--mid)':'var(--ok)';
 
 function render(){
@@ -224,11 +228,18 @@ function render(){
   $('tbl').innerHTML=`<table><thead><tr>${thOrd('Código','cod',ORDEN,'l','o')}${thOrd('Vendedor','nom',ORDEN,'l','o')}${thOrd('Universo de clientes','uni',ORDEN,'','o')}${thOrd('Sin ninguna compra','sin',ORDEN,'','o')}${thOrd('% sin compra','pct',ORDEN,'','o')}<th class="c">Clientes</th></tr></thead><tbody>`
     +rs.map(r=>{ const ab=abierto(r);
       return `<tr class="vrow${ab?' sel':''}" data-v="${r.cod}"><td class="l cod">${r.cod}</td><td class="l">${esc(r.nom)}</td><td>${fmtN(r.uni)}</td><td><b>${fmtN(r.sin)}</b></td><td><span class="chip" style="background:${semaf(r.pct)}">${fmtP(r.pct)}</span></td>`
-        +`<td class="c"><button type="button" class="exp" data-v="${r.cod}" aria-expanded="${ab}">${ab?'Ocultar ▲':'Ver clientes ▼'}</button></td></tr>`+(ab?lista(r):''); }).join('')
+  // tabla de universo por vendedor (como en universo.html), debajo de la de sin compra (pedido de Bruno, 11/11/2026)
     +`</tbody><tfoot><tr><td class="l" colspan="2">${fv?'Total':`Equipo (${rs.length} vendedores)`}</td><td>${fmtN(U)}</td><td>${fmtN(S)}</td><td>${fmtP(U?S/U:0)}</td><td></td></tr></tfoot></table>`;
   ULT={rs,C:rs.flatMap(r=>filtra(r.C)),fv};
+  const ru=rs.map(r=>{ const lst=CART[r.cod]||[]; const o={cod:r.cod,nom:r.nom,uni:lst.length}; DIAS.forEach(x=>o["d"+x]=lst.filter(c=>String(c[5]||"").includes(x)).length); return o; }).sort(cmp(ORDU.k,ORDU.dir));
+  const tu=k=>ru.reduce((a,r)=>a+r[k],0);
+  $("tblU").innerHTML=`<table><thead><tr>${thOrd("Código","cod",ORDU,"l","u")}${thOrd("Vendedor","nom",ORDU,"l","u")}${thOrd("Universo de clientes","uni",ORDU,"","u")}${DIAS.map(x=>thOrd("Ruta "+DCORTO[x],"d"+x,ORDU,"","u")).join("")}</tr></thead><tbody>`
+    +ru.map(r=>`<tr><td class="l cod">${r.cod}</td><td class="l">${esc(r.nom)}</td><td><b>${fmtN(r.uni)}</b></td>${DIAS.map(x=>`<td>${fmtN(r["d"+x])}</td>`).join("")}</tr>`).join("")
+    +`</tbody><tfoot><tr><td class="l" colspan="2">${fv?"Total":`Equipo (${ru.length} vendedores)`}</td><td>${fmtN(tu("uni"))}</td>${DIAS.map(x=>`<td>${fmtN(tu("d"+x))}</td>`).join("")}</tr></tfoot></table>`;
+        +`<td class="c"><button type="button" class="exp" data-v="${r.cod}" aria-expanded="${ab}">${ab?'Ocultar ▲':'Ver clientes ▼'}</button></td></tr>`+(ab?lista(r):''); }).join('')
 }
 let ABIERTOS=new Set();
+$("tblU").addEventListener("click",e=>{ const b=e.target.closest("[data-u]"); if(b){ ORDU=toggle(ORDU,b.dataset.u); st.ordu=ORDU; save(); render(); } });
 $('fVend').addEventListener('change',()=>{ st.fv=$('fVend').value; save(); render(); });
 $('qCli').addEventListener('input',render);
 $('tbl').addEventListener('click',e=>{ const b=e.target.closest('[data-o]'); if(b){ ORDEN=toggle(ORDEN,b.dataset.o); st.orden=ORDEN; save(); render(); return; }
