@@ -28,7 +28,7 @@ select,input[type=search]{font:inherit;color:#000;background:#fff;border:1px sol
 .excel{font:inherit;font-size:.88rem;font-weight:700;color:#fff;background:#1D6F42;border:1px solid #fff;border-radius:6px;padding:6px 12px;cursor:pointer}
 .excel:hover{background:#185C37}.excel:disabled{opacity:.6;cursor:wait}
 :focus-visible{outline:3px solid #FFD60A;outline-offset:2px}
-.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;margin-top:22px}
+.kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:22px}
 @media (max-width:1000px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:600px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .kpi{padding:14px 16px;border:2px solid #000;border-radius:10px;box-shadow:5px 5px 0 #000;background:#fff;color:#000;min-width:0}
@@ -182,9 +182,7 @@ function render(){
   $('kpis').innerHTML=[
     ['Universo de clientes',fmtN(T.uni),`clientes activos en las carteras`],
     [`Con compra ${per}`,fmtN(T.con),`${fmtP(T.uni?T.con/T.uni:0)} del universo`],
-    [`Sin compra ${per}`,fmtN(T.uni-T.con),`${fmtP(T.uni?(T.uni-T.con)/T.uni:0)} del universo`],
-    [`Importe ${per}`,fmt$(T.imp),'sin IVA, neto de devoluciones'],
-    ['Sin compra desde el '+dmy(YMA+'-01'),fmtN(T.nunca),'clientes de la cartera sin ningún pedido en dos meses']
+    [`Sin compra ${per}`,fmtN(T.uni-T.con),`${fmtP(T.uni?(T.uni-T.con)/T.uni:0)} del universo`]
   ].map(k=>`<div class="kpi"><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="n">${k[2]}</div></div>`).join('');
   const va={cod:r=>r.cod,nom:r=>r.nom,uni:r=>r.uni,con:r=>r.con,sin:r=>r.sin,cob:r=>r.cob,imp:r=>r.imp,nunca:r=>r.nunca}; DIAS.forEach(x=>va['d'+x]=r=>r['d'+x]);
   rs.sort((a,b)=>cmp(ORDEN,va[ORDEN.k]||va.cob)(a,b)||a.cod-b.cod);
