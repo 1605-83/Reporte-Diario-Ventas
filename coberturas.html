@@ -210,6 +210,16 @@ function calc(mk,sel){
     DIAS.forEach(d=>r['d'+d]=(r.dias[d].fut||r.dias[d].out)?-1:r.dias[d].cob); });
   return rs;
 }
+// listas de clientes sin compra: se ordenan tocando el titulo de cada columna (pedido de Bruno, 12/11/2026)
+let ORDS=(st.ords&&st.ords.i>=0&&st.ords.i<=5)?st.ords:{i:1,dir:1};
+const SUBCOLS=['Cliente','Razón social','Dirección','Localidad','Ramo','Días de visita'];
+function subTabla(lista,n){
+  const O=ORDS.i<n?ORDS:{i:1,dir:1}, i=O.i;
+  const val=c=>i===0? (parseInt(cli(c[0]),10)||0) : String(c[i]||'');
+  const l=[...lista].sort((a,b)=>{ const x=val(a),y=val(b); return O.dir*(typeof x==='number'? x-y : x.localeCompare(y,'es',{numeric:true}))||String(a[1]).localeCompare(String(b[1]),'es'); });
+  const th=SUBCOLS.slice(0,n).map((t,j)=>{ const on=j===i; return `<th class="l ord"${on?` aria-sort="${O.dir>0?'ascending':'descending'}"`:''}><button type="button" class="ordb" data-sub="${j}" title="Ordenar de menor a mayor o de mayor a menor">${t} <span>${on?(O.dir>0?'▲':'▼'):'↕'}</span></button></th>`; }).join('');
+  return `<div class="sublist"><table><thead><tr>${th}</tr></thead><tbody>${l.map(c=>`<tr>${SUBCOLS.slice(0,n).map((_,j)=>`<td class="l">${esc(c[j])}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+}
 // clientes con pedido de la marca en noviembre (del 1/11 a hoy), con cualquier vendedor
 function noCompraNov(mk){ const s=new Set(); const hasta=HOY<'2026-11-30'?HOY:'2026-11-30';
   Object.values(PED[mk]).forEach(o=>Object.keys(o).forEach(f=>{ if(f>='2026-11-01'&&f<=hasta) o[f].forEach(k=>s.add(k)); })); return s; }
@@ -241,9 +251,9 @@ function tabla(mk,sel){
     <td>${fmtN(r.base)}</td><td><b>${fmtN(r.ccv)}</b></td><td class="c"><span class="chip" style="background:${color(r.sem)}">${fmtP(r.sem)}</span></td><td><b>${r.falta?fmtN(r.falta):'✔ cumplido'}</b></td>
     <td class="c">${(()=>{const ab=ABIERTO&&ABIERTO.mk===mk&&ABIERTO.v===r.cod&&ABIERTO.d==='T';return `<button type="button" class="exp" data-mk="${mk}" data-v="${r.cod}" aria-expanded="${!!ab}">${ab?'▾':'▸'} Ver ${fmtN(r.sinN)}</button>`;})()}</td></tr>`;
     if(ABIERTO&&ABIERTO.mk===mk&&ABIERTO.v===r.cod&&ABIERTO.d==='T'){
-      fila+=`<tr class="sub"><td colspan="12"><p class="subnote"><b>${esc(r.nom)}: ${fmtN(r.sinN)} clientes de su cartera sin pedido de ${mk==='S'?'Softys':'Clorox'} ${P?'en lo que va del período':'en la semana'}${$('fNov').checked?' que tampoco compraron en noviembre':''}.</b></p>${r.sinN?`<div class="sublist"><table><thead><tr><th class="l">Cliente</th><th class="l">Razón social</th><th class="l">Dirección</th><th class="l">Localidad</th><th class="l">Ramo</th><th class="l">Días de visita</th></tr></thead><tbody>${r.sinSem.map(c=>`<tr><td class="l">${esc(c[0])}</td><td class="l">${esc(c[1])}</td><td class="l">${esc(c[2])}</td><td class="l">${esc(c[3])}</td><td class="l">${esc(c[4])}</td><td class="l">${esc(c[5])}</td></tr>`).join('')}</tbody></table></div>`:'<p class="subnote">Todos los clientes de su cartera tienen pedido.</p>'}</td></tr>`; }
+      fila+=`<tr class="sub"><td colspan="12"><p class="subnote"><b>${esc(r.nom)}: ${fmtN(r.sinN)} clientes de su cartera sin pedido de ${mk==='S'?'Softys':'Clorox'} ${P?'en lo que va del período':'en la semana'}${$('fNov').checked?' que tampoco compraron en noviembre':''}.</b></p>${r.sinN?subTabla(r.sinSem,6):'<p class="subnote">Todos los clientes de su cartera tienen pedido.</p>'}</td></tr>`; }
     else if(!P&&ABIERTO&&ABIERTO.mk===mk&&ABIERTO.v===r.cod){ const x=r.dias[ABIERTO.d];
-      fila+=`<tr class="sub"><td colspan="12"><p class="subnote"><b>${esc(r.nom)} · ${DNOM[ABIERTO.d]} ${ddmm(x.fecha)}${x.fecha===MANANA&&x.fut?' (visita de mañana)':''}: ${fmtN(x.sin.length)} clientes de la ruta sin pedido de ${mk==='S'?'Softys':'Clorox'} en la semana${x.fecha===MANANA&&x.fut?' hasta hoy':''}${$('fNov').checked?' que tampoco compraron en noviembre':''}.</b></p>${x.sin.length?`<div class="sublist"><table><thead><tr><th class="l">Cliente</th><th class="l">Razón social</th><th class="l">Dirección</th><th class="l">Localidad</th><th class="l">Ramo</th></tr></thead><tbody>${x.sin.map(c=>`<tr><td class="l">${esc(c[0])}</td><td class="l">${esc(c[1])}</td><td class="l">${esc(c[2])}</td><td class="l">${esc(c[3])}</td><td class="l">${esc(c[4])}</td></tr>`).join('')}</tbody></table></div>`:'<p class="subnote">Todos los clientes de la ruta tienen pedido.</p>'}</td></tr>`; }
+      fila+=`<tr class="sub"><td colspan="12"><p class="subnote"><b>${esc(r.nom)} · ${DNOM[ABIERTO.d]} ${ddmm(x.fecha)}${x.fecha===MANANA&&x.fut?' (visita de mañana)':''}: ${fmtN(x.sin.length)} clientes de la ruta sin pedido de ${mk==='S'?'Softys':'Clorox'} en la semana${x.fecha===MANANA&&x.fut?' hasta hoy':''}${$('fNov').checked?' que tampoco compraron en noviembre':''}.</b></p>${x.sin.length?subTabla(x.sin,5):'<p class="subnote">Todos los clientes de la ruta tienen pedido.</p>'}</td></tr>`; }
     return fila; }).join('')}</tbody>
   <tfoot><tr><td class="l" colspan="2">Equipo (${rs.length} vendedores)</td>${DIAS.map(d=>{const t=tot[d];return `<td class="c">${t.out?'<span class="fut">fuera</span>':t.fut?'<span class="fut">—</span>':`<span class="chip" style="background:${color(t.b?t.c/t.b:0)}">${fmtP(t.b?t.c/t.b:0)}</span>`}</td>`;}).join('')}
     <td>${fmtN(tb)}</td><td>${fmtN(rs.reduce((a,r)=>a+r.ccv,0))}</td><td class="c"><span class="chip" style="background:${color(tb?tc/tb:0)}">${fmtP(tb?tc/tb:0)}</span></td><td>${tf?fmtN(tf):'✔ cumplido'}</td><td class="c">${fmtN(rs.reduce((a,r)=>a+r.sinN,0))}</td></tr></tfoot></table></div>`;
@@ -275,7 +285,8 @@ function render(){
   ].map(k=>`<div class="kpi"><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="n">${k[2]}</div></div>`).join('');
 }
 document.addEventListener('click',e=>{
-  const o=e.target.closest('.ordb'); if(o){const k=o.dataset.k;ORDEN=ORDEN.k===k?{k,dir:-ORDEN.dir}:{k,dir:1};st.orden=ORDEN;save();render();return;}
+  const o=e.target.closest('.ordb'); if(o&&o.dataset.sub!=null){const i=+o.dataset.sub;ORDS=ORDS.i===i?{i,dir:-ORDS.dir}:{i,dir:1};st.ords=ORDS;save();render();return;}
+  if(o){const k=o.dataset.k;ORDEN=ORDEN.k===k?{k,dir:-ORDEN.dir}:{k,dir:1};st.orden=ORDEN;save();render();return;}
   const t=e.target.closest('.marca'); if(t){st.marca=t.dataset.mk;save();render();return;}
   const x2=e.target.closest('.exp'); if(x2){const x={mk:x2.dataset.mk,v:+x2.dataset.v,d:'T'};
     ABIERTO=(ABIERTO&&ABIERTO.mk===x.mk&&ABIERTO.v===x.v&&ABIERTO.d==='T')?null:x; render(); return;}
