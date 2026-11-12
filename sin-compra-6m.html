@@ -228,15 +228,15 @@ function render(){
   $('tbl').innerHTML=`<table><thead><tr>${thOrd('Código','cod',ORDEN,'l','o')}${thOrd('Vendedor','nom',ORDEN,'l','o')}${thOrd('Universo de clientes','uni',ORDEN,'','o')}${thOrd('Sin ninguna compra','sin',ORDEN,'','o')}${thOrd('% sin compra','pct',ORDEN,'','o')}<th class="c">Clientes</th></tr></thead><tbody>`
     +rs.map(r=>{ const ab=abierto(r);
       return `<tr class="vrow${ab?' sel':''}" data-v="${r.cod}"><td class="l cod">${r.cod}</td><td class="l">${esc(r.nom)}</td><td>${fmtN(r.uni)}</td><td><b>${fmtN(r.sin)}</b></td><td><span class="chip" style="background:${semaf(r.pct)}">${fmtP(r.pct)}</span></td>`
-  // tabla de universo por vendedor (como en universo.html), debajo de la de sin compra (pedido de Bruno, 11/11/2026)
+        +`<td class="c"><button type="button" class="exp" data-v="${r.cod}" aria-expanded="${ab}">${ab?'Ocultar ▲':'Ver clientes ▼'}</button></td></tr>`+(ab?lista(r):''); }).join('')
     +`</tbody><tfoot><tr><td class="l" colspan="2">${fv?'Total':`Equipo (${rs.length} vendedores)`}</td><td>${fmtN(U)}</td><td>${fmtN(S)}</td><td>${fmtP(U?S/U:0)}</td><td></td></tr></tfoot></table>`;
   ULT={rs,C:rs.flatMap(r=>filtra(r.C)),fv};
+  // tabla de universo por vendedor (como en universo.html), debajo de la de sin compra (pedido de Bruno, 11/11/2026)
   const ru=rs.map(r=>{ const lst=CART[r.cod]||[]; const o={cod:r.cod,nom:r.nom,uni:lst.length}; DIAS.forEach(x=>o["d"+x]=lst.filter(c=>String(c[5]||"").includes(x)).length); return o; }).sort(cmp(ORDU.k,ORDU.dir));
   const tu=k=>ru.reduce((a,r)=>a+r[k],0);
   $("tblU").innerHTML=`<table><thead><tr>${thOrd("Código","cod",ORDU,"l","u")}${thOrd("Vendedor","nom",ORDU,"l","u")}${thOrd("Universo de clientes","uni",ORDU,"","u")}${DIAS.map(x=>thOrd("Ruta "+DCORTO[x],"d"+x,ORDU,"","u")).join("")}</tr></thead><tbody>`
     +ru.map(r=>`<tr><td class="l cod">${r.cod}</td><td class="l">${esc(r.nom)}</td><td><b>${fmtN(r.uni)}</b></td>${DIAS.map(x=>`<td>${fmtN(r["d"+x])}</td>`).join("")}</tr>`).join("")
     +`</tbody><tfoot><tr><td class="l" colspan="2">${fv?"Total":`Equipo (${ru.length} vendedores)`}</td><td>${fmtN(tu("uni"))}</td>${DIAS.map(x=>`<td>${fmtN(tu("d"+x))}</td>`).join("")}</tr></tfoot></table>`;
-        +`<td class="c"><button type="button" class="exp" data-v="${r.cod}" aria-expanded="${ab}">${ab?'Ocultar ▲':'Ver clientes ▼'}</button></td></tr>`+(ab?lista(r):''); }).join('')
 }
 let ABIERTOS=new Set();
 $("tblU").addEventListener("click",e=>{ const b=e.target.closest("[data-u]"); if(b){ ORDU=toggle(ORDU,b.dataset.u); st.ordu=ORDU; save(); render(); } });
