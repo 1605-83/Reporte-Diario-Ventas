@@ -220,8 +220,48 @@ function calcular(ym){
   });
 }
 
-let VISTA=null, ACUM={}, abiertos=new Set(), sortK='total', sortD=-1;
+let VISTA=null, ACUM={}, POR={}, abiertos=new Set(), sortK='total', sortD=-1;
+const corto = ym => { const s=MESES[+ym.slice(5)-1]; return s[0].toUpperCase()+s.slice(1,3); };
+// vista "Todos los meses": cupones de cada mes del concurso uno al lado del otro y el acumulado (pedido de Bruno, 16/11/2026)
+function dibujarTodos(){
+  const ms=MESES_CONCURSO.filter(ym=>POR[ym]);
+  if(!ms.length){ $('estado').textContent='Todavía no hay meses cargados.'; $('main').innerHTML=''; $('kpis').innerHTML=''; return; }
+  $('estado').textContent='';
+  const F={};   // vendedor -> {c,n,m:{ym:fila del mes}}
+  for(const ym of ms) for(const x of POR[ym]){ const f=F[x.c]||(F[x.c]={c:x.c,n:x.n,m:{}}); f.m[ym]=x; if(x.n) f.n=x.n; }
+  const V=Object.values(F), ult=ms[ms.length-1];
+  $('sub').textContent=`${ms.map(nomMes).join(' + ')} · datos al ${AGG[ult].corte||'—'} · ${V.length} vendedores`;
+  const q=$('buscar').value.trim().toLowerCase();
+  const val={acum:x=>ACUM[x.c]||0, c:x=>x.c, n:x=>x.n};
+  for(const ym of ms) val['m'+ym]=x=>x.m[ym]? x.m[ym].total : -1;
+  const k0=val[sortK]? sortK : 'acum', d0=val[sortK]? sortD : -1;
+  const L=V.filter(x=>!q || String(x.c)===q || (x.n||'').toLowerCase().includes(q))
+    .sort((a,b)=>{ const f=val[k0], A=f(a), B=f(b); return (A>B?1:A<B?-1:0)*d0 || (ACUM[b.c]||0)-(ACUM[a.c]||0); });
+  const tot=V.reduce((a,x)=>a+(ACUM[x.c]||0),0), conCup=V.filter(x=>(ACUM[x.c]||0)>0).length;
+  let lider=[...V].sort((a,b)=>(ACUM[b.c]||0)-(ACUM[a.c]||0))[0]; if(lider && !(ACUM[lider.c]>0)) lider=null;
+  $('kpis').innerHTML=[
+    ['c1','Vendedores con cupones',`${conCup} de ${V.length}`,'Sumaron al menos un cupón en el concurso'],
+    ['c2','Cupones acumulados',fmtN(tot), ms.map(ym=>corto(ym)+' '+fmtN(POR[ym].reduce((a,x)=>a+x.total,0))).join(' · ')],
+    ['c3','Líder acumulado',lider? esc(lider.n) : '—',lider? `${ACUM[lider.c]||0} cupones (oct–dic)` : 'Nadie suma cupones todavía'],
+    ['c4','Meses del concurso',`${ms.length} de 3`,'Octubre, noviembre y diciembre · tope 45 cupones'],
+  ].map(k=>`<div class="kpi ${k[0]}"><div class="l">${k[1]}</div><div class="v">${k[2]}</div><div class="n">${k[3]}</div></div>`).join('');
+  const colA=p=>p==null? '#999' : p>=1? 'var(--ok)' : p>=LLAVE? 'var(--mid)' : 'var(--low)';
+  const th=(k,t,cls)=>`<th class="${cls||''}" data-k="${k||''}">${t}${k0===k? (d0>0?' ▲':' ▼') : ''}</th>`;
+  const mesTit=ym=>{ const s=nomMes(ym).split(' ')[0]; return s[0].toUpperCase()+s.slice(1); };
+  let h=`<thead><tr>${th('c','Cód','l')}${th('n','Vendedor','l')}`;
+  for(const ym of MESES_CONCURSO) h+= POR[ym]? th('m'+ym,mesTit(ym)) : `<th>${mesTit(ym)}</th>`;
+  h+=`${th('acum','Acumulado')}</tr></thead><tbody>`;
+  for(const x of L){
+    h+=`<tr class="fila"><td class="l">${x.c}</td><td class="l">${esc(x.n)}</td>`;
+    for(const ym of MESES_CONCURSO){ const m=x.m[ym];
+      h+= m? `<td title="${fmtP(m.alc)} del objetivo${m.hab?'':' · no llegó a la llave del 90%'}"><span class="tot">${m.total}</span> <span style="font-size:.75em;color:${colA(m.alc)}">(${fmtP(m.alc)})</span>${m.enCurso? ` <span style="font-size:.75em;color:#666">· proy. ${m.tend.total}</span>` : ''}</td>` : '<td style="color:#999">—</td>'; }
+    h+=`<td class="tot">${ACUM[x.c]||0}</td></tr>`;
+  }
+  $('main').innerHTML=h+'</tbody>';
+}
 function dibujar(){
+  if($('mes').value==='todos'){ VISTA=null; $('main').style.minWidth='0'; dibujarTodos(); return; }
+  $('main').style.minWidth='';
   const ym=$('mes').value; const V=calcular(ym); VISTA=V;
   if(!V){ $('estado').textContent='Todavía no hay ventas u objetivos cargados para '+nomMes(ym)+'.'; $('main').innerHTML=''; $('kpis').innerHTML=''; $('sub').textContent='Concurso octubre a diciembre 2026'; return; }
   $('estado').textContent='';
@@ -338,9 +378,9 @@ $('mes').addEventListener('change',dibujar);
     const ult={}; for(const p of arch){ const mm=p.match(/ventas-(\d{4}-\d{2})-/); if(mm && necesarios.has(mm[1]) && (!ult[mm[1]]||p>ult[mm[1]])) ult[mm[1]]=p; }
     $('sub').textContent='Bajando ventas…';
     await Promise.all(Object.entries(ult).map(async([ym,p])=>{ const r=await fetch(REPO_RAW+p.split('/').map(encodeURIComponent).join('/'),{cache:'no-store'}); if(r.ok) agregar(new TextDecoder('windows-1252').decode(await r.arrayBuffer()),ym,p); }));
-    for(const ym of MESES_CONCURSO){ const V=calcular(ym); if(V) for(const x of V) ACUM[x.c]=Math.min(45,(ACUM[x.c]||0)+x.total); }
+    for(const ym of MESES_CONCURSO){ const V=calcular(ym); if(V) POR[ym]=V; if(V) for(const x of V) ACUM[x.c]=Math.min(45,(ACUM[x.c]||0)+x.total); }
     const hay=MESES_CONCURSO.filter(ym=>AGG[ym]);
-    $('mes').innerHTML=MESES_CONCURSO.map(ym=>`<option value="${ym}">${nomMes(ym)[0].toUpperCase()+nomMes(ym).slice(1)}</option>`).join('');
+    $('mes').innerHTML=MESES_CONCURSO.map(ym=>`<option value="${ym}">${nomMes(ym)[0].toUpperCase()+nomMes(ym).slice(1)}</option>`).join('')+(hay.length>1? '<option value="todos">Todos los meses (acumulado)</option>' : '');
     $('mes').value= hay[hay.length-1]||MESES_CONCURSO[0];
     dibujar();
   }catch(e){ $('sub').textContent='No se pudieron leer los datos: '+e.message; }
