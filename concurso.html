@@ -230,7 +230,7 @@ function dibujarTodos(){
   const F={};   // vendedor -> {c,n,m:{ym:fila del mes}}
   for(const ym of ms) for(const x of POR[ym]){ const f=F[x.c]||(F[x.c]={c:x.c,n:x.n,m:{}}); f.m[ym]=x; if(x.n) f.n=x.n; }
   const V=Object.values(F), ult=ms[ms.length-1];
-  $('sub').textContent=`${ms.map(nomMes).join(' + ')} · datos al ${AGG[ult].corte||'—'} · ${V.length} vendedores`;
+  $('sub').textContent=`${ms.map(ym=>{ const s=nomMes(ym).split(' ')[0]; return s[0].toUpperCase()+s.slice(1); }).join(' + ')} 2026 · datos al ${AGG[ult].corte||'—'} · ${V.length} vendedores`;
   const q=$('buscar').value.trim().toLowerCase();
   const val={acum:x=>ACUM[x.c]||0, c:x=>x.c, n:x=>x.n};
   for(const ym of ms) val['m'+ym]=x=>x.m[ym]? x.m[ym].total : -1;
