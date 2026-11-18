@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cobertura Softys</title>
+<meta property="og:title" content="Cobertura Softys · cuántos clientes faltan para el 65% y el 70%">
+<meta property="og:description" content="Por vendedor: clientes con compra de Softys en el mes, cobertura y cuántos faltan para llegar al 65% y al 70%. En vivo.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F2F3F5;--card:#fff;--ink:#1F2328;--ink2:#6B7280;--line:#E5E7EB;--marca:#0B5CAD;--verde:#2EBD4E;--ambar:#F2C200;--rojo:#E5484D}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#F2F3F5; } }
+:root[data-theme="dark"]{ --bg:#F2F3F5; }
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Roboto,system-ui,-apple-system,"Segoe UI",Arial,sans-serif;font-variant-numeric:tabular-nums;line-height:1.35}
+.wrap{max-width:1300px;margin:0 auto;padding:20px 16px 40px}
+.card{background:var(--card);border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.head{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:16px 22px;border:3px solid #111318;border-top:6px solid var(--marca)}
+.head h1{margin:0;font-size:1.4rem;font-weight:700;color:var(--marca);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.meta{font-size:.88rem;color:var(--ink2);margin-top:3px}
+.vivo{display:inline-flex;align-items:center;gap:7px;font-size:.76rem;font-weight:500;color:#1E7B34;background:#E8F6EC;border-radius:999px;padding:4px 11px 4px 9px}
+.vivo i{width:9px;height:9px;border-radius:50%;background:#2DB34A;animation:latido 2s infinite}
+.vivo.off{color:var(--ink2);background:#EEF0F3}.vivo.off i{background:#9AA1AB;animation:none}
+@keyframes latido{0%{box-shadow:0 0 0 0 rgba(45,179,74,.55)}70%{box-shadow:0 0 0 8px rgba(45,179,74,0)}100%{box-shadow:0 0 0 0 rgba(45,179,74,0)}}
+@media (prefers-reduced-motion:reduce){.vivo i{animation:none}}
+.ctrl{display:flex;flex-wrap:wrap;gap:10px;align-items:center;flex:1 1 100%}
+select,input{font:inherit;font-size:.88rem;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:10px;padding:7px 10px}
+input[type=search]{flex:1 1 200px;min-width:0}
+button.dl{font:inherit;font-size:.88rem;padding:8px 14px;border:1px solid var(--marca);color:var(--marca);background:#fff;border-radius:10px;cursor:pointer;font-weight:700}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:14px;background:#111318;color:#fff}
+@media (max-width:900px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{padding:14px 22px;border-right:1px solid #2E3138;min-width:0}.kpi:last-child{border-right:0}
+.kpi .l{font-size:.85rem;color:#D7D9DE}.kpi .v{font-size:1.6rem;font-weight:500;margin:6px 0 2px}.kpi .n{font-size:.82rem;color:#B9BCC4}
+h2{font-size:1.05rem;margin:22px 4px 8px;color:var(--marca)}
+h2 small{font-weight:400;color:var(--ink2);font-size:.82rem;margin-left:6px}
+.tw{overflow-x:auto;border:3px solid #111318}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th{background:#111318;color:#fff;font-size:.8rem;font-weight:700;text-align:left;padding:9px 10px;white-space:nowrap;cursor:pointer;user-select:none}
+th.r{text-align:right}th.c{text-align:center}
+td{padding:8px 10px;border-bottom:1px solid #EDEDED;white-space:nowrap}
+.r{text-align:right}.c{text-align:center}
+.vrow{cursor:pointer}.vrow:hover td{background:#EEF5FD}
+.chev{color:#555;text-align:center}.chev span{display:inline-block;transition:transform .15s}.vrow.ab .chev span{transform:rotate(90deg)}
+.det>td{padding:4px 12px 14px 40px;background:#fff;white-space:normal;max-width:0}.det>td>div{overflow-x:auto}
+.dt{min-width:720px}.dt th{background:#F3F4F6;color:var(--ink2);font-size:.74rem;text-transform:uppercase;cursor:default}
+.dt tr.dia td{background:var(--marca);color:#fff;font-weight:700;font-size:.85rem;padding:6px 10px}.dt tr.dia small{font-weight:400;color:#D6E6F7;margin-left:6px}
+.dt tr.dia.man td{background:#E5484D}.dt tr.dia.man small{color:#FFE1E1}
+button.mini{font:inherit;font-size:.78rem;margin-left:8px;padding:4px 10px;border:1px solid var(--line);background:#fff;border-radius:8px;cursor:pointer;color:var(--ink2)}
+.cod{display:inline-block;min-width:2.3em;margin-right:6px;padding:1px 7px;border-radius:6px;background:#E1EDFA;color:var(--marca);font-size:.85em;font-weight:700;text-align:center}
+.pbar{position:relative;display:inline-block;width:150px;height:24px;background:#E6E6E6;border:1px solid #BDBDBD;border-radius:6px;overflow:hidden;vertical-align:middle}
+.pbar i{position:absolute;left:0;top:0;bottom:0}
+.pbar s{position:absolute;top:0;bottom:0;width:2px;background:#111318;opacity:.55}
+.pbar b{position:relative;display:block;text-align:center;line-height:22px;font-weight:700;color:#000;font-size:.82rem}
+.falta{display:inline-block;min-width:3.2em;padding:3px 10px;border-radius:8px;font-size:1rem;font-weight:900;text-align:center}
+.falta.no{background:#FDECEC;color:#B42318}.falta.ok{background:#E3F6E8;color:#17803A;font-size:.85rem}
+.est{display:inline-block;padding:2px 9px;border-radius:999px;font-size:.78rem;font-weight:700}
+.est.pr{background:#FFF4CC;color:#8A6100}
+.vac{color:var(--ink2);font-style:italic}
+.pie{font-size:.78rem;color:var(--ink2);margin:14px 4px}
+@media (max-width:640px){.head{padding:14px}.head h1{font-size:1.15rem}.kpi{padding:12px 14px}.kpi .v{font-size:1.3rem}td,th{padding:7px 8px}.pbar{width:110px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card head">
+    <div>
+      <h1>Cobertura Softys · ¿cuántos clientes faltan? <span class="vivo off" id="vivo"><i></i><span id="vivoTx">Cargando…</span></span></h1>
+      <div class="meta" id="meta">Clientes con compra de Softys en el mes sobre la cartera de cada vendedor, y cuántos clientes más necesita para llegar al 65% y al 70%.</div>
+    </div>
+    <div class="ctrl">
+      <select id="fVend" aria-label="Vendedor"><option value="">Todos los vendedores</option></select>
+      <input type="search" id="q" placeholder="Buscar cliente, código o dirección (en la lista de cada vendedor)" aria-label="Buscar">
+      <button class="dl" id="dl" type="button">⬇ Excel</button>
+    </div>
+  </div>
+  <div class="card kpis" id="kpis"></div>
+
+  <h2>Por vendedor <small id="cuenta"></small> <button class="mini" id="abrir" type="button">Abrir todos</button><button class="mini" id="cerrar" type="button">Cerrar todos</button></h2>
+  <div class="tw"><table id="tVend"><thead><tr><th style="width:28px"></th><th data-k="v">Vendedor</th><th class="r" data-k="base">Cartera</th><th class="r" data-k="ccc">Con compra</th><th data-k="cob">Cobertura</th><th class="c" data-k="f65">Faltan 65%</th><th class="c" data-k="f70">Faltan 70%</th><th class="r" data-k="hoy">Hoy</th></tr></thead><tbody></tbody></table></div>
+  <p class="pie" id="pie"></p>
+</div>
+<script>
+const B='https://1605-83.github.io/Reporte-Diario-Ventas/', RAW='https://raw.githubusercontent.com/1605-83/Reporte-Diario-Ventas/main/';
+const DIA={L:'Lunes',M:'Martes',X:'Miércoles',J:'Jueves',V:'Viernes',S:'Sábado'}, ORD={L:1,M:2,X:3,J:4,V:5,S:6}, LETRA=['','L','M','X','J','V','S'];
+// periodo del objetivo de cada mes (el mismo del Reporte diario: noviembre 2026 va del 03/11 al 30/11)
+const PERIODO={'2026-11':'2026-11-03'};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const nf=(v,d=0)=>v.toLocaleString('es-AR',{minimumFractionDigits:d,maximumFractionDigits:d});
+const norm=s=>String(s).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+const num=s=>{ s=String(s??'').trim(); return s? (parseFloat(s.replace(/\./g,'').replace(',','.'))||0) : 0; };
+const iso=s=>{ s=String(s||'').trim(); const m=s.match(/^(\d{2})-(\d{2})-(\d{4})/); return m? `${m[3]}-${m[2]}-${m[1]}` : s.slice(0,10); };
+const dm=f=>f? f.slice(8,10)+'/'+f.slice(5,7) : '';
+let VEND={}, ORDV=[], CART={}, SOFTYS=new Set(['SOFTYS ARGENTINA S.A']), HOY='', YM='', DESDE='', MANANA='';
+let MES=[], NROS=new Set(), VIVO=[], ANT={}, vivoCorte='', mesArch='', corteMes='', abiertos=new Set(), listo=false, ORDEN={k:'f70',dir:-1};
+const nomV=v=>VEND[v]||('Vendedor '+v);
+
+function parseCSV(t){
+  const rows=[]; let row=[], f='', q=false;
+  for(let i=0;i<t.length;i++){ const ch=t[i];
+    if(q){ if(ch==='"'){ if(t[i+1]==='"'){f+='"';i++;} else q=false; } else f+=ch; }
+    else if(ch==='"') q=true; else if(ch===';'){ row.push(f); f=''; }
+    else if(ch==='\n'){ row.push(f.replace(/\r$/,'')); rows.push(row); row=[]; f=''; } else f+=ch; }
+  if(f!==''||row.length){ row.push(f.replace(/\r$/,'')); rows.push(row); }
+  return rows;
+}
+// solo los renglones de Softys: vendedor, cliente, fecha de comprobante, fecha de carga, comprobante y unidades
+function leer(txt){
+  const R=parseCSV(txt).filter(r=>r.length>5); if(!R.length) return []; const H=R.shift().map(h=>h.trim()); const ix=n=>H.indexOf(n);
+  const I={cli:ix('Cliente'),fc:ix('FechaComprobante'),nro:ix('NroComprobante'),cant:ix('CantBase'),cv:ix('CodVendedor'),prov:ix('Proveedor'),car:ix('FechaCarga')};
+  const out=[]; for(const r of R){ if(!SOFTYS.has(String(r[I.prov]||'').trim().toUpperCase())) continue; const v=parseInt(r[I.cv],10); if(isNaN(v)) continue;
+    out.push({v, cli:String(r[I.cli]).trim(), f:iso(r[I.fc]), car:iso(r[I.car]), nro:String(r[I.nro]||'').trim(), u:num(r[I.cant])}); }
+  return out;
+}
+// como el Reporte diario: un cliente tiene compra si sus unidades netas de Softys en el periodo suman 1 o mas
+function calcular(){
+  const u={}, uh={}, add=(o,k,x)=>{o[k]=(o[k]||0)+x;};
+  for(const x of MES){ if(x.f<DESDE || x.f>HOY) continue; add(u,x.v+'|'+x.cli,x.u); }
+  // pedidos de hoy (robot en vivo): solo los comprobantes que todavia no estan en el CSV del mes
+  for(const x of VIVO){ if(NROS.has(x.nro)) continue; add(u,x.v+'|'+x.cli,x.u); add(uh,x.v+'|'+x.cli,x.u); }
+  const R={};
+  for(const v of ORDV){ const base=(CART[v]||[]).length; R[v]={v,base,ccc:0,hoy:0,con:new Set()}; }
+  for(const k in u){ if(u[k]<1) continue; const [v,c]=k.split('|'); const o=R[+v]; if(!o) continue; o.ccc++; o.con.add(c);
+    if((uh[k]||0)>0 && (u[k]-(uh[k]||0))<1) o.hoy++; }
+  for(const o of Object.values(R)){ o.cob=o.base? o.ccc/o.base : 0; o.f65=Math.max(0,Math.ceil(o.base*.65-1e-9)-o.ccc); o.f70=Math.max(0,Math.ceil(o.base*.70-1e-9)-o.ccc); }
+  return R;
+}
+function pbar(v){ const p=Math.max(0,Math.min(1,v)), col=p>=.7?'#2EBD4E':p>=.65?'#F2C200':'#E5484D';
+  return `<span class="pbar" title="Marcas en 65% y 70%"><i style="width:${(p*100).toFixed(1)}%;background:${col}"></i><s style="left:65%"></s><s style="left:70%"></s><b style="${p>=.55&&col!=='#F2C200'?'color:#fff':''}">${nf(v*100,1)}%</b></span>`; }
+const falta=n=>n>0? `<span class="falta no">${nf(n)}</span>` : '<span class="falta ok">✓ Llegó</span>';
+function dibujar(){
+  if(!listo) return;
+  const R=calcular(), fv=$('fVend').value, q=norm($('q').value.trim()).split(/\s+/).filter(Boolean);
+  const vs=Object.values(R).filter(o=>!fv||String(o.v)===fv);
+  const T=vs.reduce((a,o)=>({base:a.base+o.base,ccc:a.ccc+o.ccc,f65:a.f65+o.f65,f70:a.f70+o.f70,hoy:a.hoy+o.hoy,ok:a.ok+(o.f70===0?1:0)}),{base:0,ccc:0,f65:0,f70:0,hoy:0,ok:0});
+  const cob=T.base? T.ccc/T.base : 0;
+  $('kpis').innerHTML=`
+    <div class="kpi"><div class="l">Cobertura Softys ${fv?esc(nomV(+fv)):'del equipo'}</div><div class="v">${nf(cob*100,1)}%</div><div class="n">${nf(T.ccc)} clientes con compra de ${nf(T.base)}</div></div>
+    <div class="kpi"><div class="l">Faltan para el 65%</div><div class="v" style="color:#FFE14D">${nf(T.f65)}</div><div class="n">clientes, sumando lo que le falta a cada vendedor</div></div>
+    <div class="kpi"><div class="l">Faltan para el 70%</div><div class="v" style="color:#FF8A8A">${nf(T.f70)}</div><div class="n">${fv? (T.f70? 'clientes' : 'ya llegó al 70%') : `${T.ok} de ${vs.length} vendedores ya llegaron al 70%`}</div></div>
+    <div class="kpi"><div class="l">Clientes nuevos hoy</div><div class="v" style="color:#7CFF6B">${nf(T.hoy)}</div><div class="n">primera compra de Softys del mes, cargada hoy</div></div>`;
+  const k=ORDEN.k, d=ORDEN.dir; vs.sort((a,b)=> (k==='v'? (a.v-b.v) : (a[k]-b[k]))*d || a.v-b.v);
+  $('cuenta').textContent='tocá un vendedor para ver sus clientes sin compra de Softys, por día de visita';
+  const detalle=o=>{ const cs=(CART[o.v]||[]).filter(c=>!o.con.has(c.c)).filter(c=>q.every(w=>norm(c.c+' '+c.n+' '+c.dir+' '+c.loc).includes(w)));
+    const dias=[...new Set(cs.map(x=>x.dia))].sort((a,b)=>(ORD[a]||9)-(ORD[b]||9));
+    if(!cs.length) return '<p class="vac">Ningún cliente sin compra con este filtro.</p>';
+    return `<table class="dt"><thead><tr><th>Cliente</th><th>Dirección</th><th>Localidad</th><th>Segmento</th><th class="r">Softys mes anterior</th></tr></thead><tbody>${dias.map(dd=>{
+      const ds=cs.filter(x=>x.dia===dd).sort((a,b)=>((ANT[o.v+'|'+b.c]||0)-(ANT[o.v+'|'+a.c]||0))||a.n.localeCompare(b.n,'es')), man=dd===MANANA;
+      const pr=ds.filter(x=>(ANT[o.v+'|'+x.c]||0)>=1).length;
+      return `<tr class="dia${man?' man':''}"><td colspan="5">${esc(DIA[dd]||'Sin día de visita')}${man?' · MAÑANA':''} <small>${ds.length} sin compra · ${pr} compraron el mes anterior</small></td></tr>`+ds.map(x=>{ const a=ANT[o.v+'|'+x.c]||0; return `<tr>
+        <td><span class="cod">${x.c}</span>${esc(x.n)}</td><td>${esc(x.dir)}</td><td>${esc(x.loc)}</td><td>${esc(x.seg)}</td><td class="r">${a>=1?`<span class="est pr">${nf(a)} u.</span>`:''}</td></tr>`; }).join(''); }).join('')}</tbody></table>`; };
+  $('tVend').tBodies[0].innerHTML=vs.map(o=>{ const ab=abiertos.has(String(o.v));
+    return `<tr class="vrow${ab?' ab':''}" data-v="${o.v}" tabindex="0"><td class="chev"><span>▶</span></td><td><b><span class="cod">${o.v}</span>${esc(nomV(o.v))}</b></td><td class="r">${nf(o.base)}</td><td class="r"><b>${nf(o.ccc)}</b></td><td>${pbar(o.cob)}</td><td class="c">${falta(o.f65)}</td><td class="c">${falta(o.f70)}</td><td class="r">${o.hoy?'+'+o.hoy:''}</td></tr>`
+      +(ab?`<tr class="det"><td colspan="8"><div>${detalle(o)}</div></td></tr>`:''); }).join('')
+    || '<tr><td colspan="8" class="vac">Sin vendedores.</td></tr>';
+  [...$('tVend').tHead.rows[0].cells].forEach(th=>{ const kk=th.dataset.k; if(!kk) return; th.textContent=th.textContent.replace(/ [▲▼]$/,'')+(kk===ORDEN.k?(ORDEN.dir>0?' ▲':' ▼'):''); });
+}
+function marcaVivo(){
+  const ok=!!(corteMes||vivoCorte); $('vivo').classList.toggle('off',!ok);
+  $('vivoTx').textContent= vivoCorte? 'En vivo · pedidos de hoy al '+vivoCorte.slice(11) : corteMes? 'Ventas al '+corteMes : 'Sin datos del mes';
+  $('pie').innerHTML=`Igual que la cobertura de Softys del Reporte diario: clientes con al menos 1 unidad neta de Softys (las notas de crédito restan) facturada del ${dm(DESDE)} a hoy, sobre los clientes activos de la cartera de cada vendedor en Gescom. Faltan = clientes que todavía necesita para llegar al 65% / 70% de su cartera. `
+    +`Ventas del mes al ${corteMes||'—'}${vivoCorte?' + pedidos cargados hoy hasta las '+vivoCorte.slice(11):''}. Se actualiza solo cada 2 minutos. En la lista de cada vendedor, en amarillo los que compraron Softys el mes anterior (los más fáciles de recuperar) y en rojo el día de visita de mañana.`;
+}
+async function bajarMes(){
+  const arch=((await (await fetch(RAW+'archivos.json?t='+Date.now(),{cache:'no-store'})).json()).archivos||[]);
+  const ult={}; for(const p of arch){ const mm=p.match(/ventas-(\d{4}-\d{2})-/); if(mm && (!ult[mm[1]]||p>ult[mm[1]])) ult[mm[1]]=p; }
+  const [y,m]=YM.split('-').map(Number), ant=(m===1? (y-1)+'-12' : y+'-'+String(m-1).padStart(2,'0'));
+  const baja=async p=>{ if(!p) return []; const r=await fetch(RAW+p.split('/').map(encodeURIComponent).join('/'),{cache:'no-store'}); return r.ok? leer(new TextDecoder('windows-1252').decode(await r.arrayBuffer())) : []; };
+  if(ult[YM]!==mesArch){ MES=await baja(ult[YM]); NROS=new Set(MES.map(x=>x.nro)); mesArch=ult[YM]||'';
+    const st=mesArch.match(/-(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})\d{2}/); corteMes= st? `${st[3]}/${st[2]} ${st[4]}:${st[5]}` : ''; }
+  if(!Object.keys(ANT).length){ const A=await baja(ult[ant]); for(const x of A){ const k=x.v+'|'+x.cli; ANT[k]=(ANT[k]||0)+x.u; } }
+}
+async function enVivo(){
+  try{
+    const hoyAhora=new Date(Date.now()-3*3600e3).toISOString().slice(0,10); if(hoyAhora!==HOY){ location.reload(); return; }
+    await bajarMes();
+    const est=await (await fetch(RAW+'vivo/estado.json?t='+Date.now(),{cache:'no-store'})).json();
+    const dia=HOY.slice(8)+'-'+HOY.slice(5,7)+'-'+HOY.slice(0,4);
+    if(est.dia===dia && est.corte!==vivoCorte){
+      const r=await fetch(RAW+'vivo/hoy.csv?t='+Date.now(),{cache:'no-store'}); if(!r.ok) throw new Error('hoy.csv '+r.status);
+      VIVO=leer(new TextDecoder('windows-1252').decode(await r.arrayBuffer())).filter(x=>x.car===HOY);
+      vivoCorte=est.corte; }
+    dibujar();
+  }catch(e){}
+  marcaVivo();
+}
+function excel(){
+  const R=calcular(), sep=';', vs=Object.values(R).sort((a,b)=>b.f70-a.f70||a.v-b.v);
+  const L=[['Código','Vendedor','Cartera','Con compra Softys','Cobertura %','Faltan 65%','Faltan 70%','Nuevos hoy']].concat(vs.map(o=>[o.v,nomV(o.v),o.base,o.ccc,nf(o.cob*100,1),o.f65,o.f70,o.hoy]));
+  L.push([]); L.push(['Clientes sin compra de Softys en el mes']); L.push(['Código vend.','Vendedor','Día','Cliente','Nombre','Dirección','Localidad','Segmento','Softys mes anterior (u.)']);
+  for(const o of vs) for(const c of (CART[o.v]||[]).filter(c=>!o.con.has(c.c)).sort((a,b)=>(ORD[a.dia]||9)-(ORD[b.dia]||9)||a.n.localeCompare(b.n,'es')))
+    L.push([o.v,nomV(o.v),DIA[c.dia]||'',c.c,c.n,c.dir,c.loc,c.seg,(ANT[o.v+'|'+c.c]||0)>=1? ANT[o.v+'|'+c.c] : '']);
+  const csv='﻿'+L.map(r=>r.map(v=>{ v=String(v); return /[;"\n]/.test(v)? '"'+v.replace(/"/g,'""')+'"' : v; }).join(sep)).join('\r\n');
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})); a.download='Cobertura Softys '+HOY+'.csv'; a.click();
+}
+$('fVend').addEventListener('change',dibujar); $('q').addEventListener('input',dibujar); $('dl').addEventListener('click',excel);
+$('tVend').addEventListener('click',e=>{ const th=e.target.closest('th[data-k]'); if(th){ const k=th.dataset.k; ORDEN= ORDEN.k===k? {k,dir:-ORDEN.dir} : {k,dir:k==='v'?1:-1}; dibujar(); return; }
+  const tr=e.target.closest('tr.vrow'); if(!tr) return; const v=tr.dataset.v; abiertos.has(v)? abiertos.delete(v) : abiertos.add(v); dibujar(); });
+document.addEventListener('keydown',e=>{ const tr=e.target.closest&&e.target.closest('tr.vrow'); if(tr&&(e.key==='Enter'||e.key===' ')){ e.preventDefault(); tr.click(); } });
+$('abrir').addEventListener('click',()=>{ ORDV.forEach(v=>abiertos.add(String(v))); dibujar(); });
+$('cerrar').addEventListener('click',()=>{ abiertos.clear(); dibujar(); });
+(async function(){
+  try{
+    HOY=new Date(Date.now()-3*3600e3).toISOString().slice(0,10); YM=HOY.slice(0,7); DESDE=PERIODO[YM]||YM+'-01';
+    { let t=new Date(HOY+'T12:00:00Z'); do{ t.setUTCDate(t.getUTCDate()+1); }while([0,6].includes(t.getUTCDay())); MANANA=LETRA[t.getUTCDay()]; }
+    $('vivoTx').textContent='Bajando carteras…';
+    // los 23 vendedores del Reporte diario y su nomenclador de Softys
+    const html=await (await fetch(B+'index.html?t='+Date.now(),{cache:'no-store'})).text();
+    const m=html.match(/^const CFG = (.*);\s*$/m); if(!m) throw new Error('no se encontró la lista de vendedores');
+    const CFG=JSON.parse(m[1]); CFG.vendedores.forEach(v=>{ VEND[v.c]=v.n; ORDV.push(v.c); });
+    if(CFG.nomenclador&&CFG.nomenclador.SOFTYS) SOFTYS=new Set(CFG.nomenclador.SOFTYS.map(p=>p.trim().toUpperCase()));
+    const CJ=await (await fetch(RAW+'carteras.json?t='+Date.now(),{cache:'no-store'})).json();
+    // la base trae acentos mal guardados (doble codificacion): se rearman los bytes y se leen como UTF-8
+    const CP={'€':128,'‚':130,'ƒ':131,'„':132,'…':133,'†':134,'‡':135,'ˆ':136,'‰':137,'Š':138,'‹':139,'Œ':140,'Ž':142,'‘':145,'’':146,'“':147,'”':148,'•':149,'–':150,'—':151,'˜':152,'™':153,'š':154,'›':155,'œ':156,'ž':158,'Ÿ':159};
+    const dec=s=>{ const b=[]; for(const ch of s){ const c=ch.charCodeAt(0); b.push(c<256? c : CP[ch]); } try{ return new TextDecoder('utf-8',{fatal:true}).decode(new Uint8Array(b)); }catch(e){ return s; } };
+    const K='[\u0080-¿ŒœŠšŸŽžƒˆ˜–—‘-‚“-„†-•…‰‹›€™]', RX=new RegExp('[\\u00C2-\\u00DF]'+K+'|[\\u00E2]'+K+K,'g');
+    const arreglar=s=>{ for(let i=0;i<4&&RX.test(s);i++){ RX.lastIndex=0; const t=s.replace(RX,dec); if(t===s) break; s=t; } RX.lastIndex=0; return s; };
+    for(const v of ORDV){ CART[v]=(CJ.v[String(v)]||[]).map(k=>({c:String(k[0]), n:arreglar(k[1]||''), dir:arreglar(k[2]||'').replace(/\s*-\s*\([^)]*\)\s*/,' ').replace(/\s+/g,' ').trim(), loc:arreglar(k[3]||''), seg:arreglar(k[4]||''), dia:k[5]||''})); }
+    $('fVend').innerHTML+=ORDV.slice().sort((a,b)=>a-b).map(v=>`<option value="${v}">${v} · ${esc(nomV(v))}</option>`).join('');
+    $('vivoTx').textContent='Bajando ventas…';
+    listo=true; await enVivo();
+    setInterval(enVivo, 2*60e3);
+    document.addEventListener('visibilitychange',()=>{ if(!document.hidden) enVivo(); });
+  }catch(e){ $('vivoTx').textContent='No se pudieron leer los datos: '+e.message; }
+})();
+</script>
+</body>
+</html>
