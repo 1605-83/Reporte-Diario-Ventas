@@ -567,7 +567,8 @@ function arrancar(txt,nombre,ym,dia,rango){
     let st={}; try{ st=JSON.parse(localStorage.getItem(STORE)||'{}')[diasKey()]||{}; }catch(e){}
     { const f=diasDef(); $('dT').value=st.dT||f.dT; $('dH').value=st.dH||f.dH; }
     $('hMes').textContent=D.mes; document.title='Reporte diario de ventas LP · ELB, '+D.mes;
-    $('hAct').textContent=`Datos de ventas al ${String(D.corte).split(' ')[0]} · Se actualiza a las 7 hs y 13:30 hs`;
+    $('hAct').textContent= VIVO_CORTE? `En vivo · pedidos de hoy al ${VIVO_CORTE.slice(11)} · facturado al ${String(D.corte).split(' ')[0]}`
+      : `Datos de ventas al ${String(D.corte).split(' ')[0]} · Se actualiza a las 7 hs y 13:30 hs`;
     $('hSub').textContent=`Corte al ${D.corte} · Lago Puelo S.A. y Elebes · ${D.vendedores.length} vendedores`;
     $('fVend').innerHTML='<option value="">Todos</option>'+[...D.vendedores].sort((a,b)=>a.c-b.c).map(v=>`<option value="${v.c}">${v.c} · ${esc(v.n||'Vendedor '+v.c)}</option>`).join('');
     $('fEmp').innerHTML=['TOTAL',...CFG.grupos].map(g=>`<option value="${g}">${NOMBRE_G[g]}</option>`).join('');
@@ -615,13 +616,44 @@ async function cargarMes(ym,dia,rango){
       it=await bajarMes(x); if(it) partes.push({ym:x, txt:CACHE[x].txt}); }
     if(!partes.length) return;
     const ymD=partes[0].ym; $('fMes').value=ymD;
-    return arrancar(partes, it.nombre, ymD, '', rango);
+    return arrancar(conVivo(partes), it.nombre, ymD, '', rango);
   }
   if(!dia && rango) ym=rango.d.slice(0,7);   // rango dentro de un mes: se pasa a ese mes
   const it=await bajarMes(ym); if(!it) return;
   $('fMes').value=ym;
-  arrancar(CACHE[ym].txt, CACHE[ym].nombre, ym, dia||'', dia? null : rango||null);
+  arrancar(conVivo([{ym, txt:CACHE[ym].txt}]), CACHE[ym].nombre, ym, dia||'', dia? null : rango||null);
 }
+// ---- Venta en vivo (pedido de Bruno, 19/11/2026: todo el reporte con la venta en vivo) ----
+// El robot sube vivo/hoy.csv (mismas columnas que el CSV del mes) con lo cargado hoy, y vivo/estado.json con el corte.
+// Se suman los comprobantes cargados hoy que todavia no estan en el CSV del mes (los que ya estan no se cuentan dos veces).
+let VIVO_TXT='', VIVO_CORTE='';
+const hoyDmyAR=()=>new Date(Date.now()-3*3600e3).toISOString().slice(0,10).split('-').reverse().join('-');
+async function bajarVivo(){   // true si llego un corte nuevo
+  try{
+    const raw='https://raw.githubusercontent.com/'+REPO+'/main/vivo/';
+    const e=await fetch(raw+'estado.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok? r.json() : null);
+    if(!e||e.dia!==hoyDmyAR()){ const habia=!!VIVO_TXT; VIVO_TXT=''; VIVO_CORTE=''; return habia; }   // todavia no hay pedidos de hoy
+    if(e.corte===VIVO_CORTE) return false;
+    const r=await fetch(raw+'hoy.csv?t='+Date.now(),{cache:'no-store'}); if(!r.ok) return false;
+    VIVO_TXT=new TextDecoder('windows-1252').decode(await r.arrayBuffer()); VIVO_CORTE=e.corte; return true;
+  }catch(err){ return false; }
+}
+function conVivo(partes){
+  if(!VIVO_TXT) return partes;
+  const lin=VIVO_TXT.split(/\r?\n/), cab=lin[0].split(';').map(h=>h.trim()), iFc=cab.indexOf('FechaComprobante'), iNro=cab.indexOf('NroComprobante'), iCar=cab.indexOf('FechaCarga'), hoy=hoyDmyAR(), hoyIso=hoy.split('-').reverse().join('-');
+  if(iFc<0||iNro<0||iCar<0) return partes;
+  // los pedidos todavia sin facturar vienen sin fecha de comprobante: cuentan como venta de hoy
+  const filas=lin.slice(1).map(l=>l.split(';')).filter(c=>c.length>iCar && c[iCar].trim()===hoy).map(c=>{ if(!c[iFc].trim()) c[iFc]=hoyIso; return c; });
+  const out=[...partes];
+  for(const p of partes){
+    const nros=new Set(); for(const l of p.txt.split('\n')){ const c=l.split(';'); if(c[3]) nros.add(c[3].trim()); }
+    const add=filas.filter(c=>c[iFc].slice(0,7)===p.ym && !nros.has(c[iNro].trim())).map(c=>c.join(';'));
+    if(add.length) out.push({ym:p.ym, txt:lin[0]+'\n'+add.join('\n')});
+  }
+  return out;
+}
+// cada 2 minutos se fija si el robot subio pedidos nuevos de hoy y, si hay, recalcula lo que se esta viendo
+setInterval(async()=>{ if(D&&await bajarVivo()) cargarMes(D.ym, D.dia, D.rango).catch(()=>{}); }, 2*60*1000);
 // en vivo: cada 10 minutos se fija si el robot subio datos nuevos del mes que se esta viendo y, si hay, los carga
 setInterval(async()=>{ try{
   if(!D) return; const lst=await listarMeses(); const nuevo=lst.find(x=>x.ym===D.ym), viejo=MESES_REPO.find(x=>x.ym===D.ym);
@@ -742,6 +774,7 @@ $('fTipo').addEventListener('change',e=>{ TIPO_F=e.target.value; try{ localStora
   $('fMes').innerHTML=MESES_REPO.map(x=>`<option value="${x.ym}">${nombreMes(x.ym)}</option>`).join('');
   const hoyYm=new Date(Date.now()-3*3600e3).toISOString().slice(0,7);
   const def=(MESES_REPO.find(x=>x.ym===hoyYm)||MESES_REPO[0]).ym;
+  await bajarVivo();
   $('fMes').value=def; await cargarMes(def);
 } catch(e){ mostrarError(e.message+'.'); } })();
 </script>
