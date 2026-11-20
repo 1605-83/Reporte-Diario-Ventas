@@ -644,10 +644,13 @@ function conVivo(partes){
   if(iFc<0||iNro<0||iCar<0) return partes;
   // los pedidos todavia sin facturar vienen sin fecha de comprobante: cuentan como venta de hoy
   const filas=lin.slice(1).map(l=>l.split(';')).filter(c=>c.length>iCar && c[iCar].trim()===hoy).map(c=>{ if(!c[iFc].trim()) c[iFc]=hoyIso; return c; });
-  const out=[...partes];
+  // 20/11/2026: lo cargado hoy sale del archivo en vivo (es el mas nuevo): esos comprobantes se sacan del CSV del mes,
+  // que si se armo hoy los trae como pedidos sin facturar, y se ponen los del archivo en vivo (sin contar dos veces)
+  const vivos=new Set(filas.map(c=>c[iNro].trim())), out=[];
   for(const p of partes){
-    const nros=new Set(); for(const l of p.txt.split('\n')){ const c=l.split(';'); if(c[3]) nros.add(c[3].trim()); }
-    const add=filas.filter(c=>c[iFc].slice(0,7)===p.ym && !nros.has(c[iNro].trim())).map(c=>c.join(';'));
+    const txt= vivos.size? p.txt.split('\n').filter((l,i)=>{ if(!i) return true; const c=l.split(';'); return !(c[3]&&vivos.has(c[3].trim())); }).join('\n') : p.txt;
+    out.push({ym:p.ym, txt});
+    const add=filas.filter(c=>c[iFc].slice(0,7)===p.ym).map(c=>c.join(';'));
     if(add.length) out.push({ym:p.ym, txt:lin[0]+'\n'+add.join('\n')});
   }
   return out;
