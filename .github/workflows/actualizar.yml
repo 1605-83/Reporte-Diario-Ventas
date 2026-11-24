@@ -4,6 +4,13 @@ on:
   schedule:
     - cron: '0 10 * * 1-5'    # 07:00 hora argentina, lunes a viernes
     - cron: '30 16 * * 1-5'   # 13:30 hora argentina, lunes a viernes (pedido de Bruno, 13/10/2026)
+    # 24/11/2026: GitHub largaba estas corridas con 8 a 10 horas de atraso. Horarios extra en minutos raros
+    # (en la hora en punto descarta muchas); si ya hubo una actualizacion hace menos de 2 horas, la extra no hace nada.
+    - cron: '17 10 * * 1-5'   # 07:17
+    - cron: '43 11 * * 1-5'   # 08:43
+    - cron: '13 13 * * 1-5'   # 10:13
+    - cron: '47 16 * * 1-5'   # 13:47
+    - cron: '23 18 * * 1-5'   # 15:23
   workflow_dispatch:         # boton "Run workflow" para correrlo a mano
 
 permissions:
@@ -18,15 +25,28 @@ jobs:
   actualizar:
     runs-on: windows-latest
     steps:
+      - name: Ver si hace falta (las corridas automaticas se saltean si ya hubo una hace menos de 2 horas)
+        id: falta
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then echo "si=1" >> $GITHUB_OUTPUT; exit 0; fi
+          ult=$(gh api "repos/$GITHUB_REPOSITORY/commits?path=archivos.json&per_page=1" --jq '.[0].commit.committer.date // ""')   # ultima vez que el robot subio un archivo del mes
+          if [ -n "$ult" ] && [ $(( $(date +%s) - $(date -d "$ult" +%s) )) -lt 7200 ]; then echo "Ya se actualizo a las $ult: no hace falta"; echo "si=0" >> $GITHUB_OUTPUT; else echo "si=1" >> $GITHUB_OUTPUT; fi
+
       - uses: actions/checkout@v4
+        if: steps.falta.outputs.si == '1'
 
       - name: Bajar ventas de la base de Gescom y armar el CSV
+        if: steps.falta.outputs.si == '1'
         shell: powershell
         env:
           GESCOM_LPE_CLAVE: ${{ secrets.GESCOM_LPE_CLAVE }}
         run: .\robot\actualizar.ps1 -Salida .
 
       - name: Subir el CSV nuevo
+        if: steps.falta.outputs.si == '1'
         shell: bash
         run: |
           git config user.name "robot-gescom"
