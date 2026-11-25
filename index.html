@@ -567,7 +567,8 @@ function arrancar(txt,nombre,ym,dia,rango){
     let st={}; try{ st=JSON.parse(localStorage.getItem(STORE)||'{}')[diasKey()]||{}; }catch(e){}
     { const f=diasDef(); $('dT').value=st.dT||f.dT; $('dH').value=st.dH||f.dH; }
     $('hMes').textContent=D.mes; document.title='Reporte diario de ventas LP · ELB, '+D.mes;
-    $('hAct').textContent= VIVO_CORTE? `En vivo · pedidos de hoy al ${VIVO_CORTE.slice(11)} · facturado al ${String(D.corte).split(' ')[0]}`
+    $('hAct').textContent= SOLO_FACTURADO? `Solo facturado · datos al ${VIVO_CORTE? VIVO_CORTE.slice(11)+' de hoy' : String(D.corte).split(' ')[0]}`
+      : VIVO_CORTE? `En vivo · pedidos de hoy al ${VIVO_CORTE.slice(11)} · facturado al ${String(D.corte).split(' ')[0]}`
       : `Datos de ventas al ${String(D.corte).split(' ')[0]} · Se actualiza a las 7 hs y 13:30 hs`;
     $('hSub').textContent=`Corte al ${D.corte} · Lago Puelo S.A. y Elebes · ${D.vendedores.length} vendedores`;
     $('fVend').innerHTML='<option value="">Todos</option>'+[...D.vendedores].sort((a,b)=>a.c-b.c).map(v=>`<option value="${v.c}">${v.c} · ${esc(v.n||'Vendedor '+v.c)}</option>`).join('');
@@ -638,7 +639,14 @@ async function bajarVivo(){   // true si llego un corte nuevo
     VIVO_TXT=new TextDecoder('windows-1252').decode(await r.arrayBuffer()); VIVO_CORTE=e.corte; return true;
   }catch(err){ return false; }
 }
+// 25/11/2026 (pedido de Bruno): el reporte muestra solo lo facturado; los pedidos sin facturar (comprobante VEN-) no se cuentan
+const SOLO_FACTURADO=true;
 function conVivo(partes){
+  const out=conVivoTodo(partes);
+  if(!SOLO_FACTURADO) return out;
+  return out.map(p=>({ym:p.ym, txt:p.txt.split('\n').filter((l,i)=>{ if(!i) return true; const c=l.split(';'); return !(c[3]&&/^VEN-/.test(c[3].trim())); }).join('\n')}));
+}
+function conVivoTodo(partes){
   if(!VIVO_TXT) return partes;
   const lin=VIVO_TXT.split(/\r?\n/), cab=lin[0].split(';').map(h=>h.trim()), iFc=cab.indexOf('FechaComprobante'), iNro=cab.indexOf('NroComprobante'), iCar=cab.indexOf('FechaCarga'), hoy=hoyDmyAR(), hoyIso=hoy.split('-').reverse().join('-');
   if(iFc<0||iNro<0||iCar<0) return partes;
