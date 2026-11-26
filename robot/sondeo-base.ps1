@@ -24,3 +24,5 @@ Ver 'todos: actualizados hoy por activo' "SELECT c.activo, COUNT(*) AS n FROM cl
 Ver 'todos: ultima actualizacion' "SELECT MAX(c.actualizado) AS max_act FROM clientes c"
 Ver 'v2: valores de baja (fechas)' "SELECT substr(c.baja,1,10) AS baja, c.activo, COUNT(*) AS n $C2 AND NULLIF(c.baja,'') IS NOT NULL GROUP BY 1,2 ORDER BY 1 DESC LIMIT 10"
 Ver 'tablas de la base' "SELECT name FROM sqlite_master WHERE type='table'"
+Ver 'tabla sync (estado de la copia)' "SELECT * FROM sync"
+Ver 'clientes: actualizaciones por hora en los ultimos 3 dias' "SELECT substr(c.actualizado,1,13) AS hora, COUNT(*) AS n FROM clientes c WHERE c.actualizado >= date('now','-3 day') GROUP BY 1 ORDER BY 1"
