@@ -61,11 +61,12 @@ footer{margin-top:16px;font-size:.78rem;color:var(--ink2);text-align:center;line
 <div class="wrap">
   <div class="card head">
     <div>
-      <h1>Rechazos: no llegó el chofer</h1>
+      <h1 id="tit">Rechazos por motivo</h1>
       <div class="meta" id="meta">Cargando…</div>
     </div>
     <div class="ctrl">
       <label>Mes <select id="fMes"></select></label>
+      <label>Motivo <select id="fMot"></select></label>
       <select id="fVend"><option value="">Todos los vendedores</option></select>
       <input type="search" id="fQ" placeholder="Buscar cliente o código">
       <button class="excel" id="btnXls" type="button">⬇ Descargar Excel</button>
@@ -88,12 +89,12 @@ footer{margin-top:16px;font-size:.78rem;color:var(--ink2);text-align:center;line
     </div>
     <div id="filas"><div class="vacio">Cargando…</div></div>
   </div>
-  <footer>Rechazos con motivo de devolución "NO LLEGO CHOFER" en Gescom, por fecha de comprobante de la nota de crédito.<br>
+  <footer>Rechazos por motivo de devolución cargado en Gescom, por fecha de comprobante de la nota de crédito.<br>
   Importe neto: notas de crédito menos las notas de débito con el mismo motivo. Se actualiza con el reporte diario (7 hs y 13:30 hs).</footer>
 </div>
 <script>
 const RAW='https://raw.githubusercontent.com/1605-83/Reporte-Diario-Ventas/main/';
-const MOTIVO='NO LLEGO CHOFER';
+const MOTIVO_INI='NO LLEGO CHOFER';   // motivo que se ve al abrir; el selector Motivo trae todos los del mes
 const MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -112,13 +113,13 @@ function parseCSV(t){ const rows=[]; let row=[], f='', q=false;
   if(f!==''||row.length){ row.push(f.replace(/\r$/,'')); rows.push(row); }
   return rows; }
 let ARCH={}, FILAS=[], corte='', sortK='imp', sortD=-1; const abiertos=new Set();
-// renglones del mes con motivo "NO LLEGO CHOFER" (solo los de comprobante en ese mes: el CSV trae tambien otras fechas)
+// renglones del mes con motivo de devolucion (solo los de comprobante en ese mes: el CSV trae tambien otras fechas)
 function leer(txt,ym){
   const R=parseCSV(txt).filter(r=>r.length>5); if(!R.length) return []; const H=R.shift().map(h=>h.trim()), ix=n=>H.indexOf(n);
   const I={cli:ix('Cliente'),fc:ix('FechaComprobante'),nro:ix('NroComprobante'),imp:ix('ImporteItem'),cant:ix('CantBase'),rs:ix('RazonSocial'),cv:ix('CodVendedor'),vn:ix('Vendedor'),art:ix('Articulo'),cod:ix('Codigo'),prov:ix('Proveedor'),mot:ix('MotivoDevolucion'),emp:ix('Empresa')};
   if(I.mot<0) throw new Error('el archivo no trae la columna MotivoDevolucion');
-  return R.filter(r=>(r[I.mot]||'').trim().toUpperCase()===MOTIVO && (r[I.fc]||'').startsWith(ym)).map(r=>({
-    cli:String(r[I.cli]).trim(), fc:r[I.fc].trim(), nro:(r[I.nro]||'').trim(), imp:num(r[I.imp]), cant:num(r[I.cant]), rs:(r[I.rs]||'').trim(),
+  return R.filter(r=>(r[I.mot]||'').trim() && (r[I.fc]||'').startsWith(ym)).map(r=>({
+    mot:(r[I.mot]||'').trim().toUpperCase(), cli:String(r[I.cli]).trim(), fc:r[I.fc].trim(), nro:(r[I.nro]||'').trim(), imp:num(r[I.imp]), cant:num(r[I.cant]), rs:(r[I.rs]||'').trim(),
     v:parseInt(r[I.cv],10), vn:titulo(r[I.vn]), art:(r[I.art]||'').trim(), cod:String(r[I.cod]||'').trim(), prov:(r[I.prov]||'').trim(), emp:(r[I.emp]||'').trim()}));
 }
 async function cargar(ym){
@@ -127,6 +128,11 @@ async function cargar(ym){
   if(!r.ok) throw new Error('no se pudo bajar '+p);
   FILAS=leer(new TextDecoder('windows-1252').decode(await r.arrayBuffer()),ym);
   const st=p.match(/-(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})\d{2}/); corte= st? `${st[3]}/${st[2]}/${st[1]} ${st[4]}:${st[5]}` : '';
+  // motivos del mes, de mayor a menor importe; se mantiene el elegido si existe en el mes nuevo
+  const pm={}; FILAS.forEach(f=>pm[f.mot]=(pm[f.mot]||0)-f.imp);
+  const antes=$('fMot').value||MOTIVO_INI, ms=Object.keys(pm).sort((a,b)=>pm[b]-pm[a]);
+  $('fMot').innerHTML='<option value="*">Todos los motivos</option>'+ms.map(m=>`<option value="${esc(m)}">${esc(titulo(m))} · ${fmt$(pm[m])}</option>`).join('');
+  $('fMot').value=antes==='*'||pm[antes]!=null? antes : (ms[0]||'*');
   const vs={}; FILAS.forEach(f=>vs[f.v]=f.vn);
   $('fVend').innerHTML='<option value="">Todos los vendedores</option>'+Object.keys(vs).map(Number).sort((a,b)=>a-b).map(c=>`<option value="${c}">${c} · ${esc(vs[c])}</option>`).join('');
   abiertos.clear(); dibujar();
@@ -139,9 +145,12 @@ function clientes(F){
   // veces = dias distintos con rechazo (un mismo reparto puede generar varias notas de credito, una por empresa)
   return Object.values(C).map(c=>({...c, n:new Set(Object.values(c.comp).filter(x=>x.nro.startsWith('NCR')).map(x=>x.fc)).size, f:[...c.fechas].sort()}));
 }
+const filtradas=()=>{ const fv=$('fVend').value, fm=$('fMot').value; return FILAS.filter(f=>(!fv||String(f.v)===fv) && (fm==='*'||f.mot===fm)); };
+const nomMot=()=>$('fMot').value==='*'? 'todos los motivos' : titulo($('fMot').value);
 function dibujar(){
   const ym=$('fMes').value, fv=$('fVend').value, q=norm($('fQ').value.trim());
-  let F=FILAS.filter(f=>!fv||String(f.v)===fv);
+  const F=filtradas();
+  $('tit').textContent='Rechazos: '+nomMot(); document.title='Rechazos · '+nomMot();
   const todos=clientes(F);
   const L=todos.filter(c=>!q||norm(c.cli+' '+c.rs).includes(q));
   // indicadores
@@ -150,7 +159,7 @@ function dibujar(){
   $('kComp').textContent=fmtN(comps.size);
   $('kImp').textContent=fmt$(imp); $('kImpN').textContent=todos.length? 'Promedio por cliente '+fmt$(imp/todos.length) : '';
   $('kDias').textContent=fmtN(dias.length); $('kDiasN').textContent=dias.length? `Del ${ddmm(dias[0])} al ${ddmm(dias[dias.length-1])}` : '';
-  $('meta').textContent=`${MESES[+ym.slice(5)-1][0].toUpperCase()+MESES[+ym.slice(5)-1].slice(1)} ${ym.slice(0,4)} · motivo "No llegó chofer" · datos al ${corte}`;
+  $('meta').textContent=`${MESES[+ym.slice(5)-1][0].toUpperCase()+MESES[+ym.slice(5)-1].slice(1)} ${ym.slice(0,4)} · motivo: ${nomMot()} · datos al ${corte}`;
   // por dia
   const pd={}; F.forEach(f=>pd[f.fc]=(pd[f.fc]||0)-f.imp); const mx=Math.max(1,...Object.values(pd));
   $('gDias').innerHTML=dias.length? dias.map(d=>`<div class="dia" title="${dmy(d)}: ${fmt$(pd[d])}"><i>${pd[d]>=1e6? (pd[d]/1e6).toFixed(1).replace('.',',')+'M' : Math.round(pd[d]/1e3)+'k'}</i><b style="height:${Math.max(pd[d],0)/mx*100}%"></b><span>${ddmm(d)}</span></div>`).join('') : '<div class="vacio">Sin rechazos</div>';
@@ -165,27 +174,27 @@ function dibujar(){
   $('filas').innerHTML=L.length? L.map(c=>{ const ab=abiertos.has(c.cli);
     return `<div class="row${ab?' ab':''}" data-c="${esc(c.cli)}"><span class="chev">›</span><span><span class="cod">${esc(c.cli)}</span></span><span>${esc(c.rs)}</span>
       <span class="m">${c.v} · ${esc(c.ven)}</span><span class="r"><span class="vez${c.n>1?' mucho':''}">${c.n}</span></span><span class="m fx">${c.f.map(ddmm).join(', ')}</span><span class="r"><b>${fmt$(c.imp)}</b></span></div>`
-      +(ab? `<div class="det"><table><thead><tr><th>Comprobante / artículo</th><th>Fecha</th><th>Proveedor</th><th class="r">Cantidad</th><th class="r">Importe</th></tr></thead><tbody>`
+      +(ab? `<div class="det"><table><thead><tr><th>Comprobante / artículo</th><th>Fecha${$('fMot').value==='*'? ' / motivo' : ''}</th><th>Proveedor</th><th class="r">Cantidad</th><th class="r">Importe</th></tr></thead><tbody>`
         +Object.values(c.comp).sort((a,b)=>a.fc.localeCompare(b.fc)).map(x=>`<tr class="comp"><td>${esc(x.nro)}${x.nro.startsWith('NDB')? ' (nota de débito)' : ''}</td><td>${dmy(x.fc)}</td><td></td><td></td><td class="r">${fmt$(x.imp)}</td></tr>`
-          +x.items.map(i=>`<tr><td>${esc(i.cod)} · ${esc(i.art)}</td><td></td><td>${esc(i.prov)}</td><td class="r">${fmtN(Math.abs(i.cant))}</td><td class="r">${fmt$(-i.imp)}</td></tr>`).join('')).join('')
+          +x.items.map(i=>`<tr><td>${esc(i.cod)} · ${esc(i.art)}</td><td>${$('fMot').value==='*'? esc(titulo(i.mot)) : ''}</td><td>${esc(i.prov)}</td><td class="r">${fmtN(Math.abs(i.cant))}</td><td class="r">${fmt$(-i.imp)}</td></tr>`).join('')).join('')
         +'</tbody></table></div>' : '');
-  }).join('') : `<div class="vacio">No hay rechazos por "No llegó chofer"${q||fv? ' con estos filtros' : ' en este mes'}.</div>`;
+  }).join('') : `<div class="vacio">No hay rechazos (${esc(nomMot())})${q||fv? ' con estos filtros' : ' en este mes'}.</div>`;
 }
 $('filas').addEventListener('click',e=>{ const r=e.target.closest('.row'); if(!r) return; const c=r.dataset.c; abiertos.has(c)?abiertos.delete(c):abiertos.add(c); dibujar(); });
 $('th').addEventListener('click',e=>{ const s=e.target.closest('span[data-k]'); if(!s) return; const k=s.dataset.k; if(sortK===k) sortD*=-1; else { sortK=k; sortD=(k==='rs'||k==='ven'||k==='cli')?1:-1; } dibujar(); });
-$('fVend').addEventListener('change',dibujar); $('fQ').addEventListener('input',dibujar);
+$('fVend').addEventListener('change',dibujar); $('fMot').addEventListener('change',()=>{ abiertos.clear(); dibujar(); }); $('fQ').addEventListener('input',dibujar);
 $('fMes').addEventListener('change',e=>cargar(e.target.value).catch(err=>$('meta').textContent='No se pudieron leer los datos: '+err.message));
 // Excel: una hoja con los clientes (lo que se ve con los filtros) y otra con el detalle de cada articulo rechazado
 let XLSX_OK=null;
 const cargarXLSX=()=>XLSX_OK||(XLSX_OK=new Promise((ok,mal)=>{ const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; s.onload=ok; s.onerror=()=>mal(new Error('no se pudo bajar la librería de Excel')); document.head.appendChild(s); }));
 $('btnXls').addEventListener('click',async()=>{ const b=$('btnXls'); b.disabled=true;
-  try{ await cargarXLSX(); const fv=$('fVend').value, q=norm($('fQ').value.trim());
-    const L=clientes(FILAS.filter(f=>!fv||String(f.v)===fv)).filter(c=>!q||norm(c.cli+' '+c.rs).includes(q)).sort((a,b)=>b.imp-a.imp);
+  try{ await cargarXLSX(); const q=norm($('fQ').value.trim());
+    const L=clientes(filtradas()).filter(c=>!q||norm(c.cli+' '+c.rs).includes(q)).sort((a,b)=>b.imp-a.imp);
     const h1=[['Cód. cliente','Cliente','Cód. vendedor','Vendedor','Veces','Fechas','Importe rechazado']].concat(L.map(c=>[+c.cli||c.cli,c.rs,c.v,c.ven,c.n,c.f.map(dmy).join(', '),Math.round(c.imp*100)/100]));
-    const h2=[['Cód. cliente','Cliente','Vendedor','Comprobante','Fecha','Cód. artículo','Artículo','Proveedor','Cantidad','Importe']];
-    L.forEach(c=>Object.values(c.comp).forEach(x=>x.items.forEach(i=>h2.push([+c.cli||c.cli,c.rs,c.v+' · '+c.ven,x.nro,dmy(x.fc),i.cod,i.art,i.prov,Math.abs(i.cant),Math.round(-i.imp*100)/100]))));
+    const h2=[['Cód. cliente','Cliente','Vendedor','Comprobante','Fecha','Motivo','Cód. artículo','Artículo','Proveedor','Cantidad','Importe']];
+    L.forEach(c=>Object.values(c.comp).forEach(x=>x.items.forEach(i=>h2.push([+c.cli||c.cli,c.rs,c.v+' · '+c.ven,x.nro,dmy(x.fc),titulo(i.mot),i.cod,i.art,i.prov,Math.abs(i.cant),Math.round(-i.imp*100)/100]))));
     const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(h1),'Clientes'); XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(h2),'Detalle');
-    XLSX.writeFile(wb,`Rechazos no llego chofer ${$('fMes').value}.xlsx`);
+    XLSX.writeFile(wb,`Rechazos ${nomMot().replace(/[\\/:*?"<>|,]/g,'')} ${$('fMes').value}.xlsx`);
   }catch(e){ alert('No se pudo armar el Excel: '+e.message); } finally{ b.disabled=false; } });
 (async function(){
   try{
