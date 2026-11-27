@@ -33,7 +33,8 @@ select,input{font:inherit;font-size:.88rem;color:var(--ink);background:#fff;bord
 .dia b{width:100%;max-width:34px;background:var(--rojo);border-radius:4px 4px 0 0;min-height:2px}
 .dia span{font-size:.7rem;color:var(--ink2);margin-top:4px}.dia i{font-style:normal;font-size:.7rem;color:var(--ink);margin-bottom:2px}
 .vend{display:grid;grid-template-columns:minmax(120px,170px) 1fr auto auto auto;gap:5px 12px;align-items:center;font-size:.84rem;max-height:260px;overflow:auto}
-.vend .vh{font-size:.72rem;color:var(--ink2);text-transform:uppercase;position:sticky;top:0;background:#fff;padding-bottom:2px}
+.vend .vh{font-size:.72rem;color:var(--ink2);text-transform:uppercase;position:sticky;top:0;z-index:2;background:#fff;padding:0 0 4px;align-self:stretch}
+.vend .vh[data-vk]{cursor:pointer;user-select:none}.vend .vh[data-vk]:hover{color:var(--ink)}
 .pct{display:inline-block;min-width:3.6em;padding:1px 7px;border-radius:999px;background:var(--rojo2);color:var(--rojo);font-weight:700;text-align:center}
 .vend .bar{height:14px;background:#F3C1BB;border-radius:4px;position:relative}.vend .bar b{position:absolute;inset:0 auto 0 0;background:var(--rojo);border-radius:4px}
 .vend .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -117,6 +118,7 @@ function parseCSV(t){ const rows=[]; let row=[], f='', q=false;
     else if(ch==='\n'){ row.push(f.replace(/\r$/,'')); rows.push(row); row=[]; f=''; } else f+=ch; }
   if(f!==''||row.length){ row.push(f.replace(/\r$/,'')); rows.push(row); }
   return rows; }
+let vSortK='imp', vSortD=-1;
 let ARCH={}, FILAS=[], FACT={}, EQUIPO=null, corte='', sortK='imp', sortD=-1; const abiertos=new Set();
 // renglones del mes con motivo de devolucion (solo los de comprobante en ese mes: el CSV trae tambien otras fechas)
 function leer(txt,ym){
@@ -177,8 +179,11 @@ function dibujar(){
   $('gDias').innerHTML=dias.length? dias.map(d=>`<div class="dia" title="${dmy(d)}: ${fmt$(pd[d])}"><i>${pd[d]>=1e6? (pd[d]/1e6).toFixed(1).replace('.',',')+'M' : Math.round(pd[d]/1e3)+'k'}</i><b style="height:${Math.max(pd[d],0)/mx*100}%"></b><span>${ddmm(d)}</span></div>`).join('') : '<div class="vacio">Sin rechazos</div>';
   // por vendedor
   const pv={}; todos.forEach(c=>{ const x=pv[c.v]||(pv[c.v]={v:c.v,n:c.ven,imp:0,cli:0}); x.imp+=c.imp; x.cli++; });
-  const vl=Object.values(pv).sort((a,b)=>b.imp-a.imp), mv=Math.max(1,...vl.map(x=>x.imp));
-  $('gVend').innerHTML='<span class="vh">Vendedor</span><span class="vh"></span><span class="vh r">Importe</span><span class="vh r">Clientes</span><span class="vh r" title="Rechazado sobre lo facturado por el vendedor en el mes">% Rechazo</span>'
+  // orden con clic en los titulos: mayor a menor y, con otro clic, menor a mayor
+  const pctV=x=>FACT[x.v]>0? x.imp/FACT[x.v] : -1, valV={v:x=>x.v, imp:x=>x.imp, cli:x=>x.cli, pct:pctV};
+  const vl=Object.values(pv).sort((a,b)=>(valV[vSortK](a)-valV[vSortK](b))*vSortD || b.imp-a.imp), mv=Math.max(1,...vl.map(x=>x.imp));
+  const tv=(k,txt,cl,tip)=>`<span class="vh${cl}" data-vk="${k}"${tip? ` title="${tip}"` : ''}>${txt}${vSortK===k? (vSortD>0?' ▲':' ▼') : ''}</span>`;
+  $('gVend').innerHTML=tv('v','Vendedor','')+'<span class="vh"></span>'+tv('imp','Importe',' r')+tv('cli','Clientes',' r')+tv('pct','% Rechazo',' r','Rechazado sobre lo facturado por el vendedor en el mes')
     +vl.map(x=>`<span class="nm"><span class="cod">${x.v}</span> ${esc(x.n)}</span><span class="bar"><b style="width:${x.imp/mv*100}%"></b></span><span class="r" style="white-space:nowrap">${fmt$(x.imp)}</span><span class="r">${x.cli}</span><span class="r"><span class="pct">${FACT[x.v]>0? fmtP(x.imp/FACT[x.v]) : '—'}</span></span>`).join('');
   // tabla de clientes
   const val={cli:c=>+c.cli||0, rs:c=>norm(c.rs), ven:c=>norm(c.ven), n:c=>c.n, f:c=>c.f[c.f.length-1], imp:c=>c.imp};
@@ -195,6 +200,7 @@ function dibujar(){
 }
 $('filas').addEventListener('click',e=>{ const r=e.target.closest('.row'); if(!r) return; const c=r.dataset.c; abiertos.has(c)?abiertos.delete(c):abiertos.add(c); dibujar(); });
 $('th').addEventListener('click',e=>{ const s=e.target.closest('span[data-k]'); if(!s) return; const k=s.dataset.k; if(sortK===k) sortD*=-1; else { sortK=k; sortD=(k==='rs'||k==='ven'||k==='cli')?1:-1; } dibujar(); });
+$('gVend').addEventListener('click',e=>{ const s=e.target.closest('[data-vk]'); if(!s) return; const k=s.dataset.vk; if(vSortK===k) vSortD*=-1; else { vSortK=k; vSortD=k==='v'? 1 : -1; } dibujar(); });
 $('fVend').addEventListener('change',dibujar); $('fMot').addEventListener('change',()=>{ abiertos.clear(); dibujar(); }); $('fQ').addEventListener('input',dibujar);
 $('fMes').addEventListener('change',e=>cargar(e.target.value).catch(err=>$('meta').textContent='No se pudieron leer los datos: '+err.message));
 // Excel: una hoja con los clientes (lo que se ve con los filtros) y otra con el detalle de cada articulo rechazado
