@@ -20,7 +20,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:Roboto,system-ui
 .meta{font-size:.88rem;color:var(--ink2);margin-top:3px}
 .ctrl{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 select,input{font:inherit;font-size:.88rem;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:10px;padding:7px 10px}
-.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:14px;background:var(--negro);color:#fff}
+.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));margin-top:14px;background:var(--negro);color:#fff}
 @media (max-width:900px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .kpi{padding:14px 22px;border-right:1px solid #2E3138;min-width:0}.kpi:last-child{border-right:0}
 .kpi .l{font-size:.85rem;color:#D7D9DE}.kpi .v{font-size:1.6rem;font-weight:500;margin:6px 0 2px}.kpi .n{font-size:.82rem;color:#B9BCC4}
@@ -32,7 +32,9 @@ select,input{font:inherit;font-size:.88rem;color:var(--ink);background:#fff;bord
 .dia{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0}
 .dia b{width:100%;max-width:34px;background:var(--rojo);border-radius:4px 4px 0 0;min-height:2px}
 .dia span{font-size:.7rem;color:var(--ink2);margin-top:4px}.dia i{font-style:normal;font-size:.7rem;color:var(--ink);margin-bottom:2px}
-.vend{display:grid;grid-template-columns:minmax(120px,190px) 1fr auto;gap:4px 10px;align-items:center;font-size:.84rem;max-height:260px;overflow:auto}
+.vend{display:grid;grid-template-columns:minmax(120px,170px) 1fr auto auto auto;gap:5px 12px;align-items:center;font-size:.84rem;max-height:260px;overflow:auto}
+.vend .vh{font-size:.72rem;color:var(--ink2);text-transform:uppercase;position:sticky;top:0;background:#fff;padding-bottom:2px}
+.pct{display:inline-block;min-width:3.6em;padding:1px 7px;border-radius:999px;background:var(--rojo2);color:var(--rojo);font-weight:700;text-align:center}
 .vend .bar{height:14px;background:#F3C1BB;border-radius:4px;position:relative}.vend .bar b{position:absolute;inset:0 auto 0 0;background:var(--rojo);border-radius:4px}
 .vend .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lista{margin-top:14px;overflow:hidden;border:3px solid var(--negro)}
@@ -77,6 +79,7 @@ footer{margin-top:16px;font-size:.78rem;color:var(--ink2);text-align:center;line
     <div class="kpi"><div class="l">Pedidos rechazados</div><div class="v" id="kComp">—</div><div class="n">Notas de crédito con este motivo</div></div>
     <div class="kpi"><div class="l">Importe rechazado (con IVA)</div><div class="v" id="kImp">—</div><div class="n" id="kImpN"></div></div>
     <div class="kpi"><div class="l">Días con rechazos</div><div class="v" id="kDias">—</div><div class="n" id="kDiasN"></div></div>
+    <div class="kpi"><div class="l">Índice de rechazo</div><div class="v" id="kPct">—</div><div class="n">Rechazado sobre lo facturado en el mes</div></div>
   </div>
   <div class="graf">
     <div class="card"><h2>Importe rechazado por día</h2><div class="dias" id="gDias"></div></div>
@@ -101,6 +104,7 @@ const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&g
 const norm=s=>String(s).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
 const fmt$=n=>'$ '+Math.round(n).toLocaleString('es-AR');
 const fmtN=n=>Math.round(n).toLocaleString('es-AR');
+const fmtP=x=>(x*100).toFixed(2).replace('.',',')+'%';
 const dmy=iso=>iso? iso.split('-').reverse().join('/') : '';
 const ddmm=iso=>iso.slice(8,10)+'/'+iso.slice(5,7);
 const titulo=s=>String(s||'').toLowerCase().replace(/(^|\s)\S/g,c=>c.toUpperCase());
@@ -112,12 +116,15 @@ function parseCSV(t){ const rows=[]; let row=[], f='', q=false;
     else if(ch==='\n'){ row.push(f.replace(/\r$/,'')); rows.push(row); row=[]; f=''; } else f+=ch; }
   if(f!==''||row.length){ row.push(f.replace(/\r$/,'')); rows.push(row); }
   return rows; }
-let ARCH={}, FILAS=[], corte='', sortK='imp', sortD=-1; const abiertos=new Set();
+let ARCH={}, FILAS=[], FACT={}, EQUIPO=null, corte='', sortK='imp', sortD=-1; const abiertos=new Set();
 // renglones del mes con motivo de devolucion (solo los de comprobante en ese mes: el CSV trae tambien otras fechas)
 function leer(txt,ym){
   const R=parseCSV(txt).filter(r=>r.length>5); if(!R.length) return []; const H=R.shift().map(h=>h.trim()), ix=n=>H.indexOf(n);
   const I={cli:ix('Cliente'),fc:ix('FechaComprobante'),nro:ix('NroComprobante'),imp:ix('ImporteItem'),cant:ix('CantBase'),rs:ix('RazonSocial'),cv:ix('CodVendedor'),vn:ix('Vendedor'),art:ix('Articulo'),cod:ix('Codigo'),prov:ix('Proveedor'),mot:ix('MotivoDevolucion'),emp:ix('Empresa')};
   if(I.mot<0) throw new Error('el archivo no trae la columna MotivoDevolucion');
+  // facturado del mes por vendedor (todo menos notas de credito y debito): base del indice de rechazo
+  FACT={}; for(const r of R){ if(!(r[I.fc]||'').startsWith(ym)) continue; const tc=(r[I.nro]||'').trim().slice(0,3).toUpperCase(); if(tc==='NCR'||tc==='NDB') continue;
+    const v=parseInt(r[I.cv],10); if(!isNaN(v)) FACT[v]=(FACT[v]||0)+num(r[I.imp]); }
   return R.filter(r=>(r[I.mot]||'').trim() && (r[I.fc]||'').startsWith(ym)).map(r=>({
     mot:(r[I.mot]||'').trim().toUpperCase(), cli:String(r[I.cli]).trim(), fc:r[I.fc].trim(), nro:(r[I.nro]||'').trim(), imp:num(r[I.imp]), cant:num(r[I.cant]), rs:(r[I.rs]||'').trim(),
     v:parseInt(r[I.cv],10), vn:titulo(r[I.vn]), art:(r[I.art]||'').trim(), cod:String(r[I.cod]||'').trim(), prov:(r[I.prov]||'').trim(), emp:(r[I.emp]||'').trim()}));
@@ -158,6 +165,10 @@ function dibujar(){
   $('kCli').textContent=fmtN(todos.length); $('kCliN').textContent=`${todos.filter(c=>c.n>1).length} con más de un rechazo`;
   $('kComp').textContent=fmtN(comps.size);
   $('kImp').textContent=fmt$(imp); $('kImpN').textContent=todos.length? 'Promedio por cliente '+fmt$(imp/todos.length) : '';
+  // indice total: solo los vendedores del reporte (los de calle; sin deposito ni mostrador), o el vendedor elegido
+  const deEq=v=>fv? String(v)===fv : (!EQUIPO||EQUIPO.has(+v));
+  const factT=Object.entries(FACT).filter(([v])=>deEq(v)).reduce((a,[,x])=>a+x,0), rechT=todos.filter(c=>deEq(c.v)).reduce((a,c)=>a+c.imp,0);
+  $('kPct').textContent=factT>0? fmtP(rechT/factT) : '—';
   $('kDias').textContent=fmtN(dias.length); $('kDiasN').textContent=dias.length? `Del ${ddmm(dias[0])} al ${ddmm(dias[dias.length-1])}` : '';
   $('meta').textContent=`${MESES[+ym.slice(5)-1][0].toUpperCase()+MESES[+ym.slice(5)-1].slice(1)} ${ym.slice(0,4)} · motivo: ${nomMot()} · datos al ${corte}`;
   // por dia
@@ -166,7 +177,8 @@ function dibujar(){
   // por vendedor
   const pv={}; todos.forEach(c=>{ const x=pv[c.v]||(pv[c.v]={v:c.v,n:c.ven,imp:0,cli:0}); x.imp+=c.imp; x.cli++; });
   const vl=Object.values(pv).sort((a,b)=>b.imp-a.imp), mv=Math.max(1,...vl.map(x=>x.imp));
-  $('gVend').innerHTML=vl.map(x=>`<span class="nm"><span class="cod">${x.v}</span> ${esc(x.n)}</span><span class="bar"><b style="width:${x.imp/mv*100}%"></b></span><span class="r" style="white-space:nowrap">${fmt$(x.imp)} · ${x.cli} cl.</span>`).join('');
+  $('gVend').innerHTML='<span class="vh">Vendedor</span><span class="vh"></span><span class="vh r">Importe</span><span class="vh r">Clientes</span><span class="vh r" title="Rechazado sobre lo facturado por el vendedor en el mes">% Rechazo</span>'
+    +vl.map(x=>`<span class="nm"><span class="cod">${x.v}</span> ${esc(x.n)}</span><span class="bar"><b style="width:${x.imp/mv*100}%"></b></span><span class="r" style="white-space:nowrap">${fmt$(x.imp)}</span><span class="r">${x.cli}</span><span class="r"><span class="pct">${FACT[x.v]>0? fmtP(x.imp/FACT[x.v]) : '—'}</span></span>`).join('');
   // tabla de clientes
   const val={cli:c=>+c.cli||0, rs:c=>norm(c.rs), ven:c=>norm(c.ven), n:c=>c.n, f:c=>c.f[c.f.length-1], imp:c=>c.imp};
   L.sort((a,b)=>{ const x=val[sortK](a), y=val[sortK](b); return (x<y?-1:x>y?1:0)*sortD || b.imp-a.imp; });
@@ -193,11 +205,15 @@ $('btnXls').addEventListener('click',async()=>{ const b=$('btnXls'); b.disabled=
     const h1=[['Cód. cliente','Cliente','Cód. vendedor','Vendedor','Veces','Fechas','Importe rechazado']].concat(L.map(c=>[+c.cli||c.cli,c.rs,c.v,c.ven,c.n,c.f.map(dmy).join(', '),Math.round(c.imp*100)/100]));
     const h2=[['Cód. cliente','Cliente','Vendedor','Comprobante','Fecha','Motivo','Cód. artículo','Artículo','Proveedor','Cantidad','Importe']];
     L.forEach(c=>Object.values(c.comp).forEach(x=>x.items.forEach(i=>h2.push([+c.cli||c.cli,c.rs,c.v+' · '+c.ven,x.nro,dmy(x.fc),titulo(i.mot),i.cod,i.art,i.prov,Math.abs(i.cant),Math.round(-i.imp*100)/100]))));
-    const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(h1),'Clientes'); XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(h2),'Detalle');
+    const pv={}; L.forEach(c=>{ const x=pv[c.v]||(pv[c.v]={v:c.v,n:c.ven,imp:0,cli:0}); x.imp+=c.imp; x.cli++; });
+    const h0=[['Cód. vendedor','Vendedor','Clientes','Importe rechazado','Facturado del mes','% Rechazo']].concat(Object.values(pv).sort((a,b)=>b.imp-a.imp).map(x=>[x.v,x.n,x.cli,Math.round(x.imp*100)/100,Math.round((FACT[x.v]||0)*100)/100,FACT[x.v]>0? Math.round(x.imp/FACT[x.v]*10000)/100 : null]));
+    const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(h0),'Vendedores'); XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(h1),'Clientes'); XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(h2),'Detalle');
     XLSX.writeFile(wb,`Rechazos ${nomMot().replace(/[\\/:*?"<>|,]/g,'')} ${$('fMes').value}.xlsx`);
   }catch(e){ alert('No se pudo armar el Excel: '+e.message); } finally{ b.disabled=false; } });
 (async function(){
   try{
+    // vendedores del reporte diario (CFG de index.html), para el indice total
+    try{ const html=await (await fetch('index.html?t='+Date.now(),{cache:'no-store'})).text(); const m=html.match(/^const CFG = (.*);\s*$/m); if(m) EQUIPO=new Set(JSON.parse(m[1]).vendedores.map(v=>+v.c)); }catch(e){}
     const arch=((await (await fetch('archivos.json?t='+Date.now(),{cache:'no-store'})).json()).archivos||[]);
     for(const p of arch){ const m=p.match(/ventas-(\d{4}-\d{2})-/); if(m && (!ARCH[m[1]]||p>ARCH[m[1]])) ARCH[m[1]]=p; }
     const yms=Object.keys(ARCH).sort().reverse(); if(!yms.length) throw new Error('no hay meses cargados');
