@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cobertura Softys por mes</title>
-<meta property="og:title" content="Cobertura Softys · cuántos clientes faltan para el 65% y el 70% en diciembre">
-<meta property="og:description" content="Por vendedor: clientes con compra de Softys en el mes, cobertura y cuántos faltan para llegar al 65% y al 70%. En vivo.">
+<title>Cobertura Softys y Clorox</title>
+<meta property="og:title" content="Cobertura Softys y Clorox · cuántos clientes faltan para el 65% y el 70%">
+<meta property="og:description" content="Por vendedor: clientes con compra de Softys o Clorox en el mes, cobertura y cuántos faltan para llegar al 65% y al 70%. En vivo.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>
@@ -67,10 +67,11 @@ button.mini{font:inherit;font-size:.78rem;margin-left:8px;padding:4px 10px;borde
 <div class="wrap">
   <div class="card head">
     <div>
-      <h1>Cobertura Softys <span id="tMes">diciembre</span> · ¿cuántos clientes faltan? <span class="vivo off" id="vivo"><i></i><span id="vivoTx">Cargando…</span></span></h1>
-      <div class="meta" id="meta">Diciembre 2026: clientes con compra de Softys en el mes sobre la cartera de cada vendedor, y cuántos clientes tiene que venderle cada uno para llegar al 65% y al 70%.</div>
+      <h1>Cobertura <span id="tProv">Softys</span> <span id="tMes">diciembre</span> · ¿cuántos clientes faltan? <span class="vivo off" id="vivo"><i></i><span id="vivoTx">Cargando…</span></span></h1>
+      <div class="meta" id="meta">Clientes con compra de Softys o Clorox (Grupo Ayudin) en el mes sobre la cartera de cada vendedor, y cuántos clientes tiene que venderle cada uno para llegar al 65% y al 70%.</div>
     </div>
     <div class="ctrl">
+      <select id="fProv" aria-label="Proveedor"><option value="S">Softys</option><option value="C">Clorox</option></select>
       <select id="fMes" aria-label="Mes"></select>
       <select id="fVend" aria-label="Vendedor"><option value="">Todos los vendedores</option></select>
       <input type="search" id="q" placeholder="Buscar cliente, código o dirección (en la lista de cada vendedor)" aria-label="Buscar">
@@ -108,7 +109,7 @@ const norm=s=>String(s).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
 const num=s=>{ s=String(s??'').trim(); return s? (parseFloat(s.replace(/\./g,'').replace(',','.'))||0) : 0; };
 const iso=s=>{ s=String(s||'').trim(); const m=s.match(/^(\d{2})-(\d{2})-(\d{4})/); return m? `${m[3]}-${m[2]}-${m[1]}` : s.slice(0,10); };
 const dm=f=>f? f.slice(8,10)+'/'+f.slice(5,7) : '';
-let VEND={}, ORDV=[], CART={}, SOFTYS=new Set(['SOFTYS ARGENTINA S.A']), HOY='', YM='', DESDE='', MANANA='';
+let VEND={}, ORDV=[], CART={}, SOFTYS=new Set(['SOFTYS ARGENTINA S.A']), CLOROX=new Set(['GRUPO AYUDIN ARGENTINA S.A']), MK='S', PN='Softys', HOY='', YM='', DESDE='', MANANA='';
 let MES=[], NROS=new Set(), VIVO=[], ANT={}, vivoCorte='', mesArch='', corteMes='', abiertos=new Set(), listo=false, ORDEN={k:'f70',dir:-1};
 const nomV=v=>VEND[v]||('Vendedor '+v);
 
@@ -125,7 +126,7 @@ function parseCSV(t){
 function leer(txt){
   const R=parseCSV(txt).filter(r=>r.length>5); if(!R.length) return []; const H=R.shift().map(h=>h.trim()); const ix=n=>H.indexOf(n);
   const I={cli:ix('Cliente'),fc:ix('FechaComprobante'),nro:ix('NroComprobante'),cant:ix('CantBase'),cv:ix('CodVendedor'),prov:ix('Proveedor'),car:ix('FechaCarga')};
-  const out=[]; for(const r of R){ if(!SOFTYS.has(String(r[I.prov]||'').trim().toUpperCase())) continue; const v=parseInt(r[I.cv],10); if(isNaN(v)) continue;
+  const out=[]; for(const r of R){ if(!(MK==='C'? CLOROX : SOFTYS).has(String(r[I.prov]||'').trim().toUpperCase())) continue; const v=parseInt(r[I.cv],10); if(isNaN(v)) continue;
     out.push({v, cli:String(r[I.cli]).trim(), f:iso(r[I.fc]), car:iso(r[I.car]), nro:String(r[I.nro]||'').trim(), u:num(r[I.cant])}); }
   return out;
 }
@@ -153,16 +154,16 @@ function dibujar(){
   const T=vs.reduce((a,o)=>({d65:a.d65+o.d65,d70:a.d70+o.d70,base:a.base+o.base,ccc:a.ccc+o.ccc,f65:a.f65+o.f65,f70:a.f70+o.f70,hoy:a.hoy+o.hoy,ok:a.ok+(o.f70===0?1:0)}),{d65:0,d70:0,base:0,ccc:0,f65:0,f70:0,hoy:0,ok:0});
   const cob=T.base? T.ccc/T.base : 0;
   $('kpis').innerHTML=`
-    <div class="kpi"><div class="l">Cobertura Softys ${fv?esc(nomV(+fv)):'del equipo'}</div><div class="v">${nf(cob*100,1)}%</div><div class="n">${nf(T.ccc)} clientes con compra de ${nf(T.base)}</div></div>
+    <div class="kpi"><div class="l">Cobertura ${PN} ${fv?esc(nomV(+fv)):'del equipo'}</div><div class="v">${nf(cob*100,1)}%</div><div class="n">${nf(T.ccc)} clientes con compra de ${nf(T.base)}</div></div>
     <div class="kpi"><div class="l">Faltan para el 65%</div><div class="v" style="color:#FFE14D">${nf(T.f65)}</div><div class="n">clientes · ${DIAS_REST? `<b>${nf(T.d65)} por día</b> hasta el ${dm(CIERRE[YM]||finMes(YM))} (${DIAS_REST} días hábiles${HOY>=DESDE?' con hoy':' de '+MESES_N[+YM.slice(5,7)]})` : 'mes cerrado'}</div></div>
     <div class="kpi"><div class="l">Faltan para el 70%</div><div class="v" style="color:#FF8A8A">${nf(T.f70)}</div><div class="n">clientes · ${DIAS_REST? `<b>${nf(T.d70)} por día</b>` : 'mes cerrado'}${fv? '' : ` · ${T.ok} de ${vs.length} vendedores ya llegaron`}</div></div>
-    <div class="kpi"><div class="l">Clientes nuevos hoy</div><div class="v" style="color:#7CFF6B">${nf(T.hoy)}</div><div class="n">primera compra de Softys del mes, cargada hoy</div></div>`;
+    <div class="kpi"><div class="l">Clientes nuevos hoy</div><div class="v" style="color:#7CFF6B">${nf(T.hoy)}</div><div class="n">primera compra de ${PN} del mes, cargada hoy</div></div>`;
   const k=ORDEN.k, d=ORDEN.dir; vs.sort((a,b)=> (k==='v'? (a.v-b.v) : (a[k]-b[k]))*d || a.v-b.v);
-  $('cuenta').textContent='tocá un vendedor para ver sus clientes sin compra de Softys, por día de visita';
+  $('cuenta').textContent=`tocá un vendedor para ver sus clientes sin compra de ${PN}, por día de visita`;
   const detalle=o=>{ const cs=(CART[o.v]||[]).filter(c=>!o.con.has(c.c)).filter(c=>q.every(w=>norm(c.c+' '+c.n+' '+c.dir+' '+c.loc).includes(w)));
     const dias=[...new Set(cs.map(x=>x.dia))].sort((a,b)=>(ORD[a]||9)-(ORD[b]||9));
     if(!cs.length) return '<p class="vac">Ningún cliente sin compra con este filtro.</p>';
-    return `<table class="dt"><thead><tr><th>Cliente</th><th>Dirección</th><th>Localidad</th><th>Segmento</th><th class="r">Softys mes anterior</th></tr></thead><tbody>${dias.map(dd=>{
+    return `<table class="dt"><thead><tr><th>Cliente</th><th>Dirección</th><th>Localidad</th><th>Segmento</th><th class="r">${PN} mes anterior</th></tr></thead><tbody>${dias.map(dd=>{
       const ds=cs.filter(x=>x.dia===dd).sort((a,b)=>((ANT[o.v+'|'+b.c]||0)-(ANT[o.v+'|'+a.c]||0))||a.n.localeCompare(b.n,'es')), man=dd===MANANA;
       const pr=ds.filter(x=>(ANT[o.v+'|'+x.c]||0)>=1).length;
       return `<tr class="dia${man?' man':''}"><td colspan="5">${esc(DIA[dd]||'Sin día de visita')}${man?' · MAÑANA':''} <small>${ds.length} sin compra · ${pr} compraron el mes anterior</small></td></tr>`+ds.map(x=>{ const a=ANT[o.v+'|'+x.c]||0; return `<tr>
@@ -176,8 +177,8 @@ function dibujar(){
 function marcaVivo(){
   const ok=!!(corteMes||vivoCorte); $('vivo').classList.toggle('off',!ok);
   $('vivoTx').textContent= vivoCorte? 'En vivo · pedidos de hoy al '+vivoCorte.slice(11) : corteMes? 'Ventas al '+corteMes : 'Sin datos del mes';
-  $('pie').innerHTML=`Igual que la cobertura de Softys del Reporte diario: clientes con al menos 1 unidad neta de Softys (las notas de crédito restan) facturada del ${dm(DESDE)} a hoy, sobre los clientes activos de la cartera de cada vendedor en Gescom. Faltan = clientes que todavía necesita para llegar al 65% / 70% de su cartera. `
-    +`Ventas del mes al ${corteMes||'—'}${vivoCorte?' + pedidos cargados hoy hasta las '+vivoCorte.slice(11):''}. Se actualiza solo cada 2 minutos. En la lista de cada vendedor, en amarillo los que compraron Softys el mes anterior (los más fáciles de recuperar) y en rojo el día de visita de mañana.`;
+  $('pie').innerHTML=`Igual que la cobertura de ${PN} del Reporte diario: clientes con al menos 1 unidad neta de ${PN==='Clorox'?'Grupo Ayudin (Clorox, Ayudin y demás marcas del grupo)':'Softys'} (las notas de crédito restan) facturada del ${dm(DESDE)} a hoy, sobre los clientes activos de la cartera de cada vendedor en Gescom. Faltan = clientes que todavía necesita para llegar al 65% / 70% de su cartera. `
+    +`Ventas del mes al ${corteMes||'—'}${vivoCorte?' + pedidos cargados hoy hasta las '+vivoCorte.slice(11):''}. Se actualiza solo cada 2 minutos. En la lista de cada vendedor, en amarillo los que compraron ${PN} el mes anterior (los más fáciles de recuperar) y en rojo el día de visita de mañana.`;
 }
 async function bajarMes(){
   const arch=((await (await fetch(RAW+'archivos.json?t='+Date.now(),{cache:'no-store'})).json()).archivos||[]);
@@ -204,12 +205,12 @@ async function enVivo(){
 }
 function excel(){
   const R=calcular(), sep=';', vs=Object.values(R).sort((a,b)=>b.f70-a.f70||a.v-b.v);
-  const L=[['Código','Vendedor','Cartera','Con compra Softys','Cobertura %','Faltan 65%','Faltan 70%','Por día 65% (al '+dm(CIERRE[YM]||finMes(YM))+')','Por día 70% (al '+dm(CIERRE[YM]||finMes(YM))+')','Nuevos hoy']].concat(vs.map(o=>[o.v,nomV(o.v),o.base,o.ccc,nf(o.cob*100,1),o.f65,o.f70,o.d65,o.d70,o.hoy]));
-  L.push([]); L.push(['Clientes sin compra de Softys en el mes']); L.push(['Código vend.','Vendedor','Día','Cliente','Nombre','Dirección','Localidad','Segmento','Softys mes anterior (u.)']);
+  const L=[['Código','Vendedor','Cartera','Con compra '+PN,'Cobertura %','Faltan 65%','Faltan 70%','Por día 65% (al '+dm(CIERRE[YM]||finMes(YM))+')','Por día 70% (al '+dm(CIERRE[YM]||finMes(YM))+')','Nuevos hoy']].concat(vs.map(o=>[o.v,nomV(o.v),o.base,o.ccc,nf(o.cob*100,1),o.f65,o.f70,o.d65,o.d70,o.hoy]));
+  L.push([]); L.push(['Clientes sin compra de '+PN+' en el mes']); L.push(['Código vend.','Vendedor','Día','Cliente','Nombre','Dirección','Localidad','Segmento',PN+' mes anterior (u.)']);
   for(const o of vs) for(const c of (CART[o.v]||[]).filter(c=>!o.con.has(c.c)).sort((a,b)=>(ORD[a.dia]||9)-(ORD[b.dia]||9)||a.n.localeCompare(b.n,'es')))
     L.push([o.v,nomV(o.v),DIA[c.dia]||'',c.c,c.n,c.dir,c.loc,c.seg,(ANT[o.v+'|'+c.c]||0)>=1? ANT[o.v+'|'+c.c] : '']);
   const csv='﻿'+L.map(r=>r.map(v=>{ v=String(v); return /[;"\n]/.test(v)? '"'+v.replace(/"/g,'""')+'"' : v; }).join(sep)).join('\r\n');
-  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})); a.download='Cobertura Softys '+nomMes(YM)+' '+HOY+'.csv'; a.click();
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})); a.download='Cobertura '+PN+' '+nomMes(YM)+' '+HOY+'.csv'; a.click();
 }
 $('fVend').addEventListener('change',dibujar); $('q').addEventListener('input',dibujar); $('dl').addEventListener('click',excel);
 $('tVend').addEventListener('click',e=>{ const th=e.target.closest('th[data-k]'); if(th){ const k=th.dataset.k; ORDEN= ORDEN.k===k? {k,dir:-ORDEN.dir} : {k,dir:k==='v'?1:-1}; dibujar(); return; }
@@ -225,6 +226,7 @@ $('cerrar').addEventListener('click',()=>{ abiertos.clear(); dibujar(); });
       const ms=new Set([MES_INI]); for(const p of arch){ const mm=p.match(/ventas-(\d{4}-\d{2})-/); if(mm) ms.add(mm[1]); }
       $('fMes').innerHTML=[...ms].sort().reverse().map(ym=>`<option value="${ym}"${ym===MES_INI?' selected':''}>${nomMes(ym)[0].toUpperCase()+nomMes(ym).slice(1)}</option>`).join(''); }
     $('fMes').addEventListener('change',async()=>{ ponerMes($('fMes').value); $('vivoTx').textContent='Bajando ventas…'; await enVivo(); });
+    $('fProv').addEventListener('change',async()=>{ MK=$('fProv').value; PN=MK==='C'?'Clorox':'Softys'; $('tProv').textContent=PN; ponerMes(YM); $('vivoTx').textContent='Bajando ventas…'; await enVivo(); });
     { let t=new Date(HOY+'T12:00:00Z'); do{ t.setUTCDate(t.getUTCDate()+1); }while([0,6].includes(t.getUTCDay())); MANANA=LETRA[t.getUTCDay()]; }
     $('vivoTx').textContent='Bajando carteras…';
     // los 23 vendedores del Reporte diario y su nomenclador de Softys
@@ -232,6 +234,7 @@ $('cerrar').addEventListener('click',()=>{ abiertos.clear(); dibujar(); });
     const m=html.match(/^const CFG = (.*);\s*$/m); if(!m) throw new Error('no se encontró la lista de vendedores');
     const CFG=JSON.parse(m[1]); CFG.vendedores.forEach(v=>{ VEND[v.c]=v.n; ORDV.push(v.c); });
     if(CFG.nomenclador&&CFG.nomenclador.SOFTYS) SOFTYS=new Set(CFG.nomenclador.SOFTYS.map(p=>p.trim().toUpperCase()));
+    if(CFG.nomenclador&&CFG.nomenclador.AYUDIN) CLOROX=new Set(CFG.nomenclador.AYUDIN.map(p=>p.trim().toUpperCase()));
     const CJ=await (await fetch(RAW+'carteras.json?t='+Date.now(),{cache:'no-store'})).json();
     // la base trae acentos mal guardados (doble codificacion): se rearman los bytes y se leen como UTF-8
     const CP={'€':128,'‚':130,'ƒ':131,'„':132,'…':133,'†':134,'‡':135,'ˆ':136,'‰':137,'Š':138,'‹':139,'Œ':140,'Ž':142,'‘':145,'’':146,'“':147,'”':148,'•':149,'–':150,'—':151,'˜':152,'™':153,'š':154,'›':155,'œ':156,'ž':158,'Ÿ':159};
