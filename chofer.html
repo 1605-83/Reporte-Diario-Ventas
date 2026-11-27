@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rechazos No Llegó Chofer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+/* Clientes con rechazo por "NO LLEGO CHOFER" (motivo de devolucion de Gescom), del CSV mensual que sube el robot a meses/ */
+:root{--bg:#F2F3F5;--card:#fff;--ink:#1F2328;--ink2:#6B7280;--line:#E5E7EB;--negro:#111318;--azul:#2F6FDE;--rojo:#C0392B;--rojo2:#FDECEA}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#F2F3F5; } }
+:root[data-theme="dark"]{ --bg:#F2F3F5; }
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Roboto,system-ui,-apple-system,"Segoe UI",Arial,sans-serif;font-variant-numeric:tabular-nums;line-height:1.35}
+.wrap{max-width:1300px;margin:0 auto;padding:20px 16px 40px}
+.card{background:var(--card);border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.head{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:16px 22px;border:3px solid var(--negro)}
+.head h1{margin:0;font-size:1.4rem;font-weight:900}
+.meta{font-size:.88rem;color:var(--ink2);margin-top:3px}
+.ctrl{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+select,input{font:inherit;font-size:.88rem;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:10px;padding:7px 10px}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:14px;background:var(--negro);color:#fff}
+@media (max-width:900px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{padding:14px 22px;border-right:1px solid #2E3138;min-width:0}.kpi:last-child{border-right:0}
+.kpi .l{font-size:.85rem;color:#D7D9DE}.kpi .v{font-size:1.6rem;font-weight:500;margin:6px 0 2px}.kpi .n{font-size:.82rem;color:#B9BCC4}
+.graf{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px}
+@media (max-width:900px){.graf{grid-template-columns:1fr}}
+.graf .card{padding:14px 18px;border:3px solid var(--negro)}
+.graf h2{margin:0 0 10px;font-size:1rem;font-weight:900}
+.dias{display:flex;align-items:flex-end;gap:4px;height:150px}
+.dia{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0}
+.dia b{width:100%;max-width:34px;background:var(--rojo);border-radius:4px 4px 0 0;min-height:2px}
+.dia span{font-size:.7rem;color:var(--ink2);margin-top:4px}.dia i{font-style:normal;font-size:.7rem;color:var(--ink);margin-bottom:2px}
+.vend{display:grid;grid-template-columns:minmax(120px,190px) 1fr auto;gap:4px 10px;align-items:center;font-size:.84rem;max-height:260px;overflow:auto}
+.vend .bar{height:14px;background:#F3C1BB;border-radius:4px;position:relative}.vend .bar b{position:absolute;inset:0 auto 0 0;background:var(--rojo);border-radius:4px}
+.vend .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lista{margin-top:14px;overflow:hidden;border:3px solid var(--negro)}
+.th,.row{display:grid;grid-template-columns:24px 80px minmax(180px,1fr) minmax(140px,220px) 70px minmax(120px,200px) 120px;gap:10px;align-items:center;padding:10px 18px}
+.th{font-size:.82rem;font-weight:700;background:var(--negro);color:#fff}
+.th span{cursor:pointer;user-select:none}.r{text-align:right}
+.row{border-bottom:1px solid var(--line);cursor:pointer;font-size:.9rem}.row:hover{background:#F6F9FF}
+.chev{transition:transform .15s;color:#555;text-align:center}.row.ab .chev{transform:rotate(90deg)}
+.cod{display:inline-block;padding:1px 7px;border-radius:6px;background:#E6F0FF;color:var(--azul);font-size:.85em;font-weight:700}
+.vez{display:inline-block;min-width:2em;padding:1px 8px;border-radius:999px;background:var(--rojo2);color:var(--rojo);font-weight:700;text-align:center}
+.vez.mucho{background:var(--rojo);color:#fff}
+.fx{font-size:.8rem;color:var(--ink2)}
+.det{background:#FAFBFC;border-bottom:1px solid var(--line);padding:6px 18px 14px 52px;overflow-x:auto}
+.det table{width:100%;border-collapse:collapse;font-size:.85rem;min-width:620px}
+.det th,.det td{padding:5px 8px;border-bottom:1px solid #EDEDED;text-align:left;white-space:nowrap}
+.det th{font-size:.74rem;color:var(--ink2);text-transform:uppercase}.det .r{text-align:right}
+.det tr.comp td{font-weight:700;background:#F1F3F6}
+.vacio{padding:30px;text-align:center;color:var(--ink2)}
+@media (max-width:760px){.th{display:none}.row{grid-template-columns:20px 1fr auto}.row .m{display:none}.det{padding-left:10px}}
+.excel{font:inherit;font-size:.88rem;font-weight:700;color:#fff;background:#1D6F42;border:0;border-radius:10px;padding:8px 14px;cursor:pointer}
+.excel:hover{background:#185C37}.excel:disabled{opacity:.6;cursor:wait}
+footer{margin-top:16px;font-size:.78rem;color:var(--ink2);text-align:center;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card head">
+    <div>
+      <h1>Rechazos: no llegó el chofer</h1>
+      <div class="meta" id="meta">Cargando…</div>
+    </div>
+    <div class="ctrl">
+      <label>Mes <select id="fMes"></select></label>
+      <select id="fVend"><option value="">Todos los vendedores</option></select>
+      <input type="search" id="fQ" placeholder="Buscar cliente o código">
+      <button class="excel" id="btnXls" type="button">⬇ Descargar Excel</button>
+    </div>
+  </div>
+  <div class="card kpis">
+    <div class="kpi"><div class="l">Clientes afectados</div><div class="v" id="kCli">—</div><div class="n" id="kCliN"></div></div>
+    <div class="kpi"><div class="l">Pedidos rechazados</div><div class="v" id="kComp">—</div><div class="n">Notas de crédito con este motivo</div></div>
+    <div class="kpi"><div class="l">Importe rechazado (con IVA)</div><div class="v" id="kImp">—</div><div class="n" id="kImpN"></div></div>
+    <div class="kpi"><div class="l">Días con rechazos</div><div class="v" id="kDias">—</div><div class="n" id="kDiasN"></div></div>
+  </div>
+  <div class="graf">
+    <div class="card"><h2>Importe rechazado por día</h2><div class="dias" id="gDias"></div></div>
+    <div class="card"><h2>Por vendedor</h2><div class="vend" id="gVend"></div></div>
+  </div>
+  <div class="card lista">
+    <div class="th" id="th">
+      <span></span><span data-k="cli">Cód.</span><span data-k="rs">Cliente</span><span data-k="ven" class="m">Vendedor</span>
+      <span data-k="n" class="r" title="Días distintos con rechazo">Veces</span><span data-k="f" class="m">Fechas</span><span data-k="imp" class="r">Importe ▼</span>
+    </div>
+    <div id="filas"><div class="vacio">Cargando…</div></div>
+  </div>
+  <footer>Rechazos con motivo de devolución "NO LLEGO CHOFER" en Gescom, por fecha de comprobante de la nota de crédito.<br>
+  Importe neto: notas de crédito menos las notas de débito con el mismo motivo. Se actualiza con el reporte diario (7 hs y 13:30 hs).</footer>
+</div>
+<script>
+const RAW='https://raw.githubusercontent.com/1605-83/Reporte-Diario-Ventas/main/';
+const MOTIVO='NO LLEGO CHOFER';
+const MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const norm=s=>String(s).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+const fmt$=n=>'$ '+Math.round(n).toLocaleString('es-AR');
+const fmtN=n=>Math.round(n).toLocaleString('es-AR');
+const dmy=iso=>iso? iso.split('-').reverse().join('/') : '';
+const ddmm=iso=>iso.slice(8,10)+'/'+iso.slice(5,7);
+const titulo=s=>String(s||'').toLowerCase().replace(/(^|\s)\S/g,c=>c.toUpperCase());
+const num=s=>parseFloat(String(s||'0').replace(/\./g,'').replace(',','.'))||0;
+function parseCSV(t){ const rows=[]; let row=[], f='', q=false;
+  for(let i=0;i<t.length;i++){ const ch=t[i];
+    if(q){ if(ch==='"'){ if(t[i+1]==='"'){f+='"';i++;} else q=false; } else f+=ch; }
+    else if(ch==='"') q=true; else if(ch===';'){ row.push(f); f=''; }
+    else if(ch==='\n'){ row.push(f.replace(/\r$/,'')); rows.push(row); row=[]; f=''; } else f+=ch; }
+  if(f!==''||row.length){ row.push(f.replace(/\r$/,'')); rows.push(row); }
+  return rows; }
+let ARCH={}, FILAS=[], corte='', sortK='imp', sortD=-1; const abiertos=new Set();
+// renglones del mes con motivo "NO LLEGO CHOFER" (solo los de comprobante en ese mes: el CSV trae tambien otras fechas)
+function leer(txt,ym){
+  const R=parseCSV(txt).filter(r=>r.length>5); if(!R.length) return []; const H=R.shift().map(h=>h.trim()), ix=n=>H.indexOf(n);
+  const I={cli:ix('Cliente'),fc:ix('FechaComprobante'),nro:ix('NroComprobante'),imp:ix('ImporteItem'),cant:ix('CantBase'),rs:ix('RazonSocial'),cv:ix('CodVendedor'),vn:ix('Vendedor'),art:ix('Articulo'),cod:ix('Codigo'),prov:ix('Proveedor'),mot:ix('MotivoDevolucion'),emp:ix('Empresa')};
+  if(I.mot<0) throw new Error('el archivo no trae la columna MotivoDevolucion');
+  return R.filter(r=>(r[I.mot]||'').trim().toUpperCase()===MOTIVO && (r[I.fc]||'').startsWith(ym)).map(r=>({
+    cli:String(r[I.cli]).trim(), fc:r[I.fc].trim(), nro:(r[I.nro]||'').trim(), imp:num(r[I.imp]), cant:num(r[I.cant]), rs:(r[I.rs]||'').trim(),
+    v:parseInt(r[I.cv],10), vn:titulo(r[I.vn]), art:(r[I.art]||'').trim(), cod:String(r[I.cod]||'').trim(), prov:(r[I.prov]||'').trim(), emp:(r[I.emp]||'').trim()}));
+}
+async function cargar(ym){
+  $('meta').textContent='Bajando las ventas de '+MESES[+ym.slice(5)-1]+'…';
+  const p=ARCH[ym], r=await fetch(RAW+p.split('/').map(encodeURIComponent).join('/'),{cache:'no-store'});
+  if(!r.ok) throw new Error('no se pudo bajar '+p);
+  FILAS=leer(new TextDecoder('windows-1252').decode(await r.arrayBuffer()),ym);
+  const st=p.match(/-(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})\d{2}/); corte= st? `${st[3]}/${st[2]}/${st[1]} ${st[4]}:${st[5]}` : '';
+  const vs={}; FILAS.forEach(f=>vs[f.v]=f.vn);
+  $('fVend').innerHTML='<option value="">Todos los vendedores</option>'+Object.keys(vs).map(Number).sort((a,b)=>a-b).map(c=>`<option value="${c}">${c} · ${esc(vs[c])}</option>`).join('');
+  abiertos.clear(); dibujar();
+}
+function clientes(F){
+  const C={};
+  for(const f of F){ const c=C[f.cli]||(C[f.cli]={cli:f.cli,rs:f.rs,v:f.v,ven:f.vn,imp:0,comp:{},fechas:new Set()});
+    c.imp-=f.imp; c.fechas.add(f.fc);
+    const k=f.nro, x=c.comp[k]||(c.comp[k]={nro:k,fc:f.fc,imp:0,items:[]}); x.imp-=f.imp; x.items.push(f); }
+  // veces = dias distintos con rechazo (un mismo reparto puede generar varias notas de credito, una por empresa)
+  return Object.values(C).map(c=>({...c, n:new Set(Object.values(c.comp).filter(x=>x.nro.startsWith('NCR')).map(x=>x.fc)).size, f:[...c.fechas].sort()}));
+}
+function dibujar(){
+  const ym=$('fMes').value, fv=$('fVend').value, q=norm($('fQ').value.trim());
+  let F=FILAS.filter(f=>!fv||String(f.v)===fv);
+  const todos=clientes(F);
+  const L=todos.filter(c=>!q||norm(c.cli+' '+c.rs).includes(q));
+  // indicadores
+  const imp=todos.reduce((a,c)=>a+c.imp,0), comps=new Set(F.filter(f=>f.nro.startsWith('NCR')).map(f=>f.nro)), dias=[...new Set(F.map(f=>f.fc))].sort();
+  $('kCli').textContent=fmtN(todos.length); $('kCliN').textContent=`${todos.filter(c=>c.n>1).length} con más de un rechazo`;
+  $('kComp').textContent=fmtN(comps.size);
+  $('kImp').textContent=fmt$(imp); $('kImpN').textContent=todos.length? 'Promedio por cliente '+fmt$(imp/todos.length) : '';
+  $('kDias').textContent=fmtN(dias.length); $('kDiasN').textContent=dias.length? `Del ${ddmm(dias[0])} al ${ddmm(dias[dias.length-1])}` : '';
+  $('meta').textContent=`${MESES[+ym.slice(5)-1][0].toUpperCase()+MESES[+ym.slice(5)-1].slice(1)} ${ym.slice(0,4)} · motivo "No llegó chofer" · datos al ${corte}`;
+  // por dia
+  const pd={}; F.forEach(f=>pd[f.fc]=(pd[f.fc]||0)-f.imp); const mx=Math.max(1,...Object.values(pd));
+  $('gDias').innerHTML=dias.length? dias.map(d=>`<div class="dia" title="${dmy(d)}: ${fmt$(pd[d])}"><i>${pd[d]>=1e6? (pd[d]/1e6).toFixed(1).replace('.',',')+'M' : Math.round(pd[d]/1e3)+'k'}</i><b style="height:${Math.max(pd[d],0)/mx*100}%"></b><span>${ddmm(d)}</span></div>`).join('') : '<div class="vacio">Sin rechazos</div>';
+  // por vendedor
+  const pv={}; todos.forEach(c=>{ const x=pv[c.v]||(pv[c.v]={v:c.v,n:c.ven,imp:0,cli:0}); x.imp+=c.imp; x.cli++; });
+  const vl=Object.values(pv).sort((a,b)=>b.imp-a.imp), mv=Math.max(1,...vl.map(x=>x.imp));
+  $('gVend').innerHTML=vl.map(x=>`<span class="nm"><span class="cod">${x.v}</span> ${esc(x.n)}</span><span class="bar"><b style="width:${x.imp/mv*100}%"></b></span><span class="r" style="white-space:nowrap">${fmt$(x.imp)} · ${x.cli} cl.</span>`).join('');
+  // tabla de clientes
+  const val={cli:c=>+c.cli||0, rs:c=>norm(c.rs), ven:c=>norm(c.ven), n:c=>c.n, f:c=>c.f[c.f.length-1], imp:c=>c.imp};
+  L.sort((a,b)=>{ const x=val[sortK](a), y=val[sortK](b); return (x<y?-1:x>y?1:0)*sortD || b.imp-a.imp; });
+  document.querySelectorAll('#th span[data-k]').forEach(s=>{ s.textContent=s.textContent.replace(/ [▲▼]$/,'')+(s.dataset.k===sortK? (sortD>0?' ▲':' ▼') : ''); });
+  $('filas').innerHTML=L.length? L.map(c=>{ const ab=abiertos.has(c.cli);
+    return `<div class="row${ab?' ab':''}" data-c="${esc(c.cli)}"><span class="chev">›</span><span><span class="cod">${esc(c.cli)}</span></span><span>${esc(c.rs)}</span>
+      <span class="m">${c.v} · ${esc(c.ven)}</span><span class="r"><span class="vez${c.n>1?' mucho':''}">${c.n}</span></span><span class="m fx">${c.f.map(ddmm).join(', ')}</span><span class="r"><b>${fmt$(c.imp)}</b></span></div>`
+      +(ab? `<div class="det"><table><thead><tr><th>Comprobante / artículo</th><th>Fecha</th><th>Proveedor</th><th class="r">Cantidad</th><th class="r">Importe</th></tr></thead><tbody>`
+        +Object.values(c.comp).sort((a,b)=>a.fc.localeCompare(b.fc)).map(x=>`<tr class="comp"><td>${esc(x.nro)}${x.nro.startsWith('NDB')? ' (nota de débito)' : ''}</td><td>${dmy(x.fc)}</td><td></td><td></td><td class="r">${fmt$(x.imp)}</td></tr>`
+          +x.items.map(i=>`<tr><td>${esc(i.cod)} · ${esc(i.art)}</td><td></td><td>${esc(i.prov)}</td><td class="r">${fmtN(Math.abs(i.cant))}</td><td class="r">${fmt$(-i.imp)}</td></tr>`).join('')).join('')
+        +'</tbody></table></div>' : '');
+  }).join('') : `<div class="vacio">No hay rechazos por "No llegó chofer"${q||fv? ' con estos filtros' : ' en este mes'}.</div>`;
+}
+$('filas').addEventListener('click',e=>{ const r=e.target.closest('.row'); if(!r) return; const c=r.dataset.c; abiertos.has(c)?abiertos.delete(c):abiertos.add(c); dibujar(); });
+$('th').addEventListener('click',e=>{ const s=e.target.closest('span[data-k]'); if(!s) return; const k=s.dataset.k; if(sortK===k) sortD*=-1; else { sortK=k; sortD=(k==='rs'||k==='ven'||k==='cli')?1:-1; } dibujar(); });
+$('fVend').addEventListener('change',dibujar); $('fQ').addEventListener('input',dibujar);
+$('fMes').addEventListener('change',e=>cargar(e.target.value).catch(err=>$('meta').textContent='No se pudieron leer los datos: '+err.message));
+// Excel: una hoja con los clientes (lo que se ve con los filtros) y otra con el detalle de cada articulo rechazado
+let XLSX_OK=null;
+const cargarXLSX=()=>XLSX_OK||(XLSX_OK=new Promise((ok,mal)=>{ const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; s.onload=ok; s.onerror=()=>mal(new Error('no se pudo bajar la librería de Excel')); document.head.appendChild(s); }));
+$('btnXls').addEventListener('click',async()=>{ const b=$('btnXls'); b.disabled=true;
+  try{ await cargarXLSX(); const fv=$('fVend').value, q=norm($('fQ').value.trim());
+    const L=clientes(FILAS.filter(f=>!fv||String(f.v)===fv)).filter(c=>!q||norm(c.cli+' '+c.rs).includes(q)).sort((a,b)=>b.imp-a.imp);
+    const h1=[['Cód. cliente','Cliente','Cód. vendedor','Vendedor','Veces','Fechas','Importe rechazado']].concat(L.map(c=>[+c.cli||c.cli,c.rs,c.v,c.ven,c.n,c.f.map(dmy).join(', '),Math.round(c.imp*100)/100]));
+    const h2=[['Cód. cliente','Cliente','Vendedor','Comprobante','Fecha','Cód. artículo','Artículo','Proveedor','Cantidad','Importe']];
+    L.forEach(c=>Object.values(c.comp).forEach(x=>x.items.forEach(i=>h2.push([+c.cli||c.cli,c.rs,c.v+' · '+c.ven,x.nro,dmy(x.fc),i.cod,i.art,i.prov,Math.abs(i.cant),Math.round(-i.imp*100)/100]))));
+    const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(h1),'Clientes'); XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(h2),'Detalle');
+    XLSX.writeFile(wb,`Rechazos no llego chofer ${$('fMes').value}.xlsx`);
+  }catch(e){ alert('No se pudo armar el Excel: '+e.message); } finally{ b.disabled=false; } });
+(async function(){
+  try{
+    const arch=((await (await fetch('archivos.json?t='+Date.now(),{cache:'no-store'})).json()).archivos||[]);
+    for(const p of arch){ const m=p.match(/ventas-(\d{4}-\d{2})-/); if(m && (!ARCH[m[1]]||p>ARCH[m[1]])) ARCH[m[1]]=p; }
+    const yms=Object.keys(ARCH).sort().reverse(); if(!yms.length) throw new Error('no hay meses cargados');
+    $('fMes').innerHTML=yms.map(ym=>`<option value="${ym}">${MESES[+ym.slice(5)-1][0].toUpperCase()+MESES[+ym.slice(5)-1].slice(1)} ${ym.slice(0,4)}</option>`).join('');
+    const hoy=new Date(Date.now()-3*3600e3).toISOString().slice(0,7); $('fMes').value=ARCH[hoy]? hoy : yms[0];
+    await cargar($('fMes').value);
+  }catch(e){ $('meta').textContent='No se pudieron leer los datos: '+e.message; $('filas').innerHTML=''; }
+})();
+</script>
+</body>
+</html>
