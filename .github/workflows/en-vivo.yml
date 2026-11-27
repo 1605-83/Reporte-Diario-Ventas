@@ -68,7 +68,19 @@ jobs:
               echo "Los combos fallaron; se reintenta en la proxima vuelta"
             fi
             git checkout -- . 2>/dev/null || true
-            enHorario || { echo "Fuera de horario: se termina"; break; }
+            # 27/11/2026: GitHub largaba con horas de atraso (o no largaba) la actualizacion de las 07:00 y 13:30 del
+            # Reporte de ventas. Si ya paso ese horario y todavia no se actualizo, la lanza este robot.
+            hm=$(TZ=ART3 date +%H%M); hoy=$(TZ=ART3 date +%F); turno=""
+            if [ $((10#$hm)) -ge 1330 ]; then turno="13:30"; elif [ $((10#$hm)) -ge 700 ]; then turno="07:00"; fi
+            if [ -n "$turno" ]; then
+              desde=$(date -d "$hoy $turno -0300" +%s)
+              ult=$(gh api "repos/$GITHUB_REPOSITORY/commits?path=archivos.json&per_page=1" --jq '.[0].commit.committer.date // ""' 2>/dev/null)
+              if [ -n "$ult" ] && [ "$(date -d "$ult" +%s)" -lt "$desde" ]; then
+                n=$(gh run list -R "$GITHUB_REPOSITORY" -w actualizar.yml -L 5 --json status --jq '[.[]|select(.status!="completed")]|length')
+                if [ "$n" = "0" ]; then gh workflow run actualizar.yml -R "$GITHUB_REPOSITORY" --ref main && echo "Falta la actualizacion de las $turno: lanzada"; fi
+              fi
+            fi
+            enHorario ||{ echo "Fuera de horario: se termina"; break; }
             # antes de llegar a las 6 horas de GitHub, se relanza y termina (la nueva corrida espera a que esta termine)
             if [ $(( $(date +%s) - inicio )) -gt $(( 5*3600 + 30*60 )) ]; then
               gh workflow run en-vivo.yml -R "$GITHUB_REPOSITORY" --ref main && echo "Relanzada" || echo "No se pudo relanzar"
