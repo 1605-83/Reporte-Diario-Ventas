@@ -98,6 +98,7 @@ footer{margin-top:16px;font-size:.78rem;color:var(--ink2);text-align:center;line
 <script>
 const RAW='https://raw.githubusercontent.com/1605-83/Reporte-Diario-Ventas/main/';
 const MOTIVO_INI='NO LLEGO CHOFER';   // motivo que se ve al abrir; el selector Motivo trae todos los del mes
+const SACAR=new Set([16,18,25,30,40,76]);   // vendedores que no van en este tablero (pedido de Bruno, 26/11/2026)
 const MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -124,8 +125,8 @@ function leer(txt,ym){
   if(I.mot<0) throw new Error('el archivo no trae la columna MotivoDevolucion');
   // facturado del mes por vendedor (todo menos notas de credito y debito): base del indice de rechazo
   FACT={}; for(const r of R){ if(!(r[I.fc]||'').startsWith(ym)) continue; const tc=(r[I.nro]||'').trim().slice(0,3).toUpperCase(); if(tc==='NCR'||tc==='NDB') continue;
-    const v=parseInt(r[I.cv],10); if(!isNaN(v)) FACT[v]=(FACT[v]||0)+num(r[I.imp]); }
-  return R.filter(r=>(r[I.mot]||'').trim() && (r[I.fc]||'').startsWith(ym)).map(r=>({
+    const v=parseInt(r[I.cv],10); if(!isNaN(v) && !SACAR.has(v)) FACT[v]=(FACT[v]||0)+num(r[I.imp]); }
+  return R.filter(r=>(r[I.mot]||'').trim() && !SACAR.has(parseInt(r[I.cv],10)) && (r[I.fc]||'').startsWith(ym)).map(r=>({
     mot:(r[I.mot]||'').trim().toUpperCase(), cli:String(r[I.cli]).trim(), fc:r[I.fc].trim(), nro:(r[I.nro]||'').trim(), imp:num(r[I.imp]), cant:num(r[I.cant]), rs:(r[I.rs]||'').trim(),
     v:parseInt(r[I.cv],10), vn:titulo(r[I.vn]), art:(r[I.art]||'').trim(), cod:String(r[I.cod]||'').trim(), prov:(r[I.prov]||'').trim(), emp:(r[I.emp]||'').trim()}));
 }
